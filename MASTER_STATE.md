@@ -24,13 +24,13 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 
 ## Current reconciliation — 2026-09-18
 
-- Actual implementation/source-port HEAD before this ledger-only update: `166c39f21d7ce5703e20a9cc73a53f952f737c65` (`P1: port entity data non-null bounds`).
-- Parent ledger-only commit: `277c5f4e7c62816887258f6385d5266946cf365c` (`watchdog: record entity manager proof result`).
-- Prior implementation HEAD `a2951cab7d0a5b32756b45dc361a040d7212cdea` (`P1: port entity manager Identifier API cluster`) remains proven clean for its targeted `VSEntityManager.kt` cluster by P1 run `35325476529`, job `105537397785`.
-- Diagnostic artifact for run `35325476529`: `p1-compile-log-a2951cab7d0a5b32756b45dc361a040d7212cdea`, artifact ID `10539163151`, uploaded ZIP SHA-256 `9b8e64739baa4cad226269b543cb2573a3e9d4cc2d0b484febb990bd9571d2ff`.
-- HEAD `166c39f21d7ce5703e20a9cc73a53f952f737c65` applies only the compiler-required Minecraft 26.2 non-null generic bounds in `common/src/main/kotlin/org/valkyrienskies/mod/util/EntityData.kt`: `R : Any` for `defineSynced` and `T : Any` for `EntityDataDelegate`. Delegate get/set behavior and VS2 entity-data semantics are unchanged.
+- Actual repository HEAD before this ledger-only update: `d801971fd7e26f7f5335a301e48069ed1462d641` (`watchdog: sync EntityData active proof state`). This is ledger-only; latest implementation/source-port HEAD remains `166c39f21d7ce5703e20a9cc73a53f952f737c65` (`P1: port entity data non-null bounds`).
+- Prior implementation HEAD `a2951cab7d0a5b32756b45dc361a040d7212cdea` remains proven clean for its targeted `VSEntityManager.kt` cluster by P1 run `35325476529`.
+- P1 at exact implementation HEAD `166c39f21d7ce5703e20a9cc73a53f952f737c65`: run `35327172496`, job `105542829942`, completed `failure` at `:common:compileKotlin` after checkout, Java 25, both overlays, diff validation, and Gradle startup succeeded.
+- Run `35327172496` proves the `EntityData.kt` non-null-bound adaptation worked: `EntityData.kt` no longer appears anywhere in compiler errors.
+- Diagnostic artifact for run `35327172496`: `p1-compile-log-166c39f21d7ce5703e20a9cc73a53f952f737c65`, artifact ID `10539941266`, uploaded ZIP SHA-256 `6576ec914a83786a70850b346c0153eee1efa80e8463a7f9b9e5164d2f2c847b`.
 - P0 at `166c39f21d7ce5703e20a9cc73a53f952f737c65`: run `35327172660` completed `success`.
-- Active P1 proof at exact implementation HEAD `166c39f21d7ce5703e20a9cc73a53f952f737c65`: run `35327172496`, currently `in_progress` when this ledger entry was written.
+- The next smallest direct compiler-proven standalone cluster is `common/src/main/kotlin/org/valkyrienskies/mod/util/NbtUtil.kt`: all seven errors are Minecraft 26.2 `CompoundTag.getDouble()` now returning `Optional<Double>` instead of primitive `Double`. Both pinned upstream and current `1.21.1/main` are identical. The source already checks `contains(...)` for every key before reading, so adapting the seven reads with `.orElse(0.0)` preserves the old primitive/default semantics without altering VS2 vector/quaternion serialization logic.
 - No code from `apm23/VS2-Create_Interactive` has been imported. The retired workaround project remains forbidden as implementation source.
 
 ## Target runtime baseline
@@ -49,8 +49,8 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
 - active_proof_head: `166c39f21d7ce5703e20a9cc73a53f952f737c65`
-- active_proof_run: `35327172496` (`in_progress` when ledger was written)
-- active_hypothesis: `The two Minecraft 26.2 non-null generic bounds are sufficient to clear the EntityData.kt compiler cluster without behavior changes.`
+- active_proof_run: `35327172496` (`completed/failure`; EntityData cluster proven clean)
+- active_hypothesis: `Adapt only NbtUtil.kt getDouble Optional return values with explicit old-default semantics; do not change serialization or VS2 behavior.`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 
@@ -68,10 +68,11 @@ Source API clusters proven clean in successive runs:
 - data-provider `ResourceLocation -> Identifier` plus registry-holder `location() -> identifier()`;
 - `BlockStateInfoProvider.kt` Identifier cluster;
 - `SimpleSoundInstanceOnShip.kt` Identifier cluster;
-- `VSEntityManager.kt` Identifier cluster.
+- `VSEntityManager.kt` Identifier cluster;
+- `EntityData.kt` non-null generic bounds.
 
-Current candidate under proof:
-- `EntityData.kt` non-null generic bounds required by Minecraft 26.2 entity-data API.
+Next candidate:
+- `NbtUtil.kt` seven `Optional<Double>` return adaptations preserving old `Double` default semantics.
 
 Representative remaining compiler areas include renderer/render-state APIs, direction/position/build-height changes, SavedData/NBT `ValueInput`/`ValueOutput`, command permissions, resource reload listener generics, entity save/hurt/network APIs, tickets/ticks/structure processors, Create-compat classpath/API drift, and Sable compatibility.
 
@@ -134,12 +135,13 @@ Do not reintroduce without new direct evidence:
 
 ## next_safe_action
 
-1. Treat implementation HEAD `166c39f21d7ce5703e20a9cc73a53f952f737c65` and P1 run `35327172496` as the active proof pair.
-2. **Do not patch while run `35327172496` is active.**
-3. When it completes, inspect the exact compile log. If `EntityData.kt` is absent from compiler errors, preserve the patch and select only the next smallest direct compiler-proven API cluster. If it regressed, repair only that regression.
-4. Do not alter renderer, NBT, Sable/entity-dragging, physics, collision, networking, player/camera, or Create semantics merely to remove unrelated compiler errors; each needs its own evidence-backed adaptation.
-5. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet.
-6. Update this ledger after the active run lands before any subsequent source patch.
+1. Preserve implementation HEAD `166c39f21d7ce5703e20a9cc73a53f952f737c65`; run `35327172496` proves its `EntityData.kt` cluster clean.
+2. Apply the smallest next source adaptation only in `NbtUtil.kt`: unwrap the seven Minecraft 26.2 `Optional<Double>` values with `.orElse(0.0)`, preserving the old primitive/default behavior and existing `contains(...)` guards.
+3. Include `NbtUtil.kt` in P1 workflow delta display, commit atomically, and let the resulting P1 run prove whether that file disappears from compiler errors.
+4. Do not stack another source patch while that new P1 workflow is active.
+5. Do not alter renderer, Sable/entity-dragging, physics, collision, networking, player/camera, or Create semantics merely to remove unrelated compiler errors; each needs its own evidence-backed adaptation.
+6. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet.
+7. Update this ledger with the new implementation HEAD/run after the patch lands.
 
 ## Video validation
 
