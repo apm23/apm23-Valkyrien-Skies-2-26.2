@@ -11,12 +11,14 @@ GitHub code is the implementation source of truth. This file is the durable cont
 - Exact dependency/environment lock: `BASELINE_LOCK.json`
 - Upstream provenance: `UPSTREAM_PROVENANCE.md`
 
-## Current reconciliation — 2026-09-18 watchdog resume
+## Current reconciliation — 2026-09-18 watchdog continue
 
-- Actual repository HEAD at watchdog start: `1e90c3aa93240092a1c1a3f3dd8b0c9afb7afc89`.
-- No GitHub Actions runs existed at restart reconciliation time.
-- P0 import/provenance landed at `04b3228435ea14bc34de0646363a985cf6b2ba59`.
-- P0 provenance Actions run `35304871880` completed `success` against that exact HEAD.
+- Actual repository HEAD at this watchdog start: `6de134088ec6c0453d0572a2a8e7335b9d8a96d4`.
+- P0 import/provenance remains frozen green from source HEAD `04b3228435ea14bc34de0646363a985cf6b2ba59`, Actions run `35304871880` success.
+- P1 first standalone compile probe ran against exact HEAD `6de134088ec6c0453d0572a2a8e7335b9d8a96d4` as Actions run `35305188689`.
+- P1 job `105475830280` completed `failure` before source compilation began.
+- Direct blocker from the log: Gradle `9.5.1` rejects legacy `archivesBaseName = ...` at upstream `build.gradle` line 200 (`Could not set unknown property 'archivesBaseName'`).
+- Gradle runtime, Java 25, exact upstream checkout, and build-only overlay application all completed successfully before that failure.
 - No code from `apm23/VS2-Create_Interactive` has been imported.
 
 ## Official upstream baseline
@@ -32,7 +34,7 @@ GitHub code is the implementation source of truth. This file is the durable cont
 
 The exact official source baseline is imported as the Git submodule/gitlink `upstream-vs2/` pinned directly to `f39132148e717d325933b4ce6e9e9fb13d929390`.
 
-This is intentional: the baseline remains byte-for-byte upstream source instead of being reconstructed through the connector. Minecraft 26.2 adaptations must be explicit, reviewable port changes layered on that exact baseline. `.github/workflows/p0-provenance.yml` verifies the gitlink commit, checked-out submodule HEAD, root tree, upstream LICENSE blob, and clean checkout.
+This is intentional: the baseline remains byte-for-byte upstream source instead of being reconstructed through the connector. Minecraft 26.2 adaptations are explicit, reviewable port changes layered on that exact baseline. `.github/workflows/p0-provenance.yml` verifies the gitlink commit, checked-out submodule HEAD, root tree, upstream LICENSE blob, and clean checkout.
 
 P0 proof: run `35304871880`, conclusion `success`, source HEAD `04b3228435ea14bc34de0646363a985cf6b2ba59`.
 
@@ -51,11 +53,23 @@ No Create/SNR/Copycats integration is part of P0.
 
 ## Project state
 
-- project_state: `P1_BUILD_BASELINE_PENDING`
-- active_blocker: `FIRST_26_2_STANDALONE_COMPILE_SIGNAL_NOT_YET_RUN`
-- active_hypothesis: `Minecraft 26.2 requires a Java-25/no-remap build path; begin with the smallest traceable build-only adaptation before touching VS2 gameplay code`
+- project_state: `P1_BUILD_TOOLING_ADAPTATION_IN_PROGRESS`
+- active_blocker: `GRADLE9_ARCHIVES_BASENAME_REMOVED`
+- active_hypothesis: `Replace only the removed Gradle base-plugin convention property with supported base.archivesName while leaving VS2 source/architecture untouched`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
+
+## P1 build-port evidence
+
+First P1 probe (`35305188689`) established:
+- exact upstream submodule pin checkout succeeds;
+- Java `25.0.4+1` setup succeeds;
+- Gradle `9.5.1` starts successfully;
+- Architect Plugin `3.5.170` and Architectury Loom `1.17.493` configure far enough to evaluate the root build;
+- target metadata overlay for Minecraft `26.2`, Fabric Loader `0.19.3`, Fabric API `0.160.0+26.2`, Java 25 and Fabric-only platform is applied cleanly;
+- first failure is the removed Gradle 9 `archivesBaseName` convention, before VS2 Java/Kotlin compilation.
+
+The smallest next adaptation is build-only: replace upstream `archivesBaseName = rootProject.archives_base_name` with the supported Gradle `base { archivesName = rootProject.archives_base_name }` extension through `scripts/apply_p1_build_baseline.py`.
 
 ## Mandatory architecture
 
@@ -83,15 +97,15 @@ Port real VS2 to 26.2 until client/server boot and core/native initialization wo
 
 ### P2 / M1 — Standalone real VS2 ship runtime
 Prove on 26.2 using a real VS2 ship:
-- actual ship creation/lifecycle;
+- actual VS2 ship creation/lifecycle;
 - ship transform translation + rotation;
-- player standing/walking;
-- jump -> airborne -> natural landing in ship frame;
+- player standing and walking;
+- jump -> airborne -> natural landing while staying in the ship frame;
 - solid floor/walls/ceiling;
-- free stable camera/mouse look;
-- entity dragging/reference-space behavior;
-- client/server sync;
-- no fake carry or per-tick teleport chase.
+- free stable mouse look/camera;
+- entity dragging/reference-frame behavior;
+- client/server synchronization;
+- no fake carry, no per-tick teleport chase.
 
 Only after all of this may `M1_COMPLETE` be emitted.
 
@@ -114,8 +128,8 @@ Full target stack, final exact JAR, final verification, then exact-JAR real-user
 
 ## Unproven
 
-- 26.2 build
-- standalone boot
+- 26.2 compile
+- standalone client/server boot
 - VSCore/Krunch/native chain
 - ship lifecycle
 - ship transforms
@@ -133,6 +147,7 @@ Full target stack, final exact JAR, final verification, then exact-JAR real-user
 ## Failed hypotheses / forbidden reintroductions
 
 Do not reintroduce without new direct evidence:
+- Gradle 9 with the removed legacy `archivesBaseName` convention property;
 - custom "VS2-style" reference-frame system as a substitute for VS2;
 - grounded floor carry as proof of real ship-space correctness;
 - per-tick player teleport/setPos chase;
@@ -157,13 +172,12 @@ This proves that floor-only automated green is insufficient. It does NOT authori
 
 ## next_safe_action
 
-1. Keep the exact upstream submodule pin unchanged and treat P0 as frozen green.
-2. Add the smallest deterministic, reviewable P1 build-port overlay for Minecraft `26.2`, Java `25`, Fabric Loader `0.19.3`, and Fabric API `0.160.0+26.2`.
-3. Adapt only build/mapping/loader mechanics required by 26.2 first; do not make gameplay/carry/collision changes to manufacture a compile result.
-4. Run the smallest standalone Fabric compile/configuration proof from the real upstream source with the overlay applied.
-5. Classify the first direct blocker from that run before making the next patch.
-6. Do not add Create/SNR/Copycats integration during P1.
-7. Update this ledger with exact resulting HEAD/run/blocker after every proof-changing action.
+1. Keep P0 and the exact upstream submodule pin frozen unchanged.
+2. Apply only the Gradle-9 archive-name compatibility adaptation through the existing traceable P1 overlay; no gameplay/source architecture edits.
+3. Run the same standalone common + Fabric compile proof.
+4. If the proof advances, classify the next direct blocker from the new log before changing anything else.
+5. Continue P1 only through evidence-backed Minecraft/Fabric/build/API port changes; do not add Create/SNR/Copycats.
+6. Update this ledger with exact resulting HEAD/run/blocker after the next proof-changing result.
 
 ## Final gate
 

@@ -47,6 +47,14 @@ replace_once(
     '''    tasks.withType(KotlinJvmCompile).configureEach {\n        compilerOptions {\n            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_25)\n            freeCompilerArgs.add("-Xjvm-default=all")\n        }\n    }''',
 )
 
+# Gradle 9 removed the legacy base-plugin convention property archivesBaseName.
+# Preserve the upstream archive identity through the supported BasePluginExtension instead.
+replace_once(
+    "build.gradle",
+    "    archivesBaseName = rootProject.archives_base_name",
+    '''    base {\n        archivesName = rootProject.archives_base_name\n    }''',
+)
+
 # Shadow 7.x predates the Gradle-9 toolchain used by Minecraft 26.2.
 replace_once(
     "fabric/build.gradle",
