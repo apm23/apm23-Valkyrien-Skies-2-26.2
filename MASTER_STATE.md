@@ -22,25 +22,23 @@ GitHub code is the implementation source of truth. This file is the durable cont
 
 The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are applied by explicit fail-closed overlay scripts so every adaptation stays traceable to upstream VS2 source.
 
-## Current reconciliation — TestHingeBlockEntity getLong Optional proof completed; removal-hook proof selected
+## Current reconciliation — TestHinge removal hook proven; ShipSavedData byte-array Optional proof selected
 
-- Current proven implementation HEAD: `2152734918d4e4938af5aad17476f35f1ae361cf` (`P1: wire TestHingeBlockEntity getLong Optional proof`).
-- Exact-head P0 provenance run `35396770555`, job `105767287832`, completed `success` for `2152734918d4e4938af5aad17476f35f1ae361cf`.
-- Exact-head P1 standalone compile run `35396770532`, job `105767287715`, completed `failure` only because later independent Minecraft 26.2 source/API errors remain.
-- Every traceable overlay applied successfully, including `apply_p1_testhinge_blockentity_getlong_26_2.py`; explicit port-delta validation and Gradle runtime steps succeeded.
-- Exact TestHingeBlockEntity delta is two Optional unwraps only: `tag.getLong("shipId0")` and `tag.getLong("shipId1")` in the existing `VSRevoluteJoint` load path now use `.orElse(0L)`. Constructor argument order, poses, rotations, `maxForceTorque`, `driveFreeSpin`, `makeConstraint`, tick behavior and all other code are unchanged.
-- The previous `TestHingeBlockEntity.kt:47-48` `Optional<Long>` -> `Long?` diagnostics are absent from run `35396770532`.
-- Independent hinge diagnostics remain exactly where expected: `TestHingeBlock.kt:200` `onRemove overrides nothing`, line 208 unresolved `super.onRemove`, plus `TestHingeBlockEntity.kt` save/load persistence API drift (`ValueOutput`/`ValueInput`) at lines 32-45.
-- Therefore the isolated TestHingeBlockEntity load-time `CompoundTag.getLong` Optional migration is proven clean and frozen independently from persistence and block-removal API migration.
-- Diagnostic artifact: `p1-compile-log-2152734918d4e4938af5aad17476f35f1ae361cf`, artifact ID `10568142768`, size `7999` bytes, ZIP SHA-256 `c677210fb53c9b716521063eb6e48d567559bb76b4154dc88d24a38aad3505d9`.
+- Current proven implementation HEAD: `58e978bf8841e8bbb26e4658e9b7b566d4800e14` (`P1: wire TestHinge removal hook proof`).
+- Exact-head P0 provenance run `35398688368`, job `105773330399`, completed `success` for `58e978bf8841e8bbb26e4658e9b7b566d4800e14`.
+- Exact-head P1 standalone compile run `35398688325`, job `105773336393`, completed `failure` only because later independent Minecraft 26.2 source/API errors remain.
+- Every traceable overlay applied successfully, including `apply_p1_testhinge_removal_hook_26_2.py`; explicit port-delta validation and Gradle runtime steps succeeded.
+- Exact TestHinge removal delta migrates the pinned `onRemove(BlockState, Level, BlockPos, BlockState, Boolean)` hook to Minecraft 26.2 `affectNeighborsAfterRemoval(BlockState, ServerLevel, BlockPos, Boolean)`. The obsolete `newState` parameter and redundant runtime `ServerLevel` type guard disappear, while block-entity lookup, `constraintId` early return, `getOrCreateGTPA(...).removeJoint(...)`, execution ordering and superclass delegation are preserved.
+- The previous `TestHingeBlock.kt:200` `onRemove overrides nothing` diagnostic and line 208 unresolved `super.onRemove` diagnostic are absent from run `35398688325`.
+- Independent `TestHingeBlockEntity.kt` persistence diagnostics remain exactly where expected: `saveAdditional` expects `ValueOutput`, `loadAdditional` expects `ValueInput`, and the old CompoundTag/provider calls no longer match.
+- Therefore the isolated TestHinge removal-hook migration is proven clean and frozen independently from block-entity persistence migration.
+- Diagnostic artifact: `p1-compile-log-58e978bf8841e8bbb26e4658e9b7b566d4800e14`, artifact ID `10570252019`, size `7974` bytes, ZIP SHA-256 `9ec5ff7f63122b365dfa8460e176dfbcd4be0d86235fa35b9fe803e9959a2f58`.
 - Pinned upstream `TestHingeBlock.kt` blob remains `073936536693be20171032cf53fbee99f6addad3`.
-- Pinned upstream `TestHingeBlockEntity.kt` blob remains `80a7545bbabc5f871a79ceb7d6eb4a51c5ebc725`.
-- Current Minecraft 26.2 API evidence exposes `BlockBehaviour.affectNeighborsAfterRemoval(BlockState, ServerLevel, BlockPos, boolean)` as the removal hook. The pinned VS2 `TestHingeBlock.onRemove(oldState, Level, pos, newState, movedByPiston)` implementation does not use `newState`; it only retrieves the local `TestHingeBlockEntity`, removes its existing joint on the server, then delegates to `super.onRemove`.
-- Selected next hypothesis: migrate exactly that TestHinge removal hook to `affectNeighborsAfterRemoval(state: BlockState, level: ServerLevel, pos: BlockPos, movedByPiston: Boolean)`, preserving the same block-entity lookup, `constraintId` guard, GTPA `removeJoint` call, ordering and superclass delegation. Do not touch TestHingeBlockEntity persistence, joint construction, physics, rendering or unrelated code.
-- Expected proof: only `TestHingeBlock.kt:200` override and line 208 `super.onRemove` diagnostics disappear; independent TestHingeBlockEntity ValueInput/ValueOutput persistence diagnostics remain.
-- Previous TestHinge onPaste proof remains frozen at HEAD `4e3dbdd2d26b1861f93f5ac651c3f8cf615ffde6`, P0 `35396104505` / job `105765179878`, P1 `35396104498` / job `105765179621`, artifact `10567986686`, SHA-256 `4f06b192a022770df0687a244ae0db2da049c2a227dcd117202404ac440e8425`.
-- Previous TestHinge getTicker proof remains frozen at HEAD `a4bb9db1749b0cd79e23e2f90cbfbad95202f46d`, P0 `35395323531`, P1 `35395323604` / job `105762731288`, artifact `10567955398`, SHA-256 `53b4e9a70dfac7122d5f2fe9b040fa2b3097e69f0ad8b7d3fb284e4b678b99d2`.
-- Previous TestHinge getShape proof remains frozen at HEAD `01e86b1dba7f483a6f8363f22e72100a61b887a8`, P0 `35392499266`, P1 `35392499337` / job `105753820631`, artifact `10567085228`, SHA-256 `b0022b364c646cf3c65df478a98132b09877b5758768ac9d04abe9721b067f56`.
+- Pinned upstream `ShipSavedData.kt` blob is `5d666d924ba228e235fb9ad065e9dd6d113f93d8`.
+- Exact run `35398688325` shows `ShipSavedData.load()` now receives `Optional<ByteArray>` from the three `CompoundTag.getByteArray` calls (`queryable_ship_data`, `chunk_allocator`, `vs_pipeline`), while the unchanged downstream VS2 code requires `ByteArray` for `.size`, `.isNotEmpty()`, `newPipeline(...)` and `newPipelineLegacyData(...)`.
+- The pinned 1.21.1 code treats a missing/wrong-type byte-array tag as an empty byte array before the existing fallback/error logic. Selected next hypothesis: unwrap exactly those three `getByteArray` results with an empty `ByteArray` default, preserving key names, pipeline-vs-legacy precedence, logging, exception handling and all serialization semantics.
+- Expected proof: the `ShipSavedData.kt:36-43` Optional<ByteArray>/ByteArray member and argument diagnostics disappear; the independent `ShipSavedData.kt:61` `save overrides nothing` persistence-signature diagnostic remains. Do not migrate `SavedData.save` in the same proof.
+- `VSGameUtils.kt` Identifier migration is not selected yet because its resource-key path crosses `ResourceKeyAccessor` and `MixinLevel`; do not apply a partial one-file replacement.
 - `VSKeyBindings.kt` remains deferred because Minecraft 26.2 `KeyMapping.Category` migration changes category translation-key handling; a compile-only type swap must not silently break `category.valkyrienskies.driving`.
 - Nullable ship slug/name command/item messages remain deferred; do not invent fallback strings merely to satisfy Kotlin vararg nullability.
 - No code from retired `apm23/VS2-Create_Interactive` has been imported or reused as implementation source.
@@ -60,9 +58,9 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
-- active_proof_head: `none; TestHingeBlock removal-hook onRemove -> affectNeighborsAfterRemoval proof selected but not yet patched/wired`
+- active_proof_head: `none; ShipSavedData CompoundTag.getByteArray Optional-to-ByteArray proof selected but not yet patched/wired`
 - active_proof_run: `none`
-- active_hypothesis: `Minecraft 26.2 exposes BlockBehaviour.affectNeighborsAfterRemoval(BlockState, ServerLevel, BlockPos, boolean) instead of the pinned TestHingeBlock onRemove signature. Migrate only this hook while preserving existing joint removal semantics and superclass delegation. Expected proof: TestHingeBlock lines 200/208 removal-hook diagnostics disappear while TestHingeBlockEntity ValueInput/ValueOutput persistence errors remain.`
+- active_hypothesis: `Minecraft 26.2 CompoundTag.getByteArray returns Optional<ByteArray>. In pinned ShipSavedData.load(), unwrap exactly the queryable_ship_data, chunk_allocator and vs_pipeline reads to empty ByteArray defaults so the existing pipeline/legacy selection semantics remain unchanged. Expected proof: ShipSavedData lines 36-43 Optional/ByteArray diagnostics disappear while the independent SavedData.save signature error remains.`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 
@@ -91,13 +89,14 @@ Source/API clusters proven clean in exact-head runs:
 - `TestHingeBlock.kt` `getShape` non-null signature migration;
 - `TestHingeBlock.kt` `getTicker` non-null generic-bound migration;
 - `TestHingeBlock.kt` `onPaste` four `CompoundTag.getLong` Optional unwraps preserving legacy zero defaults;
-- `TestHingeBlockEntity.kt` two load-time `CompoundTag.getLong` Optional unwraps preserving legacy zero defaults.
+- `TestHingeBlockEntity.kt` two load-time `CompoundTag.getLong` Optional unwraps preserving legacy zero defaults;
+- `TestHingeBlock.kt` removal hook migrated to `affectNeighborsAfterRemoval` while preserving joint-removal behavior and superclass delegation.
 
-Representative remaining compiler areas from exact run `35396770532`: Create compat classpath/API drift; `EmptyRenderer` render-state/type-argument migration; `CompatUtil` position/build-height/nullability drift; `ShipSavedData` Optional/SaveData changes; `VSGameUtils` Identifier/build-height/chunk-position APIs; `ValkyrienSkiesMod` creative-tab output API; assembly/tick/ValueInput-ValueOutput/structure processor migrations; TestChair entity-create/`moveTo`; TestHinge removal hook plus TestHingeBlockEntity persistence; deferred nullable command/item messages; reload-listener/Identifier generics; keybinding category; ShipMountingEntity persistence/hurt; entity-handler rendering; networking/local-control/lerp; `EntityDragger` local-control; chunk tickets; Sable; relocation.
+Representative remaining compiler areas from exact run `35398688325`: Create compat classpath/API drift; `EmptyRenderer` render-state/type-argument migration; `CompatUtil` position/build-height/nullability drift; `ShipSavedData` Optional byte arrays plus separate SavedData save-signature migration; `VSGameUtils` resource-key/Identifier plus build-height/chunk-position APIs; `ValkyrienSkiesMod` creative-tab output API; assembly/tick/ValueInput-ValueOutput/structure processor migrations; TestChair entity-create/`moveTo`; TestHingeBlockEntity persistence; deferred nullable command/item messages; reload-listener/Identifier generics; keybinding category; ShipMountingEntity persistence/hurt; entity-handler rendering; networking/local-control/lerp; `EntityDragger` local-control; chunk tickets; Sable; relocation.
 
 ## Proof chain retained
 
-- `ad922ded33ff46a3028fca1217559a60be54fad6`: `MinecraftPlayer.kt` permission predicates proven clean by P1 `35340545586`.
+- `ad922ded33ff46a3028fca1217559a60be54fad6`: `MinecraftPlayer.kt` permission predicates; P1 `35340545586`.
 - `6253d38ff84785921c95c175563a5b24800979ef`: Backend permission; P1 `35342297011`; artifact `10545204522`; SHA-256 `72de18f36f7538bf818ee59f090fea3d009e7c6f4265a9f7f5261517344b4c03`.
 - `b1a8d44abb54150a5b97e03677a37977702ed65e`: GetAir permission; P1 `35355388045`; artifact `10552130508`; SHA-256 `f921fc35d29e54d827fafbb5ca4c2d5664092a72579e3e394e15cede87e212b3`.
 - `7700e2194f96b79db0ffc67b6b754fecd29cc04f`: GetGravity permission; P1 `35357765377`; artifact `10552603034`; SHA-256 `dfa0c9eae9e1fc118784975bcf7adcbaa0d2ddca29a4f8318b290b1f30cea877`.
@@ -118,6 +117,7 @@ Representative remaining compiler areas from exact run `35396770532`: Create com
 - `a4bb9db1749b0cd79e23e2f90cbfbad95202f46d`: TestHinge getTicker bound; P0 `35395323531`; P1 `35395323604`; job `105762731288`; artifact `10567955398`; SHA-256 `53b4e9a70dfac7122d5f2fe9b040fa2b3097e69f0ad8b7d3fb284e4b678b99d2`.
 - `4e3dbdd2d26b1861f93f5ac651c3f8cf615ffde6`: TestHinge onPaste getLong; P0 `35396104505`; job `105765179878`; P1 `35396104498`; job `105765179621`; artifact `10567986686`; SHA-256 `4f06b192a022770df0687a244ae0db2da049c2a227dcd117202404ac440e8425`.
 - `2152734918d4e4938af5aad17476f35f1ae361cf`: TestHingeBlockEntity getLong; P0 `35396770555`; job `105767287832`; P1 `35396770532`; job `105767287715`; artifact `10568142768`; SHA-256 `c677210fb53c9b716521063eb6e48d567559bb76b4154dc88d24a38aad3505d9`.
+- `58e978bf8841e8bbb26e4658e9b7b566d4800e14`: TestHinge removal hook; P0 `35398688368`; job `105773330399`; P1 `35398688325`; job `105773336393`; artifact `10570252019`; SHA-256 `9ec5ff7f63122b365dfa8460e176dfbcd4be0d86235fa35b9fe803e9959a2f58`.
 
 ## Sable contract
 
@@ -134,7 +134,7 @@ Forbidden final substitutes: custom VS2-style reference frames, synthetic carry 
 ## Milestones
 
 ### P0 — Upstream import + provenance
-Frozen green. Exact upstream identity/pin/license/provenance is established and repeatedly re-confirmed. Latest proven implementation HEAD `2152734918d4e4938af5aad17476f35f1ae361cf` has exact-head P0 run `35396770555` success.
+Frozen green. Exact upstream identity/pin/license/provenance is established and repeatedly re-confirmed. Latest proven implementation HEAD `58e978bf8841e8bbb26e4658e9b7b566d4800e14` has exact-head P0 run `35398688368` success.
 
 ### P1 — Standalone VS2 26.2 compile/boot
 Port actual VS2 until common/Fabric compile, standalone client/server boot, and core/native initialization are proven without Create/SNR/Copycats hiding failures.
@@ -168,15 +168,16 @@ Do not reintroduce without new direct evidence:
 - retired project gameplay patches;
 - fixture/input mutations solely to manufacture green;
 - compile-only `VSKeyBindings` category replacement that changes/drops existing translation behavior;
-- invented fallback values for nullable ship slug/name just to satisfy Kotlin vararg nullability.
+- invented fallback values for nullable ship slug/name just to satisfy Kotlin vararg nullability;
+- partial `VSGameUtils` ResourceLocation replacement without reconciling the `ResourceKeyAccessor`/`MixinLevel` boundary.
 
 ## next_safe_action
 
-1. Preserve exact TestHingeBlockEntity getLong proof HEAD `2152734918d4e4938af5aad17476f35f1ae361cf`, P0 `35396770555` / job `105767287832`, P1 `35396770532` / job `105767287715`, artifact `10568142768`, ZIP SHA-256 `c677210fb53c9b716521063eb6e48d567559bb76b4154dc88d24a38aad3505d9`.
+1. Preserve exact TestHinge removal-hook proof HEAD `58e978bf8841e8bbb26e4658e9b7b566d4800e14`, P0 `35398688368` / job `105773330399`, P1 `35398688325` / job `105773336393`, artifact `10570252019`, ZIP SHA-256 `9ec5ff7f63122b365dfa8460e176dfbcd4be0d86235fa35b9fe803e9959a2f58`.
 2. Reconcile actual HEAD after this ledger update and allow its automatically triggered P0 provenance workflow to settle before proof setup.
-3. Add one fail-closed overlay for `TestHingeBlock.kt` that migrates only the old `onRemove` hook to Minecraft 26.2 `affectNeighborsAfterRemoval(BlockState, ServerLevel, BlockPos, Boolean)`. Preserve block-entity lookup, `constraintId` early return, `getOrCreateGTPA(...).removeJoint(...)`, execution ordering and superclass delegation. Remove only parameters/type-guard made obsolete by the new server-only signature.
-4. Wire only that overlay into P1. `TestHingeBlock.kt` remains in the explicit port-delta display. Do not change TestHingeBlockEntity persistence, joint creation, transform math, physics, rendering or unrelated clusters.
-5. Proof target: `TestHingeBlock.kt:200` override and line 208 `super.onRemove` diagnostics disappear; independent TestHingeBlockEntity ValueInput/ValueOutput persistence diagnostics remain. Overall compile may remain red on unrelated clusters.
+3. Add one fail-closed overlay for `ShipSavedData.kt` that changes exactly the three load-time `compoundTag.getByteArray(...)` expressions for `QUERYABLE_SHIP_DATA_NBT_KEY`, `CHUNK_ALLOCATOR_NBT_KEY`, and `PIPELINE_NBT_KEY` to unwrap their Minecraft 26.2 Optional values with an empty `ByteArray` default. Preserve all keys, log messages, pipeline precedence, legacy fallback, exception behavior and serialization semantics.
+4. Wire only that overlay into P1 and add `ShipSavedData.kt` to the explicit port-delta display. Do not change `ShipSavedData.save`, `SavedData` factory/signatures, TestHingeBlockEntity persistence, resource-key accessors, physics, rendering or unrelated clusters.
+5. Proof target: `ShipSavedData.kt:36-43` Optional<ByteArray>/ByteArray member and argument diagnostics disappear; independent `ShipSavedData.kt:61` `save overrides nothing` remains. Overall compile may remain red on unrelated clusters.
 6. After proof completes, record exact HEAD, P0/P1 runs, job/artifact/hash and targeted diagnostic result before selecting another cluster.
 7. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet. No video is authorized during compile/API-port work.
 
