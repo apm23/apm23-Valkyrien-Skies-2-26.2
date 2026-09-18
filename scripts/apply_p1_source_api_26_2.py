@@ -153,4 +153,15 @@ replace_count(
     1,
 )
 
+# Run 35331485313 proved ValkyrienSkies.kt is now clean and reported a direct private
+# Direction.normal access in TestFlapBlock#getWing. Pinned baseline and current 1.21.1/main
+# are byte-identical at this callsite. Replace only that unit-vector accessor; Wing
+# construction, coefficients, and toJOMLD conversion remain unchanged.
+replace_count(
+    "common/src/main/kotlin/org/valkyrienskies/mod/common/block/TestFlapBlock.kt",
+    "blockState.getValue(FACING).normal.toJOMLD()",
+    "blockState.getValue(FACING).getUnitVec3i().toJOMLD()",
+    1,
+)
+
 print("P1_SOURCE_API_26_2_OVERLAY_APPLIED")
