@@ -17,9 +17,11 @@ GitHub code is the implementation source of truth. This file is the durable cont
 - P0 import/provenance remains frozen green from source HEAD `04b3228435ea14bc34de0646363a985cf6b2ba59`, Actions run `35304871880` success.
 - P1 first standalone compile probe ran against exact HEAD `6de134088ec6c0453d0572a2a8e7335b9d8a96d4` as Actions run `35305188689`.
 - P1 first probe job `105475830280` failed before source compilation on removed Gradle 9 `archivesBaseName`; that blocker was fixed at HEAD `66b34d601fd3e7d303c798bc369243b63d781f01`.
-- P1 second probe run `35305340412`, job `105476272906`, also completed `failure`, but advanced past the archive-name blocker.
+- P1 second probe run `35305340412`, job `105476272906`, completed `failure`, but advanced past the archive-name blocker.
 - Direct second blocker: regular Architectury Loom `1.17.493` requires a populated `mappings` configuration (`Configuration 'mappings' has no dependencies`) after the 26.2 overlay intentionally removed Mojang mappings.
-- Exact upstream checkout, Java 25, Gradle 9.5.1, archive-name adaptation, and build-only overlay all succeeded before that failure.
+- The no-remap adaptation landed at HEAD `01f91ddda5578d680aba3f29827775b517203828` and triggered run `35305492616`.
+- Run `35305492616`, job `105476728867`, failed in the overlay application before Gradle configuration because the strict `remapJar` matcher omitted the upstream inline duplicates-strategy comment; this is an overlay-script matching defect, not a VS2/Loom runtime result.
+- Exact upstream checkout and Java 25 setup succeeded on that run.
 - No code from `apm23/VS2-Create_Interactive` has been imported.
 
 ## Official upstream baseline
@@ -55,8 +57,8 @@ No Create/SNR/Copycats integration is part of P0.
 ## Project state
 
 - project_state: `P1_BUILD_TOOLING_ADAPTATION_IN_PROGRESS`
-- active_blocker: `REGULAR_ARCHITECTURY_LOOM_REQUIRES_MAPPINGS_ON_26_2`
-- active_hypothesis: `Use Architectury Loom's documented 26.x no-remap plugin path, keep mappings absent, and remove only the obsolete remapJar task while leaving VS2 source/architecture untouched`
+- active_blocker: `P1_OVERLAY_REMAPJAR_MATCHER_DOES_NOT_MATCH_PINNED_UPSTREAM`
+- active_hypothesis: `Correct only the fail-closed matcher to the exact pinned upstream remapJar block, then re-run the already justified no-remap build adaptation`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 
@@ -70,7 +72,7 @@ First P1 probe (`35305188689`) established:
 - target metadata overlay for Minecraft `26.2`, Fabric Loader `0.19.3`, Fabric API `0.160.0+26.2`, Java 25 and Fabric-only platform is applied cleanly;
 - first failure is the removed Gradle 9 `archivesBaseName` convention, before VS2 Java/Kotlin compilation.
 
-Second P1 probe (`35305340412`) proved the Gradle-9 archive-name adaptation works and advanced configuration to Loom setup. It then failed because regular `dev.architectury.loom` requires a mappings dependency even though Minecraft 26.x is unobfuscated. Architectury's 26.1+ guidance uses `dev.architectury.loom-no-remap`, removes the mappings dependency, and removes `remapJar`. The smallest next adaptation is therefore build-only: switch the declared/applied Loom plugin to `dev.architectury.loom-no-remap` and remove only the Fabric `remapJar` block.
+Second P1 probe (`35305340412`) proved the Gradle-9 archive-name adaptation works and advanced configuration to Loom setup. It then failed because regular `dev.architectury.loom` requires a mappings dependency even though Minecraft 26.x is unobfuscated. Architectury's 26.1+ guidance uses `dev.architectury.loom-no-remap`, removes the mappings dependency, and removes `remapJar`. The first no-remap proof attempt (`35305492616`) did not test that hypothesis because the fail-closed overlay matcher did not exactly match the pinned upstream `remapJar` block's inline comment. The immediate safe action is to correct only that exact matcher and re-run the same proof.
 
 ## Mandatory architecture
 
@@ -175,7 +177,7 @@ This proves that floor-only automated green is insufficient. It does NOT authori
 ## next_safe_action
 
 1. Keep P0 and the exact upstream submodule pin frozen unchanged.
-2. Switch only the build overlay from regular Architectury Loom to `dev.architectury.loom-no-remap` and remove the obsolete Fabric `remapJar` block; keep mappings absent and make no gameplay/source architecture edits.
+2. Correct only the strict `remapJar` matcher in the existing build overlay to match the exact pinned upstream block including its inline comment; retain the already justified `dev.architectury.loom-no-remap` adaptation and no mappings.
 3. Run the same standalone common + Fabric compile proof.
 4. If the proof advances, classify the next direct blocker from the new log before changing anything else.
 5. Continue P1 only through evidence-backed Minecraft/Fabric/build/API port changes; do not add Create/SNR/Copycats.

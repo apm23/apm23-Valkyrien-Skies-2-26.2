@@ -67,7 +67,7 @@ replace_once(
 # upstream remapJar task, which is not part of the no-remap build model.
 replace_once(
     "fabric/build.gradle",
-    '''remapJar {\n    input.set shadowJar.archiveFile\n    dependsOn shadowJar\n    archiveClassifier.set null\n    duplicatesStrategy DuplicatesStrategy.EXCLUDE\n}\n\n''',
+    '''remapJar {\n    input.set shadowJar.archiveFile\n    dependsOn shadowJar\n    archiveClassifier.set null\n    duplicatesStrategy DuplicatesStrategy.EXCLUDE // Ignore duplicate valkyrienskies-common.accesswidener files\n}\n\n''',
     "",
 )
 
