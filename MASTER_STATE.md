@@ -22,23 +22,19 @@ GitHub code is the implementation source of truth. This file is the durable cont
 
 The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are applied by explicit fail-closed overlay scripts so every adaptation stays traceable to upstream VS2 source.
 
-## Current reconciliation — CompatUtil build-height proven; empty collision-context proof selected
+## Current reconciliation — CompatUtil explicit empty collision-context proven
 
-- Current proven implementation HEAD: `b544a504d4b9fe82b0bddfde113f6b386e295f71` (`P1: wire CompatUtil build-height proof`).
-- Exact-head P0 provenance run `35405820754`, job `105795255194`, completed `success` for `b544a504d4b9fe82b0bddfde113f6b386e295f71`.
-- Exact-head P1 standalone compile run `35405820745`, job `105795253518`, completed `failure` only because later independent Minecraft 26.2 source/API errors remain.
-- Every traceable overlay applied successfully, including `apply_p1_compatutil_center_26_2.py` and `apply_p1_compatutil_build_height_26_2.py`; explicit port-delta validation and Gradle runtime steps succeeded.
-- Exact build-height delta changes only three pinned CompatUtil expressions: `BlockPos(x, level.minBuildHeight, z)` -> `BlockPos(x, level.getMinY(), z)`; `worldHeight.y >= level.maxBuildHeight` -> `worldHeight.y >= level.getMinY() + level.getHeight()`; and ray-start Y `level.maxBuildHeight.toDouble()` -> `(level.getMinY() + level.getHeight()).toDouble()`. The old exclusive upper-bound semantics are preserved; current inclusive `getMaxY()` is intentionally not used.
-- The previous CompatUtil build-height diagnostics at lines 116, 123, and 127 are absent from run `35405820745`.
-- The two independent CompatUtil diagnostics remain exactly as expected: lines 143 and 159 pass `Entity?` where Minecraft 26.2 requires non-null `Entity`.
-- Therefore the isolated CompatUtil build-height migration is proven clean and frozen independently from nullable-Entity handling.
-- Diagnostic artifact: `p1-compile-log-b544a504d4b9fe82b0bddfde113f6b386e295f71`, artifact ID `10572194074`, size `7764` bytes, ZIP SHA-256 `ecbbfd86b28720dcd1b397ad57807eb3f3a6aec026b7099983be704b4db5d53b`.
+- Current proven implementation HEAD: `d2cd775048bb9620bde6b3f524451cea8bf1dab6` (`P1: wire CompatUtil empty collision-context proof`).
+- Exact-head P0 provenance run `35406397283`, job `105796934724`, completed `success` for `d2cd775048bb9620bde6b3f524451cea8bf1dab6`.
+- Exact-head P1 standalone compile run `35406397269`, job `105796934449`, completed `failure` only because later independent Minecraft 26.2 source/API errors remain.
+- Every traceable overlay applied successfully, including `apply_p1_compatutil_center_26_2.py`, `apply_p1_compatutil_buildheight_26_2.py`, and `apply_p1_compatutil_collision_context_26_2.py`; explicit port-delta validation and Gradle runtime steps succeeded.
+- Exact collision-context delta imports `net.minecraft.world.phys.shapes.CollisionContext` and replaces only the two pinned `null as net.minecraft.world.entity.Entity?` ClipContext arguments with `CollisionContext.empty()`. Start/end vectors, block/fluid modes, `skipWorld`, leaf-retry behavior, and surrounding VS2 ship raycast flow are unchanged.
+- Run `35406397269` contains no `CompatUtil.kt` diagnostics. The prior nullable-Entity diagnostics at lines 143 and 159 disappeared, and the previously proven center/build-height diagnostics remained absent.
+- Therefore the isolated CompatUtil explicit empty collision-context migration is proven clean and frozen independently from later compiler clusters.
+- Diagnostic artifact: `p1-compile-log-d2cd775048bb9620bde6b3f524451cea8bf1dab6`, artifact ID `10572521917`, size `7733` bytes, ZIP SHA-256 `6ec56046e2163a36044250441a823ac6d56fbbd7e6874279ca92a958d2a88238`.
 - Pinned upstream `CompatUtil.kt` blob remains `8404d99341cb8d015ede57b49079f2b371bd7aba`.
-- Minecraft 26.2 exposes a `ClipContext(..., CollisionContext)` constructor and `CollisionContext.empty()`. The pinned VS2 code intentionally supplies a null entity for these two ship-only raycasts, i.e. no entity-specific collision context. Selected next hypothesis therefore replaces only those two null-entity arguments with explicit `CollisionContext.empty()`, preserving the no-entity shape-context intent rather than inventing a dummy entity.
-- Selected next hypothesis: in `CompatUtil.kt` only, import `net.minecraft.world.phys.shapes.CollisionContext` and replace the two exact `null as net.minecraft.world.entity.Entity?` ClipContext arguments with `CollisionContext.empty()`. Do not touch ray geometry, block/fluid modes, `clipIncludeShips`, nullable ship/name messages, ShipSavedData persistence, VSGameUtils, physics, rendering, or unrelated files.
-- Expected proof: the two CompatUtil `Entity? -> Entity` diagnostics at lines 143 and 159 disappear while the already-proven center/build-height diagnostics stay absent. Overall compile may remain red.
 - `ShipSavedData.save` remains deferred: Minecraft 26.2 SavedData persistence is broader than a signature-only edit and must reconcile the current SavedDataType/codec/factory path.
-- `VSGameUtils.kt` Identifier migration is not selected yet because its resource-key path crosses `ResourceKeyAccessor` and `MixinLevel`; do not apply a partial one-file replacement.
+- `VSGameUtils.kt` Identifier migration remains deferred because its resource-key path crosses `ResourceKeyAccessor` and `MixinLevel`; do not apply a partial one-file replacement.
 - `VSKeyBindings.kt` remains deferred because Minecraft 26.2 `KeyMapping.Category` migration changes category translation-key handling; a compile-only type swap must not silently break `category.valkyrienskies.driving`.
 - Nullable ship slug/name command/item messages remain deferred; do not invent fallback strings merely to satisfy Kotlin vararg nullability.
 - No code from retired `apm23/VS2-Create_Interactive` has been imported or reused as implementation source.
@@ -58,9 +54,9 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
-- active_proof_head: `none; CompatUtil explicit empty collision-context proof selected but not yet patched/wired`
+- active_proof_head: `none; CompatUtil collision-context proof frozen green`
 - active_proof_run: `none`
-- active_hypothesis: `Minecraft 26.2 now enforces non-null Entity for the Entity ClipContext overload while also exposing the explicit CollisionContext overload and CollisionContext.empty(). The pinned VS2 call sites intentionally use null entity, so migrate only those two arguments to CollisionContext.empty(). Expected proof: the two CompatUtil Entity? diagnostics disappear while prior center/build-height proof remains clean.`
+- active_hypothesis: `none; select the next smallest independent Minecraft 26.2 source/API cluster only from exact run 35406397269 after the post-ledger P0 provenance run settles`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 
@@ -93,9 +89,10 @@ Source/API clusters proven clean in exact-head runs:
 - `TestHingeBlock.kt` removal hook migrated to `affectNeighborsAfterRemoval` while preserving joint-removal behavior and superclass delegation;
 - `ShipSavedData.kt` three load-time `CompoundTag.getByteArray` Optional unwraps preserving legacy empty-byte-array behavior;
 - `CompatUtil.kt` three removed `BlockPos.center` accesses migrated to `Vec3.atCenterOf(...)` with position semantics preserved;
-- `CompatUtil.kt` old `minBuildHeight/maxBuildHeight` accesses migrated to `getMinY()` and the semantic-equivalent exclusive maximum `getMinY()+getHeight()`.
+- `CompatUtil.kt` old `minBuildHeight/maxBuildHeight` accesses migrated to `getMinY()` and the semantic-equivalent exclusive maximum `getMinY()+getHeight()`;
+- `CompatUtil.kt` two legacy null-entity ClipContext arguments migrated to explicit `CollisionContext.empty()` while preserving no-entity collision-context semantics and raycast flow.
 
-Representative remaining compiler areas from exact run `35405820745`: Create compat classpath/API drift; `EmptyRenderer` render-state/type-argument migration; `CompatUtil` nullable-Entity drift; separate `ShipSavedData` SavedData persistence migration; `VSGameUtils` resource-key/Identifier plus build-height/chunk-position APIs; `ValkyrienSkiesMod` creative-tab output API; assembly/tick/ValueInput-ValueOutput/structure processor migrations; TestChair entity-create/`moveTo`; TestHingeBlockEntity persistence; deferred nullable command/item messages; reload-listener/Identifier generics; keybinding category; ShipMountingEntity persistence/hurt; entity-handler rendering; networking/local-control/lerp; `EntityDragger` local-control; chunk tickets; Sable; relocation.
+Representative remaining compiler areas from exact run `35406397269`: Create compat classpath/API drift; `EmptyRenderer` render-state/type-argument migration; separate `ShipSavedData` SavedData persistence migration; `VSGameUtils` resource-key/Identifier plus build-height/chunk-position APIs; `ValkyrienSkiesMod` creative-tab output API; assembly/tick/ValueInput-ValueOutput/structure processor migrations; TestChair entity-create/`moveTo`; TestHingeBlockEntity persistence; deferred nullable command/item messages; reload-listener/Identifier generics; keybinding category; ShipMountingEntity persistence/hurt; entity-handler rendering; networking/local-control/lerp; `EntityDragger` local-control; chunk tickets; Sable; relocation.
 
 ## Proof chain retained
 
@@ -124,6 +121,7 @@ Representative remaining compiler areas from exact run `35405820745`: Create com
 - `262f6140ea3f94239d47541d46c694b8b076444e`: ShipSavedData byte-array Optional; P0 `35400474206`; job `105778970673`; P1 `35400474672`; job `105778971617`; artifact `10571260073`; SHA-256 `9c118a71c2a9c207110fd7e6fe85bef7f11f56ee12aa1d5fac72e6d38f9e404d`.
 - `108dd78c09e76a147020c637b80ba915d7716935`: CompatUtil BlockPos center; P0 `35402468337`; job `105785129691`; P1 `35402468328`; job `105785129719`; artifact `10571277244`; SHA-256 `2bf8a56926f2363d766119988c6eec2f8c03743806b03e77efb769fa1daa32a9`.
 - `b544a504d4b9fe82b0bddfde113f6b386e295f71`: CompatUtil build-height semantics; P0 `35405820754`; job `105795255194`; P1 `35405820745`; job `105795253518`; artifact `10572194074`; SHA-256 `ecbbfd86b28720dcd1b397ad57807eb3f3a6aec026b7099983be704b4db5d53b`.
+- `d2cd775048bb9620bde6b3f524451cea8bf1dab6`: CompatUtil explicit empty collision-context; P0 `35406397283`; job `105796934724`; P1 `35406397269`; job `105796934449`; artifact `10572521917`; SHA-256 `6ec56046e2163a36044250441a823ac6d56fbbd7e6874279ca92a958d2a88238`.
 
 ## Sable contract
 
@@ -140,7 +138,7 @@ Forbidden final substitutes: custom VS2-style reference frames, synthetic carry 
 ## Milestones
 
 ### P0 — Upstream import + provenance
-Frozen green. Exact upstream identity/pin/license/provenance is established and repeatedly re-confirmed. Latest proven implementation HEAD `b544a504d4b9fe82b0bddfde113f6b386e295f71` has exact-head P0 run `35405820754` success.
+Frozen green. Exact upstream identity/pin/license/provenance is established and repeatedly re-confirmed. Latest proven implementation HEAD `d2cd775048bb9620bde6b3f524451cea8bf1dab6` has exact-head P0 run `35406397283` success.
 
 ### P1 — Standalone VS2 26.2 compile/boot
 Port actual VS2 until common/Fabric compile, standalone client/server boot, and core/native initialization are proven without Create/SNR/Copycats hiding failures.
@@ -181,12 +179,12 @@ Do not reintroduce without new direct evidence:
 
 ## next_safe_action
 
-1. Preserve exact CompatUtil build-height proof HEAD `b544a504d4b9fe82b0bddfde113f6b386e295f71`, P0 `35405820754` / job `105795255194`, P1 `35405820745` / job `105795253518`, artifact `10572194074`, ZIP SHA-256 `ecbbfd86b28720dcd1b397ad57807eb3f3a6aec026b7099983be704b4db5d53b`.
-2. Reconcile actual HEAD after this ledger update and allow its automatically triggered P0 provenance workflow to settle before proof setup.
-3. Add one fail-closed overlay for pinned `CompatUtil.kt` that imports `net.minecraft.world.phys.shapes.CollisionContext` and changes exactly the two `null as net.minecraft.world.entity.Entity?` ClipContext arguments to `CollisionContext.empty()`. Preserve start/end vectors, block/fluid modes, skipWorld behavior, leaf retry behavior, and all surrounding VS2 raycast flow.
-4. Wire only that overlay into P1. `CompatUtil.kt` is already included in the explicit port-delta display. Do not change ShipSavedData persistence, VSGameUtils resource-key accessors, nullable command/item messages, physics, rendering, or unrelated clusters.
-5. Proof target: the two CompatUtil nullable-Entity diagnostics disappear while prior center/build-height diagnostics remain absent. Overall compile may remain red on unrelated clusters.
-6. After proof completes, record exact HEAD, P0/P1 runs, job/artifact/hash and targeted diagnostic result before selecting another cluster.
+1. Preserve exact CompatUtil collision-context proof HEAD `d2cd775048bb9620bde6b3f524451cea8bf1dab6`, P0 `35406397283` / job `105796934724`, P1 `35406397269` / job `105796934449`, artifact `10572521917`, ZIP SHA-256 `6ec56046e2163a36044250441a823ac6d56fbbd7e6874279ca92a958d2a88238`.
+2. Reconcile actual HEAD after this ledger update and allow its automatically triggered P0 provenance workflow to settle before another proof setup.
+3. Re-read the exact P1 diagnostic artifact from run `35406397269` and select one smallest independent Minecraft 26.2 source/API cluster. Respect all deferred/failed-hypothesis locks: do not partially patch `VSGameUtils` ResourceLocation/ResourceKey accessors, do not signature-only patch `ShipSavedData.save`, do not invent nullable ship/name fallbacks, and do not touch physics/rendering/gameplay ownership without direct evidence.
+4. Add only one fail-closed overlay for the selected cluster, wire only that overlay into P1, and keep the explicit port-delta display traceable to the exact upstream file.
+5. Proof only the selected diagnostic cluster; overall compile may remain red on unrelated clusters.
+6. After proof completes, record exact HEAD, P0/P1 run/job/artifact/hash and targeted diagnostic result before selecting another cluster.
 7. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet. No video is authorized during compile/API-port work.
 
 ## Video validation
