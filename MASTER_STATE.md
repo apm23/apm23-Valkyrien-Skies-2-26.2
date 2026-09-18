@@ -24,13 +24,12 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 
 ## Current reconciliation — 2026-09-18
 
-- Actual implementation/source-port HEAD before this ledger-only update: `d761c5039176213c4a57530866463ad09368fbb3` (`P1: port Direction unit vector accessor`).
-- Parent ledger-only commit: `ef5fe45621685ef9cff399da4f6fc451dcb1cc9f` (`watchdog: record NbtUtil proof result`).
-- Prior implementation HEAD `07fa32bc16f00c8a474c087e6d6f6e8908323876` remains proven clean for its targeted `NbtUtil.kt` cluster by P1 run `35327644535`, job `105544358050`.
-- Diagnostic artifact for run `35327644535`: `p1-compile-log-07fa32bc16f00c8a474c087e6d6f6e8908323876`, artifact ID `10540162137`, ZIP SHA-256 `f09ce2237094c5502b6080cf3a585bb7ee95a7b2d2885494a88063bf83671cd9`.
-- HEAD `d761c5039176213c4a57530866463ad09368fbb3` adds only one fail-closed source adaptation in `VectorConversionsMC.kt`: `transformDirection(dir.normal, dest)` -> `transformDirection(dir.getUnitVec3i(), dest)`, plus the P1 workflow diff-display path. Upstream transform overload structure and JOML math are unchanged.
-- Active P1 proof at exact implementation HEAD `d761c5039176213c4a57530866463ad09368fbb3`: run `35329592695`, currently `in_progress` when this ledger entry was written.
-- P0 at the same implementation HEAD: run `35329592607`, currently `in_progress` when this ledger entry was written.
+- Actual repository HEAD before this ledger-only update: `2a44b5c4fe59177e1c020a35edabfaa75cc570b3` (`watchdog: sync Direction accessor active proof state`). This is ledger-only; latest implementation/source-port HEAD remains `d761c5039176213c4a57530866463ad09368fbb3` (`P1: port Direction unit vector accessor`).
+- P0 at exact implementation HEAD `d761c5039176213c4a57530866463ad09368fbb3`: run `35329592607` completed `success`.
+- P1 at exact implementation HEAD `d761c5039176213c4a57530866463ad09368fbb3`: run `35329592695`, job `105550595539`, completed `failure` at `:common:compileKotlin` after checkout, Java 25, both overlays, delta validation, and Gradle startup succeeded.
+- Run `35329592695` proves the `VectorConversionsMC.kt` single `Direction.normal -> Direction.getUnitVec3i()` adaptation worked: `VectorConversionsMC.kt` no longer appears anywhere in compiler errors.
+- Diagnostic artifact: `p1-compile-log-d761c5039176213c4a57530866463ad09368fbb3`, artifact ID `10541060747`, ZIP SHA-256 `6e24f6f59f05a955fc0173dfb8918f6f2f42b2732f3ade89deb8cd27f09df115`.
+- The next smallest direct compiler-proven standalone cluster is `common/src/main/kotlin/org/valkyrienskies/mod/api/ValkyrienSkies.kt`: exactly one error at the same `Direction.normal` accessor pattern in the existing `Matrix4dc.transformDirection(Direction, ...)` overload. Pinned upstream and current `1.21.1/main` are identical at this callsite. The minimal adaptation is one exact replacement `transformDirection(dir.normal, dest) -> transformDirection(dir.getUnitVec3i(), dest)` with transform/JOML semantics unchanged.
 - No code from `apm23/VS2-Create_Interactive` has been imported. The retired workaround project remains forbidden as implementation source.
 
 ## Target runtime baseline
@@ -49,8 +48,8 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
 - active_proof_head: `d761c5039176213c4a57530866463ad09368fbb3`
-- active_proof_run: `35329592695` (`in_progress` when ledger was written)
-- active_hypothesis: `The single public Direction.getUnitVec3i() accessor adaptation is sufficient to clear VectorConversionsMC.kt while preserving exact unit-vector transform semantics.`
+- active_proof_run: `35329592695` (`completed/failure`; VectorConversionsMC cluster proven clean)
+- active_hypothesis: `Apply the same single public Direction.getUnitVec3i() accessor adaptation to ValkyrienSkies.kt's matching transformDirection overload; preserve exact unit-vector transform semantics.`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 
@@ -70,12 +69,13 @@ Source API clusters proven clean in successive runs:
 - `SimpleSoundInstanceOnShip.kt` Identifier cluster;
 - `VSEntityManager.kt` Identifier cluster;
 - `EntityData.kt` non-null generic bounds;
-- `NbtUtil.kt` guarded `Optional<Double>` reads.
+- `NbtUtil.kt` guarded `Optional<Double>` reads;
+- `VectorConversionsMC.kt` public Direction unit-vector accessor.
 
-Current candidate under proof:
-- `VectorConversionsMC.kt` single `Direction.normal -> Direction.getUnitVec3i()` public-accessor adaptation.
+Next candidate:
+- `ValkyrienSkies.kt` single matching `Direction.normal -> Direction.getUnitVec3i()` accessor adaptation.
 
-Representative remaining compiler areas include renderer/render-state APIs, other Direction/position/build-height changes, SavedData/NBT `ValueInput`/`ValueOutput`, command permissions, resource reload listener generics, entity save/hurt/network APIs, tickets/ticks/structure processors, Create-compat classpath/API drift, and Sable compatibility.
+Representative remaining compiler areas include Create compat classpath/API drift, other Direction/position/build-height changes, renderer/render-state APIs, SavedData/NBT `ValueInput`/`ValueOutput`, command permissions, resource reload listener generics, entity save/hurt/network APIs, tickets/ticks/structure processors, and Sable compatibility.
 
 ## Sable contract
 
@@ -100,7 +100,7 @@ Forbidden final substitutes include custom VS2-style reference frames, synthetic
 ## Milestones
 
 ### P0 — Upstream import + provenance
-Frozen green. Original proof run `35304871880`; later confirmations include `35324164899`, `35324792335`, `35325575601`, `35327172660`, `35327644515`, and ledger confirmation `35327819629`. Current implementation HEAD `d761c5039176213c4a57530866463ad09368fbb3` has P0 run `35329592607` active at ledger-write time.
+Frozen green. Original proof run `35304871880`; later confirmations include `35324164899`, `35324792335`, `35325575601`, `35327172660`, `35327644515`, `35327819629`, and exact implementation confirmation `35329592607`.
 
 ### P1 — Standalone VS2 26.2 compile/boot
 Port actual VS2 until common/Fabric compile, standalone client/server boot, and core/native initialization are proven without Create/SNR/Copycats hiding failures.
@@ -136,13 +136,13 @@ Do not reintroduce without new direct evidence:
 
 ## next_safe_action
 
-1. Treat implementation HEAD `d761c5039176213c4a57530866463ad09368fbb3` and P1 run `35329592695` as the active proof pair.
-2. **Do not patch while run `35329592695` is active.**
-3. When it completes, inspect the exact compile log. If `VectorConversionsMC.kt` is absent from compiler errors, preserve the patch and select only the next smallest direct compiler-proven API cluster. If it regressed, repair only that regression.
-4. Confirm P0 run `35329592607` remains green; do not disturb frozen provenance.
-5. Do not alter renderer, Sable/entity-dragging, physics, collision, networking, player/camera, or Create semantics merely to remove unrelated compiler errors; each needs its own evidence-backed adaptation.
+1. Preserve implementation HEAD `d761c5039176213c4a57530866463ad09368fbb3`; P1 run `35329592695` proves its `VectorConversionsMC.kt` cluster clean and P0 run `35329592607` is green.
+2. Apply only the single compiler-proven `ValkyrienSkies.kt` adaptation: `transformDirection(dir.normal, dest) -> transformDirection(dir.getUnitVec3i(), dest)` in the existing fail-closed 26.2 source overlay.
+3. Include `ValkyrienSkies.kt` in the P1 workflow delta display, commit the overlay/workflow change atomically, and let the resulting exact-head P1 run prove whether that file disappears from compiler errors.
+4. Do not stack another source patch while that new P1 workflow is active.
+5. Do not alter Create compat, renderer, Sable/entity-dragging, physics, collision, networking, player/camera, or other semantics merely to remove unrelated compiler errors; each needs its own evidence-backed adaptation.
 6. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet.
-7. Update this ledger after the active run lands before any subsequent source patch.
+7. Update this ledger with the new implementation HEAD/run after the patch lands.
 
 ## Video validation
 
