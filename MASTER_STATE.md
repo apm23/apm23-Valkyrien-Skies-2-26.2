@@ -24,17 +24,14 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 
 ## Current reconciliation — 2026-09-18
 
-- Actual repository HEAD before this ledger-only update: `da2f371116da12838a8bb8f55e120b54a47da386` (`watchdog: record TestWingBlock active proof state`).
-- Current implementation/source-port HEAD remains `555cc6ddc575061a5e5b9d1f771b9d77d0039324` (`P1: port TestWingBlock Direction accessor`).
-- Prior implementation HEAD `c8128c30bb29d9c454bf0045b873dea3bc76a17c` is proven clean for its targeted `TestFlapBlock.kt` accessor by P1 run `35333733932`, job `105563689862`.
-- Diagnostic artifact for run `35333733932`: `p1-compile-log-c8128c30bb29d9c454bf0045b873dea3bc76a17c`, artifact ID `10542133841`, ZIP SHA-256 `053cc414fab9522a53e0ba055a604d432359b06ade6e3c86fdd3cdd7286ade7b`.
-- HEAD `555cc6ddc575061a5e5b9d1f771b9d77d0039324` adds exactly one fail-closed source adaptation in `common/src/main/kotlin/org/valkyrienskies/mod/common/block/TestWingBlock.kt`: `blockState.getValue(FACING).normal.toJOMLD()` -> `blockState.getValue(FACING).getUnitVec3i().toJOMLD()`, plus that file's P1 workflow diff-display path.
-- Pinned upstream `f39132148e717d325933b4ce6e9e9fb13d929390` and current upstream `1.21.1/main` are byte-identical for `TestWingBlock.kt` at blob `0728a94852bd0adbe5fe9d3bcbd7ee719d54bb6b`; Wing construction, coefficients, camber attack-angle bias, and `toJOMLD()` conversion are otherwise unchanged.
-- Exact-head P0 run `35334205890`, job `105565186997`, completed `success` for `555cc6ddc575061a5e5b9d1f771b9d77d0039324`.
-- Exact-head P1 run `35334206051`, job `105565187606`, completed `failure` only because later independent Minecraft 26.2 API errors remain. The targeted `TestWingBlock.kt` error is absent from the final compiler error set, so this accessor adaptation is proven clean.
+- Actual implementation/source-port HEAD before this ledger-only update: `7485e9503a53b4fd086cbd29087aedbb2dfc5056` (`P1: port TestThrusterBlockEntity Direction accessor`).
+- Parent ledger-only commit before that implementation change: `5007b9645a5077150c7a2630f4c1c948e9a116f1` (`watchdog: record TestWingBlock proof result`).
+- Prior implementation HEAD `555cc6ddc575061a5e5b9d1f771b9d77d0039324` is proven clean for its targeted `TestWingBlock.kt` accessor by P1 run `35334206051`, job `105565187606`.
 - Diagnostic artifact for run `35334206051`: `p1-compile-log-555cc6ddc575061a5e5b9d1f771b9d77d0039324`, artifact ID `10542480562`, ZIP SHA-256 `0bea91a95095500948ecad45d630b86a2e5fe1b875509cd869f76e2951c05fbc`.
-- The same final compile log reports one direct private `Direction.normal` error in standalone VS2 `common/src/main/kotlin/org/valkyrienskies/mod/common/blockentity/TestThrusterBlockEntity.kt:39`, while `TestChairBlock.kt` has multiple unrelated API changes and `EntityDragger.kt` is architecture-critical and intentionally not the next target.
-- Pinned upstream and current `1.21.1/main` are byte-identical for `TestThrusterBlockEntity.kt` at blob `e1491b05b5b8f91cb8a6ffd1de2fdd3df7554e53`; the relevant upstream force call is `physShip.applyModelForce(facing.normal.toJOMLD().mul(100000.0), pos.toJOMLD().add(0.5, 0.5, 0.5))`.
+- HEAD `7485e9503a53b4fd086cbd29087aedbb2dfc5056` adds exactly one fail-closed source adaptation in `common/src/main/kotlin/org/valkyrienskies/mod/common/blockentity/TestThrusterBlockEntity.kt`: `facing.normal.toJOMLD()` -> `facing.getUnitVec3i().toJOMLD()`, plus only that file's P1 workflow diff-display path.
+- Pinned upstream `f39132148e717d325933b4ce6e9e9fb13d929390` and current upstream `1.21.1/main` are byte-identical for `TestThrusterBlockEntity.kt` at blob `e1491b05b5b8f91cb8a6ffd1de2fdd3df7554e53`; `applyModelForce`, force magnitude `100000.0`, block-center force position, activity/null guards, and physics-listener semantics are otherwise unchanged.
+- Exact-head P0 run `35336506332`, job `105572463059`, completed `success` for implementation HEAD `7485e9503a53b4fd086cbd29087aedbb2dfc5056`.
+- Exact-head P1 run `35336506362`, job `105572463018`, is active. Overlay application, port-delta validation, and Gradle runtime completed successfully; step 8 `Compile standalone common + Fabric sources` is currently in progress.
 - No code from `apm23/VS2-Create_Interactive` has been imported. The retired workaround project remains forbidden as implementation source.
 
 ## Target runtime baseline
@@ -52,9 +49,9 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
-- active_proof_head: `none; previous proof 555cc6ddc575061a5e5b9d1f771b9d77d0039324 landed`
-- active_proof_run: `none; previous P1 run 35334206051 landed`
-- active_hypothesis: `The next smallest compiler-proven standalone VS2 adaptation is the single TestThrusterBlockEntity Direction.normal accessor migration, provided exact source identity and force semantics remain unchanged.`
+- active_proof_head: `7485e9503a53b4fd086cbd29087aedbb2dfc5056`
+- active_proof_run: `35336506362` (`in_progress`; job `105572463018` compiling standalone common + Fabric sources)
+- active_hypothesis: `The single TestThrusterBlockEntity Direction.getUnitVec3i() accessor adaptation is sufficient to clear that exact private Direction.normal compiler error while preserving upstream applyModelForce semantics.`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 
@@ -79,6 +76,9 @@ Source API clusters proven clean in successive runs:
 - `ValkyrienSkies.kt` public Direction unit-vector accessor;
 - `TestFlapBlock.kt` public Direction unit-vector accessor;
 - `TestWingBlock.kt` public Direction unit-vector accessor.
+
+Current candidate under proof:
+- `TestThrusterBlockEntity.kt` single `Direction.normal -> Direction.getUnitVec3i()` accessor adaptation, with all force semantics otherwise unchanged.
 
 Representative remaining compiler areas include Create compat classpath/API drift, other Direction/position/build-height changes, renderer/render-state APIs, SavedData/NBT `ValueInput`/`ValueOutput`, command permissions, resource reload listener generics, entity save/hurt/network APIs, tickets/ticks/structure processors, and Sable compatibility.
 
@@ -105,7 +105,7 @@ Forbidden final substitutes include custom VS2-style reference frames, synthetic
 ## Milestones
 
 ### P0 — Upstream import + provenance
-Frozen green. Original proof run `35304871880`; later confirmations include `35324164899`, `35324792335`, `35325575601`, `35327172660`, `35327644515`, `35327819629`, `35329592607`, `35331485247`, `35333733917`, and exact current implementation confirmation `35334205890`.
+Frozen green. Original proof run `35304871880`; later confirmations include `35324164899`, `35324792335`, `35325575601`, `35327172660`, `35327644515`, `35327819629`, `35329592607`, `35331485247`, `35333733917`, `35334205890`, and exact current implementation confirmation `35336506332`.
 
 ### P1 — Standalone VS2 26.2 compile/boot
 Port actual VS2 until common/Fabric compile, standalone client/server boot, and core/native initialization are proven without Create/SNR/Copycats hiding failures.
@@ -141,13 +141,13 @@ Do not reintroduce without new direct evidence:
 
 ## next_safe_action
 
-1. Preserve implementation HEAD `555cc6ddc575061a5e5b9d1f771b9d77d0039324` and P1 run `35334206051` as proven clean for `TestWingBlock.kt`.
-2. Use the already-confirmed byte-identical pinned/current `TestThrusterBlockEntity.kt` source at blob `e1491b05b5b8f91cb8a6ffd1de2fdd3df7554e53`.
-3. Add exactly one fail-closed adaptation in that file: `facing.normal.toJOMLD()` -> `facing.getUnitVec3i().toJOMLD()`. Preserve `applyModelForce`, the `100000.0` magnitude, the block-center force position, activity/null guards, and all physics listener semantics unchanged.
-4. Add only that file to the P1 workflow diff-display path and trigger the smallest exact-head P0/P1 proof. If the P1 run is active, do not stack another source patch.
+1. Treat implementation HEAD `7485e9503a53b4fd086cbd29087aedbb2dfc5056` and P1 run `35336506362` as the active proof pair.
+2. **Do not source-patch while run `35336506362` is active.**
+3. When it completes, inspect the exact compile log. If `TestThrusterBlockEntity.kt` is absent from compiler errors, preserve the patch, record the artifact/run proof, then select only the next smallest direct compiler-proven standalone VS2 API cluster. If it regressed, repair only that regression.
+4. Preserve P0 run `35336506332` as green provenance for the exact implementation HEAD.
 5. Do not alter Create compat, renderer, Sable/entity-dragging, physics architecture, collision, networking, player/camera, or unrelated semantics merely to remove compiler errors; each needs its own evidence-backed adaptation.
 6. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet.
-7. Update this ledger after the next proof lands before any subsequent source patch.
+7. Update this ledger after the active run lands before any subsequent source patch.
 
 ## Video validation
 
