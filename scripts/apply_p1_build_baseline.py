@@ -109,4 +109,24 @@ replace_once(
     "",
 )
 
+# CC:Tweaked 1.115.1 has no 26.2 common artifact at the upstream coordinate. The pinned
+# VS2 dependency is used only by the isolated optional cc_tweaked mixin package, not by
+# core ship-space/physics/player code. Disable only that optional common compatibility
+# surface for the standalone 26.2 port; keep the original source baseline untouched.
+replace_once(
+    "common/build.gradle",
+    '    compileOnly("cc.tweaked:cc-tweaked-${minecraft_version}-common:${cc_tweaked_version}")\n',
+    "",
+)
+replace_once(
+    "common/build.gradle",
+    '            exclude "org/valkyrienskies/mod/mixin/mod_compat/alex_caves/**"\n',
+    '            exclude "org/valkyrienskies/mod/mixin/mod_compat/alex_caves/**"\n            exclude "org/valkyrienskies/mod/mixin/mod_compat/cc_tweaked/**"\n',
+)
+replace_once(
+    "common/src/main/resources/valkyrienskies-common.mixins.json",
+    '''    "mod_compat.cc_tweaked.MixinCustomLecternRenderer",\n    "mod_compat.cc_tweaked.MixinSpeakerPosition",\n    "mod_compat.cc_tweaked.MixinSpeakerSound",\n    "mod_compat.cc_tweaked.MixinTurtleBrain",\n    "mod_compat.cc_tweaked.MixinTurtleMoveCommand",\n    "mod_compat.cc_tweaked.MixinWirelessNetwork",\n''',
+    "",
+)
+
 print("P1_BUILD_BASELINE_APPLIED")
