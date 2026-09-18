@@ -1,0 +1,47 @@
+name: P1 standalone compile
+
+on:
+  push:
+    paths:
+      - 'scripts/apply_p1_build_baseline.py'
+      - '.github/workflows/p1-compile.yml'
+      - 'upstream-vs2'
+      - 'BASELINE_LOCK.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  first-26-2-compile-signal:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact upstream baseline
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Apply traceable P1 build-only overlay
+        run: python3 scripts/apply_p1_build_baseline.py upstream-vs2
+
+      - name: Show and validate port delta
+        shell: bash
+        run: |
+          set -euo pipefail
+          git -C upstream-vs2 diff --check
+          git -C upstream-vs2 diff -- gradle.properties settings.gradle gradle/wrapper/gradle-wrapper.properties build.gradle fabric/build.gradle
+
+      - name: Show Gradle runtime
+        working-directory: upstream-vs2
+        run: ./gradlew --version
+
+      - name: Compile standalone common + Fabric sources
+        working-directory: upstream-vs2
+        run: ./gradlew :common:compileJava :common:compileKotlin :fabric:compileJava :fabric:compileKotlin --stacktrace --no-daemon
