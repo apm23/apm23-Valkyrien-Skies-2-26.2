@@ -22,22 +22,21 @@ GitHub code is the implementation source of truth. This file is the durable cont
 
 The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are applied by explicit fail-closed overlay scripts so every adaptation stays traceable to upstream VS2 source.
 
-## Current reconciliation — 2026-09-18
+## Current reconciliation — 2026-09-18 after watchdog restart
 
-- Actual implementation/source-port HEAD before this ledger-only update: `ad922ded33ff46a3028fca1217559a60be54fad6` (`P1: port MinecraftPlayer permission API`).
-- Parent ledger commit before that implementation change: `8411671604dd1a30be0a9f4d0c4bfb8e2eb641c8` (`watchdog: record RaycastUtils proof result`).
-- Prior implementation HEAD `8c21cb63a80678c92214c980ec40686853fe33d3` is proven clean for both targeted `RaycastUtils.kt` adaptations by P1 run `35338858979`, job `105579924065`.
-- Diagnostic artifact for run `35338858979`: `p1-compile-log-8c21cb63a80678c92214c980ec40686853fe33d3`, artifact ID `10544043269`, ZIP SHA-256 `37c742271c1e79c424a93fa326b39692bb7e109cceda885371b50a109123be8a`.
-- HEAD `ad922ded33ff46a3028fca1217559a60be54fad6` adds exactly one Minecraft 26.2 permission API import in `common/src/main/kotlin/org/valkyrienskies/mod/common/util/MinecraftPlayer.kt`, `net.minecraft.server.permissions.Permissions`, and replaces exactly both `player.hasPermissions(4)` callsites with `player.permissions().hasPermission(Permissions.COMMANDS_OWNER)`.
-- Minecraft 26.2 defines `Permissions.COMMANDS_OWNER` as `Permission.HasCommandLevel(PermissionLevel.OWNERS)`, and `PermissionLevel.OWNERS` has id `4`, so the old VS2 level-4 admin/config threshold is preserved.
-- Pinned upstream `f39132148e717d325933b4ce6e9e9fb13d929390` and current upstream `1.21.1/main` are byte-identical for `MinecraftPlayer.kt` at blob `c11d83b71dc7be4144fb9473ac76636f458898a5`.
-- Exact-head P0 run `35340545446` completed `success` for implementation HEAD `ad922ded33ff46a3028fca1217559a60be54fad6`.
-- Exact-head P1 run `35340545586`, job `105585206110`, completed `failure` only because later independent Minecraft 26.2 API errors remain. `MinecraftPlayer.kt` is absent from the final compiler error set, so both targeted permission predicates are proven clean.
+- Actual implementation/source-port HEAD: `6253d38ff84785921c95c175563a5b24800979ef` (`P1: port BackendCommand permission API`).
+- Parent ledger commit: `3f89bf7d0aed1c5c1a6eecae815b79e5df202d76` (`watchdog: record MinecraftPlayer permission proof`).
+- Prior implementation HEAD `ad922ded33ff46a3028fca1217559a60be54fad6` is proven clean for both targeted `MinecraftPlayer.kt` permission predicates by P1 run `35340545586`, job `105585206110`.
 - Diagnostic artifact for run `35340545586`: `p1-compile-log-ad922ded33ff46a3028fca1217559a60be54fad6`, artifact ID `10545291225`, ZIP SHA-256 `1d8ac9f62db58dcff1ffb10bdde0ebaeb3f496ef81121ba916db1b50545d2efd`.
-- The final compiler log still reports one direct command-permission API error in `common/src/main/kotlin/org/valkyrienskies/mod/common/command/commands/BackendCommand.kt`: removed `CommandSourceStack.hasPermission(Int)`.
-- `BackendCommand.kt` uses `VSGameConfig.SERVER.Commands.changeBackendCommandPerms`, whose source contract explicitly says the configured permission level must be `0 <= x <= 4` and defaults to `4`.
-- Minecraft 26.2 exposes the direct level-based permission equivalent through `Permission.HasCommandLevel(PermissionLevel.byId(level))` plus `CommandSourceStack.permissions().hasPermission(...)`; `PermissionLevel.byId` covers the same 0..4 command-level domain.
-- Pinned upstream and current `1.21.1/main` are byte-identical for `BackendCommand.kt` at blob `46778377f9235c4f3492ea3c7b1bb2ef4c4fb8cf`.
+- HEAD `6253d38ff84785921c95c175563a5b24800979ef` adds only Minecraft 26.2 `Permission` and `PermissionLevel` imports for `BackendCommand.kt`, and changes exactly the one dynamic command predicate from `CommandSourceStack.hasPermission(configuredLevel)` to `CommandSourceStack.permissions().hasPermission(Permission.HasCommandLevel(PermissionLevel.byId(configuredLevel)))`.
+- `VSGameConfig.SERVER.Commands.changeBackendCommandPerms` retains its explicit `0 <= x <= 4` contract and default `4`; Minecraft 26.2 `PermissionLevel.byId` covers the same command-level domain.
+- Pinned upstream `f39132148e717d325933b4ce6e9e9fb13d929390` and current upstream `1.21.1/main` are byte-identical for `BackendCommand.kt` at blob `46778377f9235c4f3492ea3c7b1bb2ef4c4fb8cf`.
+- Exact-head P0 run `35342296935` completed `success` for implementation HEAD `6253d38ff84785921c95c175563a5b24800979ef`.
+- Exact-head P1 run `35342297011`, job `105590748663`, completed `failure` only because later independent Minecraft 26.2 API errors remain. `BackendCommand.kt` is absent from the final compiler error set, so its targeted permission predicate is proven clean.
+- Diagnostic artifact for run `35342297011`: `p1-compile-log-6253d38ff84785921c95c175563a5b24800979ef`, artifact ID `10545204522`, ZIP SHA-256 `72de18f36f7538bf818ee59f090fea3d009e7c6f4265a9f7f5261517344b4c03`.
+- Final compiler output now exposes several later command-permission errors. The smallest isolated candidate selected for the next proof is `GetAirCommand.kt`, which reports exactly one removed `CommandSourceStack.hasPermission(Int)` call and no other compile error in that file.
+- `GetAirCommand.kt` uses `VSGameConfig.SERVER.Commands.getAirValuesPerms`; the upstream config contract explicitly says this value must be `0 <= x <= 4` and defaults to `0` for `/vs get-air` and `/vs get-gravity`.
+- Pinned upstream and current `1.21.1/main` are byte-identical for `GetAirCommand.kt` at blob `c7048590927798690821a4135745c7fd020c218a`.
 - `ShipAssemblerItem.kt` remains deferred: its compiler error is nullable `shipData.slug: String?` passed into non-null vararg `Any`, and inventing a fallback string would change user-visible behavior without evidence.
 - `VSKeyBindings.kt` remains deferred because Minecraft 26.2's `KeyMapping.Category` migration also changes category translation-key handling; a compile-only type replacement must not silently break `category.valkyrienskies.driving` translations.
 - No code from `apm23/VS2-Create_Interactive` has been imported. The retired workaround project remains forbidden as implementation source.
@@ -57,9 +56,9 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
-- active_proof_head: `none; previous proof ad922ded33ff46a3028fca1217559a60be54fad6 landed`
-- active_proof_run: `none; previous P1 run 35340545586 landed`
-- active_hypothesis: `The next smallest safe standalone adaptation is BackendCommand's single dynamic command-level predicate, preserving its configured 0..4 level through Minecraft 26.2 Permission.HasCommandLevel(PermissionLevel.byId(level)).`
+- active_proof_head: `none; previous proof 6253d38ff84785921c95c175563a5b24800979ef landed`
+- active_proof_run: `none; previous P1 run 35342297011 landed`
+- active_hypothesis: `The next smallest safe standalone adaptation is GetAirCommand's single dynamic command-level predicate, preserving configured level 0..4 through Minecraft 26.2 Permission.HasCommandLevel(PermissionLevel.byId(level)).`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 
@@ -87,9 +86,10 @@ Source API clusters proven clean in successive runs:
 - `TestThrusterBlockEntity.kt` public Direction unit-vector accessor, with upstream force semantics unchanged;
 - `TestThrusterBlock.kt` Minecraft 26.2 `neighborChanged` signature migration, with upstream redstone/thruster semantics unchanged;
 - `RaycastUtils.kt` floating-direction API plus Kotlin non-null expression of the existing paired entity/location invariant, with upstream world/ship raycast semantics unchanged;
-- `MinecraftPlayer.kt` old level-4 permission predicates to Minecraft 26.2 `Permissions.COMMANDS_OWNER`, preserving admin/config threshold and all player/reference-state semantics.
+- `MinecraftPlayer.kt` old level-4 permission predicates to Minecraft 26.2 `Permissions.COMMANDS_OWNER`, preserving admin/config threshold and all player/reference-state semantics;
+- `BackendCommand.kt` dynamic configured permission level migrated to `Permission.HasCommandLevel(PermissionLevel.byId(level))`, preserving its 0..4 config domain and all backend/lod behavior.
 
-Representative remaining compiler areas include Create compat classpath/API drift, position/build-height changes, renderer/render-state APIs, SavedData/NBT `ValueInput`/`ValueOutput`, command permissions, resource reload listener generics, entity save/hurt/network APIs, tickets/ticks/structure processors, keybinding category migration, and Sable compatibility.
+Representative remaining compiler areas include Create compat classpath/API drift, position/build-height changes, renderer/render-state APIs, SavedData/NBT `ValueInput`/`ValueOutput`, other command permissions, resource reload listener generics, entity save/hurt/network APIs, tickets/ticks/structure processors, keybinding category migration, and Sable compatibility.
 
 ## Sable contract
 
@@ -114,7 +114,7 @@ Forbidden final substitutes include custom VS2-style reference frames, synthetic
 ## Milestones
 
 ### P0 — Upstream import + provenance
-Frozen green. Original proof run `35304871880`; later confirmations include `35324164899`, `35324792335`, `35325575601`, `35327172660`, `35327644515`, `35327819629`, `35329592607`, `35331485247`, `35333733917`, `35334205890`, `35336506332`, `35337116561`, `35338858973`, and exact implementation confirmation `35340545446`.
+Frozen green. Original proof run `35304871880`; later confirmations include `35324164899`, `35324792335`, `35325575601`, `35327172660`, `35327644515`, `35327819629`, `35329592607`, `35331485247`, `35333733917`, `35334205890`, `35336506332`, `35337116561`, `35338858973`, `35340545446`, and exact implementation confirmation `35342296935`.
 
 ### P1 — Standalone VS2 26.2 compile/boot
 Port actual VS2 until common/Fabric compile, standalone client/server boot, and core/native initialization are proven without Create/SNR/Copycats hiding failures.
@@ -152,13 +152,13 @@ Do not reintroduce without new direct evidence:
 
 ## next_safe_action
 
-1. Preserve implementation HEAD `ad922ded33ff46a3028fca1217559a60be54fad6`, P0 run `35340545446`, and P1 run `35340545586` as proven clean for `MinecraftPlayer.kt`.
-2. Preserve diagnostic artifact `p1-compile-log-ad922ded33ff46a3028fca1217559a60be54fad6`, artifact ID `10545291225`, ZIP SHA-256 `1d8ac9f62db58dcff1ffb10bdde0ebaeb3f496ef81121ba916db1b50545d2efd`.
-3. Use the confirmed byte-identical pinned/current `BackendCommand.kt` source at blob `46778377f9235c4f3492ea3c7b1bb2ef4c4fb8cf`.
-4. Adapt exactly the one `BackendCommand` permission predicate from `CommandSourceStack.hasPermission(configuredLevel)` to `CommandSourceStack.permissions().hasPermission(Permission.HasCommandLevel(PermissionLevel.byId(configuredLevel)))`, adding only the two Minecraft 26.2 permission imports required for that expression.
-5. Preserve the configured `changeBackendCommandPerms` 0..4 contract and all backend/lod command execution, config mutation, messages, and physics backend selection unchanged.
-6. Add only `BackendCommand.kt` to the P1 workflow diff-display path and trigger the smallest exact-head P0/P1 proof. If its P1 run is active, do not stack another source patch.
-7. Do not batch the other command permission errors into this patch; each command may carry separate nullable-message or command behavior errors and needs its own evidence.
+1. Preserve implementation HEAD `6253d38ff84785921c95c175563a5b24800979ef`, P0 run `35342296935`, and P1 run `35342297011` as proven clean for `BackendCommand.kt`.
+2. Preserve diagnostic artifact `p1-compile-log-6253d38ff84785921c95c175563a5b24800979ef`, artifact ID `10545204522`, ZIP SHA-256 `72de18f36f7538bf818ee59f090fea3d009e7c6f4265a9f7f5261517344b4c03`.
+3. Use the confirmed byte-identical pinned/current `GetAirCommand.kt` source at blob `c7048590927798690821a4135745c7fd020c218a`.
+4. Adapt exactly the one `GetAirCommand` permission predicate from `CommandSourceStack.hasPermission(VSGameConfig.SERVER.Commands.getAirValuesPerms)` to `CommandSourceStack.permissions().hasPermission(Permission.HasCommandLevel(PermissionLevel.byId(VSGameConfig.SERVER.Commands.getAirValuesPerms)))`, adding only the two Minecraft 26.2 permission imports required for that expression.
+5. Preserve `getAirValuesPerms`'s explicit 0..4 config contract and all aerodynamic lookups, dimension handling, messages, return values, and command structure unchanged.
+6. Add only `GetAirCommand.kt` to the P1 workflow diff-display path and trigger the smallest exact-head P0/P1 proof. If its P1 run is active, do not stack another source patch.
+7. Do not batch `GetGravityCommand.kt` even though it shares the same config field; prove this file independently first.
 8. Do not alter Create compat, renderer, Sable/entity-dragging, physics architecture, collision, networking, player/camera, or unrelated semantics merely to remove compiler errors.
 9. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet.
 10. Update this ledger after the next proof lands before any subsequent source patch.
