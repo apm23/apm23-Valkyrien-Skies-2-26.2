@@ -23,6 +23,7 @@ on:
       - 'scripts/apply_p1_testhinge_getticker_bound_26_2.py'
       - 'scripts/apply_p1_testhinge_onpaste_getlong_26_2.py'
       - 'scripts/apply_p1_testhinge_blockentity_getlong_26_2.py'
+      - 'scripts/apply_p1_testhinge_removal_hook_26_2.py'
       - '.github/workflows/p1-compile.yml'
       - 'upstream-vs2'
       - 'BASELINE_LOCK.json'
@@ -106,6 +107,9 @@ jobs:
 
       - name: Apply traceable P1 TestHingeBlockEntity getLong overlay
         run: python3 scripts/apply_p1_testhinge_blockentity_getlong_26_2.py upstream-vs2
+
+      - name: Apply traceable P1 TestHinge removal hook overlay
+        run: python3 scripts/apply_p1_testhinge_removal_hook_26_2.py upstream-vs2
 
       - name: Show and validate port delta
         shell: bash
