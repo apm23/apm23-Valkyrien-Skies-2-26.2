@@ -267,4 +267,24 @@ replace_count(
     1,
 )
 
+# Run 35342297011 proved BackendCommand.kt clean and reports exactly one removed legacy
+# CommandSourceStack.hasPermission(Int) call in GetAirCommand.kt. Pinned baseline and current
+# 1.21.1/main are byte-identical at blob c7048590927798690821a4135745c7fd020c218a.
+# getAirValuesPerms is explicitly constrained to 0..4 and defaults to 0. Preserve that exact
+# command-level threshold with Minecraft 26.2's Permission.HasCommandLevel representation.
+# Adapt only the permission imports and predicate; aerodynamic lookups, dimension handling,
+# messages, return values, and command structure stay unchanged.
+replace_count(
+    "common/src/main/kotlin/org/valkyrienskies/mod/common/command/commands/GetAirCommand.kt",
+    "import net.minecraft.network.chat.Component.translatable\n",
+    "import net.minecraft.network.chat.Component.translatable\nimport net.minecraft.server.permissions.Permission\nimport net.minecraft.server.permissions.PermissionLevel\n",
+    1,
+)
+replace_count(
+    "common/src/main/kotlin/org/valkyrienskies/mod/common/command/commands/GetAirCommand.kt",
+    "literal(\"get-air\").requires { it.hasPermission(VSGameConfig.SERVER.Commands.getAirValuesPerms)}",
+    "literal(\"get-air\").requires { it.permissions().hasPermission(Permission.HasCommandLevel(PermissionLevel.byId(VSGameConfig.SERVER.Commands.getAirValuesPerms)))}",
+    1,
+)
+
 print("P1_SOURCE_API_26_2_OVERLAY_APPLIED")
