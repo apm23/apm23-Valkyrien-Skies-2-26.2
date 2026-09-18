@@ -187,4 +187,23 @@ replace_count(
     1,
 )
 
+# Run 35336506362 proved TestThrusterBlockEntity.kt clean and exposed one direct standalone
+# Minecraft 26.2 override drift in TestThrusterBlock#neighborChanged. Pinned baseline and
+# current 1.21.1/main are byte-identical at blob d8bd39c9d3c92de942968cfb95bd807f1cfd3f19.
+# Minecraft 26.2 replaces the old neighbor BlockPos parameter with nullable Orientation.
+# The old final BlockPos/Boolean parameters are unused by VS2 here, so change only the import
+# and override signature; redstone state transitions and block-entity activation remain unchanged.
+replace_count(
+    "common/src/main/kotlin/org/valkyrienskies/mod/common/block/TestThrusterBlock.kt",
+    "import net.minecraft.world.level.block.state.properties.BlockStateProperties\n",
+    "import net.minecraft.world.level.block.state.properties.BlockStateProperties\nimport net.minecraft.world.level.redstone.Orientation\n",
+    1,
+)
+replace_count(
+    "common/src/main/kotlin/org/valkyrienskies/mod/common/block/TestThrusterBlock.kt",
+    "blockState: BlockState, level: Level, blockPos: BlockPos, block: Block, blockPos2: BlockPos, bl: Boolean",
+    "blockState: BlockState, level: Level, blockPos: BlockPos, block: Block, orientation: Orientation?, movedByPiston: Boolean",
+    1,
+)
+
 print("P1_SOURCE_API_26_2_OVERLAY_APPLIED")
