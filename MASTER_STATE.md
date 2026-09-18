@@ -13,7 +13,7 @@ GitHub code is the implementation source of truth. This file is the durable cont
 
 ## Current reconciliation — 2026-09-18 watchdog continue
 
-- Actual repository HEAD at this watchdog start: `73eb0d2c7ed8cef881acd253aadb54eddfd89eb0`.
+- Actual repository HEAD at this watchdog start: `18c291bc4d38cfa0cc9c5d5b454900cf198f0742`.
 - P0 import/provenance remains frozen green from source HEAD `04b3228435ea14bc34de0646363a985cf6b2ba59`, Actions run `35304871880` success.
 - P1 first standalone compile probe ran against exact HEAD `6de134088ec6c0453d0572a2a8e7335b9d8a96d4` as Actions run `35305188689`.
 - P1 first probe job `105475830280` failed before source compilation on removed Gradle 9 `archivesBaseName`; that blocker was fixed at HEAD `66b34d601fd3e7d303c798bc369243b63d781f01`.
@@ -22,7 +22,9 @@ GitHub code is the implementation source of truth. This file is the durable cont
 - The no-remap adaptation landed at HEAD `01f91ddda5578d680aba3f29827775b517203828` and triggered run `35305492616`.
 - Run `35305492616`, job `105476728867`, failed in the overlay application before Gradle configuration because the strict `remapJar` matcher omitted the upstream inline duplicates-strategy comment; this was fixed at HEAD `73eb0d2c7ed8cef881acd253aadb54eddfd89eb0`.
 - P1 proof run `35305553848`, job `105476906233`, then applied the full no-remap overlay successfully, passed delta validation and Gradle startup, and failed during project evaluation at `common/build.gradle:7` because `loom-no-remap` does not create `modImplementation` (`Could not find method modImplementation()`).
-- This is a build dependency-configuration migration blocker; no VS2 Java/Kotlin source compilation has started yet.
+- The dependency-configuration migration landed at HEAD `18c291bc4d38cfa0cc9c5d5b454900cf198f0742` and run `35306643156`, job `105480089986`, advanced past all `mod*` configuration errors.
+- Direct next blocker from that run: dependency resolution fails on optional common-side `dev.ryanhcode.sable:sable-common-26.2:1.1.3`; the pinned upstream comment already identifies this Sable common coordinate as an older compat coordinate that does not resolve on newer lines, and no VS2 source imports `dev.ryanhcode.sable`.
+- No VS2 Java/Kotlin source compilation has started yet because dependency resolution stops first.
 - No code from `apm23/VS2-Create_Interactive` has been imported.
 
 ## Official upstream baseline
@@ -58,8 +60,8 @@ No Create/SNR/Copycats integration is part of P0.
 ## Project state
 
 - project_state: `P1_BUILD_TOOLING_ADAPTATION_IN_PROGRESS`
-- active_blocker: `LOOM_NO_REMAP_OMITS_MOD_DEPENDENCY_CONFIGURATIONS`
-- active_hypothesis: `Translate only active modImplementation/modApi/modCompileOnly dependency configuration names to implementation/api/compileOnly while preserving exact dependency coordinates and VS2 source`
+- active_blocker: `OPTIONAL_SABLE_COMMON_ARTIFACT_UNAVAILABLE_FOR_26_2`
+- active_hypothesis: `Omit only the unavailable optional common-side Sable compileOnly dependency documented by upstream as non-resolving; keep core VS2 source and all other dependencies unchanged`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 
@@ -73,7 +75,7 @@ First P1 probe (`35305188689`) established:
 - target metadata overlay for Minecraft `26.2`, Fabric Loader `0.19.3`, Fabric API `0.160.0+26.2`, Java 25 and Fabric-only platform is applied cleanly;
 - first failure is the removed Gradle 9 `archivesBaseName` convention, before VS2 Java/Kotlin compilation.
 
-Second P1 probe (`35305340412`) proved the Gradle-9 archive-name adaptation works and advanced configuration to Loom setup. It then failed because regular `dev.architectury.loom` requires a mappings dependency even though Minecraft 26.x is unobfuscated. Architectury's 26.1+ guidance uses `dev.architectury.loom-no-remap`, removes the mappings dependency, and removes `remapJar`. After correcting the fail-closed `remapJar` matcher, run `35305553848` proved the no-remap overlay itself applies and Gradle advances into common-project dependency evaluation. The next direct blocker is that no-remap omits Loom's `mod*` dependency configurations; 26.x builds use the plain Gradle equivalents because no remapping stage exists.
+Second P1 probe (`35305340412`) proved the Gradle-9 archive-name adaptation works and advanced configuration to Loom setup. It then failed because regular `dev.architectury.loom` requires a mappings dependency even though Minecraft 26.x is unobfuscated. Architectury's 26.1+ guidance uses `dev.architectury.loom-no-remap`, removes the mappings dependency, and removes `remapJar`. After correcting the fail-closed `remapJar` matcher, run `35305553848` proved the no-remap overlay itself applies and Gradle advances into common-project dependency evaluation. Run `35306643156` then proved the plain `implementation/api/compileOnly` migration is correct enough to advance dependency resolution; the first remaining resolver blocker is the optional Sable common artifact whose versioned 26.2 coordinate does not exist.
 
 ## Mandatory architecture
 
@@ -179,7 +181,7 @@ This proves that floor-only automated green is insufficient. It does NOT authori
 ## next_safe_action
 
 1. Keep P0 and the exact upstream submodule pin frozen unchanged.
-2. Translate only active no-remap-incompatible dependency configuration names in pinned upstream `common/build.gradle` and `fabric/build.gradle`: `modImplementation -> implementation`, `modApi -> api`, and `modCompileOnly -> compileOnly`; preserve dependency coordinates, scopes, include structure, and all VS2 source.
+2. Omit only the pinned upstream optional common-side Sable compile-only dependency `dev.ryanhcode.sable:sable-common-${minecraft_version}:${sable_version}`; upstream already documents that coordinate as non-resolving and no VS2 source imports it.
 3. Run the same standalone common + Fabric compile proof.
 4. If the proof advances, classify the next direct blocker from the new log before changing anything else.
 5. Continue P1 only through evidence-backed Minecraft/Fabric/build/API port changes; do not add Create/SNR/Copycats.

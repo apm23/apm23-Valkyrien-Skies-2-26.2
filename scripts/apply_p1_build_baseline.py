@@ -100,4 +100,13 @@ replace_active_dependency_config("common/build.gradle", "modCompileOnly", "compi
 replace_active_dependency_config("fabric/build.gradle", "modImplementation", "implementation", 6)
 replace_active_dependency_config("fabric/build.gradle", "modCompileOnly", "compileOnly", 11)
 
+# The pinned upstream itself documents this common-side Sable coordinate as an old
+# optional compatibility dependency that does not resolve on newer Minecraft lines.
+# It is not imported by VS2 source, so omit only this unavailable compile-only artifact.
+replace_once(
+    "common/build.gradle",
+    '    compileOnly("dev.ryanhcode.sable:sable-common-${minecraft_version}:${sable_version}")\\n',
+    "",
+)
+
 print("P1_BUILD_BASELINE_APPLIED")
