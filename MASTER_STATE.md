@@ -11,21 +11,17 @@ GitHub code is the implementation source of truth. This file is the durable cont
 - Exact dependency/environment lock: `BASELINE_LOCK.json`
 - Upstream provenance: `UPSTREAM_PROVENANCE.md`
 
-## Current reconciliation — 2026-09-18 watchdog continue
+## Current reconciliation — 2026-09-18 watchdog timeout recovery
 
-- Actual repository HEAD at this watchdog start: `18c291bc4d38cfa0cc9c5d5b454900cf198f0742`.
-- P0 import/provenance remains frozen green from source HEAD `04b3228435ea14bc34de0646363a985cf6b2ba59`, Actions run `35304871880` success.
-- P1 first standalone compile probe ran against exact HEAD `6de134088ec6c0453d0572a2a8e7335b9d8a96d4` as Actions run `35305188689`.
-- P1 first probe job `105475830280` failed before source compilation on removed Gradle 9 `archivesBaseName`; that blocker was fixed at HEAD `66b34d601fd3e7d303c798bc369243b63d781f01`.
-- P1 second probe run `35305340412`, job `105476272906`, completed `failure`, but advanced past the archive-name blocker.
-- Direct second blocker: regular Architectury Loom `1.17.493` requires a populated `mappings` configuration (`Configuration 'mappings' has no dependencies`) after the 26.2 overlay intentionally removed Mojang mappings.
-- The no-remap adaptation landed at HEAD `01f91ddda5578d680aba3f29827775b517203828` and triggered run `35305492616`.
-- Run `35305492616`, job `105476728867`, failed in the overlay application before Gradle configuration because the strict `remapJar` matcher omitted the upstream inline duplicates-strategy comment; this was fixed at HEAD `73eb0d2c7ed8cef881acd253aadb54eddfd89eb0`.
-- P1 proof run `35305553848`, job `105476906233`, then applied the full no-remap overlay successfully, passed delta validation and Gradle startup, and failed during project evaluation at `common/build.gradle:7` because `loom-no-remap` does not create `modImplementation` (`Could not find method modImplementation()`).
-- The dependency-configuration migration landed at HEAD `18c291bc4d38cfa0cc9c5d5b454900cf198f0742` and run `35306643156`, job `105480089986`, advanced past all `mod*` configuration errors.
-- Direct next blocker from that run: dependency resolution fails on optional common-side `dev.ryanhcode.sable:sable-common-26.2:1.1.3`; the pinned upstream comment already identifies this Sable common coordinate as an older compat coordinate that does not resolve on newer lines, and no VS2 source imports `dev.ryanhcode.sable`.
-- No VS2 Java/Kotlin source compilation has started yet because dependency resolution stops first.
-- No code from `apm23/VS2-Create_Interactive` has been imported.
+- Actual source-port HEAD reconciled at watchdog start: `b38ff3f36b3c5ad831cbfee6999423f0df08a038` (`P1: port first 26.2 Identifier API cluster`).
+- Previous P1 run `35322680307`, job `105528498940`, completed `failure` at that exact HEAD **after reaching real `:common:compileKotlin` source compilation**. Build/toolchain setup, Java 25, no-remap Loom setup, dependency resolution, and the first source overlay all completed before compiler errors.
+- The compiler proved the first source overlay worked and exposed a broad Minecraft-26.2 source-API migration surface. It also proved the old ledger statement that no VS2 source imports Sable was false: pinned upstream `common/src/main/kotlin/org/valkyrienskies/mod/compat/SableCompat.kt` imports and uses Sable companion APIs for real VS2 entity-dragging state.
+- Official upstream branch `1.21.1/main` still contains `SableCompat.kt` and still declares a Sable common dependency (with newer coordinates/API). Therefore Sable is a real upstream compatibility dependency/API gap, not dead code that may be discarded from final architecture.
+- The earlier build overlay currently omits the unavailable pinned Sable artifact only to let the standalone compile probe reach source compilation. That omission is **temporary compile-probe scaffolding**, not an accepted final removal of Sable/entity-dragging behavior.
+- Smallest compiler-proven next source adaptation landed at source-port HEAD `7043d6dc2916ce86268ad2501bfc6d24cf781daf`: the exact four `ResourceLocation` references in upstream `BlockStateInfoProvider.kt` are adapted to Minecraft 26.2 `Identifier`. No VS2 registry/block-state/physics semantics were changed.
+- P0 provenance at source-port HEAD `7043d6dc2916ce86268ad2501bfc6d24cf781daf`: run `35324164899` completed `success`.
+- P1 compile proof for source-port HEAD `7043d6dc2916ce86268ad2501bfc6d24cf781daf`: run `35324164902`, job `105533249735`, is in progress at the time of this ledger update. It has already passed checkout, Java 25 setup, build overlay, 26.2 source overlay, delta validation, and Gradle runtime; it is currently executing the standalone common + Fabric compile step.
+- No code from `apm23/VS2-Create_Interactive` has been imported. The retired workaround project remains forbidden as an implementation source.
 
 ## Official upstream baseline
 
@@ -42,9 +38,10 @@ The exact official source baseline is imported as the Git submodule/gitlink `ups
 
 This is intentional: the baseline remains byte-for-byte upstream source instead of being reconstructed through the connector. Minecraft 26.2 adaptations are explicit, reviewable port changes layered on that exact baseline. `.github/workflows/p0-provenance.yml` verifies the gitlink commit, checked-out submodule HEAD, root tree, upstream LICENSE blob, and clean checkout.
 
-P0 proof: run `35304871880`, conclusion `success`, source HEAD `04b3228435ea14bc34de0646363a985cf6b2ba59`.
+P0 original frozen proof: run `35304871880`, conclusion `success`, source HEAD `04b3228435ea14bc34de0646363a985cf6b2ba59`.
+Latest P0 confirmation for current source-port patch: run `35324164899`, conclusion `success`, source-port HEAD `7043d6dc2916ce86268ad2501bfc6d24cf781daf`.
 
-No Create/SNR/Copycats integration is part of P0.
+No Create/SNR/Copycats integration is part of P0/P1.
 
 ## Target runtime baseline
 
@@ -59,23 +56,47 @@ No Create/SNR/Copycats integration is part of P0.
 
 ## Project state
 
-- project_state: `P1_BUILD_TOOLING_ADAPTATION_IN_PROGRESS`
-- active_blocker: `OPTIONAL_SABLE_COMMON_ARTIFACT_UNAVAILABLE_FOR_26_2`
-- active_hypothesis: `Omit only the unavailable optional common-side Sable compileOnly dependency documented by upstream as non-resolving; keep core VS2 source and all other dependencies unchanged`
+- project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
+- active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
+- active_hypothesis: `Continue only compiler-proven, traceable Minecraft/Fabric 26.2 API adaptations in small clusters; preserve real upstream VS2 subsystem semantics. Resolve Sable with a traceable compatibility path rather than deleting VS2 entity-dragging behavior.`
+- active_proof_head: `7043d6dc2916ce86268ad2501bfc6d24cf781daf`
+- active_proof_run: `35324164902`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 
 ## P1 build-port evidence
 
-First P1 probe (`35305188689`) established:
-- exact upstream submodule pin checkout succeeds;
-- Java `25.0.4+1` setup succeeds;
-- Gradle `9.5.1` starts successfully;
-- Architect Plugin `3.5.170` and Architectury Loom `1.17.493` configure far enough to evaluate the root build;
-- target metadata overlay for Minecraft `26.2`, Fabric Loader `0.19.3`, Fabric API `0.160.0+26.2`, Java 25 and Fabric-only platform is applied cleanly;
-- first failure is the removed Gradle 9 `archivesBaseName` convention, before VS2 Java/Kotlin compilation.
+Early P1 probes established and preserved:
+- exact upstream submodule checkout succeeds;
+- Java 25 and Gradle 9.5.1 start correctly;
+- Gradle-9 `archivesBaseName` removal was adapted;
+- Minecraft 26.x uses `dev.architectury.loom-no-remap` with no mappings/remapJar path;
+- dependency configurations were migrated away from `modImplementation`/`modApi`/`modCompileOnly` under no-remap Loom;
+- common/Fabric dependency selection was adapted far enough to enter source compilation.
 
-Second P1 probe (`35305340412`) proved the Gradle-9 archive-name adaptation works and advanced configuration to Loom setup. It then failed because regular `dev.architectury.loom` requires a mappings dependency even though Minecraft 26.x is unobfuscated. Architectury's 26.1+ guidance uses `dev.architectury.loom-no-remap`, removes the mappings dependency, and removes `remapJar`. After correcting the fail-closed `remapJar` matcher, run `35305553848` proved the no-remap overlay itself applies and Gradle advances into common-project dependency evaluation. Run `35306643156` then proved the plain `implementation/api/compileOnly` migration is correct enough to advance dependency resolution; the first remaining resolver blocker is the optional Sable common artifact whose versioned 26.2 coordinate does not exist.
+Important run history:
+- `35305188689`: first P1 probe; stopped on removed Gradle 9 `archivesBaseName`.
+- `35305340412`: advanced to Loom mappings blocker.
+- `35305492616`: exposed strict overlay matcher issue.
+- `35305553848`: no-remap overlay applied; exposed missing `modImplementation` under no-remap Loom.
+- `35306643156`: advanced dependency resolution to Sable artifact issue.
+- Subsequent build-overlay work omitted the unavailable pinned Sable artifact for compile probing and advanced to actual source compilation.
+- `35322680307` at `b38ff3f36b3c5ad831cbfee6999423f0df08a038`: reached `:common:compileKotlin`, proving the first explicit 26.2 source overlay is active. Compiler errors now primarily reflect Minecraft/Fabric API drift rather than build-system setup.
+- `35324164902` at `7043d6dc2916ce86268ad2501bfc6d24cf781daf`: active proof after adding the compiler-proven `BlockStateInfoProvider.kt` `ResourceLocation -> Identifier` cluster; run still in progress when this ledger entry was written.
+
+Representative compiler-proven source migration areas from `35322680307` include:
+- additional `ResourceLocation -> Identifier` and related registry/key API renames;
+- block/direction/position/build-height API changes;
+- saved-data / NBT / `ValueInput` / `ValueOutput` changes;
+- command permission API changes;
+- resource reload listener generics;
+- renderer/render-state changes;
+- entity save/hurt/networking/data-tracker changes;
+- ticket/tick/processor API changes;
+- Create-compat source references that must remain isolated until standalone VS2 P1 is proven;
+- Sable API/dependency incompatibility in upstream `SableCompat.kt`.
+
+These compiler errors authorize only narrow, source-traceable port adaptations. They do not authorize replacing VS2 architecture.
 
 ## Mandatory architecture
 
@@ -96,7 +117,7 @@ The previous project's custom carry/reference-frame chains, floor fixes, camera 
 ## Milestones
 
 ### P0 — Upstream import + provenance
-Frozen green at source HEAD `04b3228435ea14bc34de0646363a985cf6b2ba59`, Actions run `35304871880` success. Exact upstream gitlink, tree and license identity proven.
+Frozen green at source HEAD `04b3228435ea14bc34de0646363a985cf6b2ba59`, Actions run `35304871880` success. Exact upstream commit/tree/license identity proven. Current source-port patch also reconfirmed by P0 run `35324164899` success.
 
 ### P1 — Standalone VS2 26.2 boot
 Port real VS2 to 26.2 until client/server boot and core/native initialization work without Create/SNR/Copycats hiding failures.
@@ -130,11 +151,12 @@ Full target stack, final exact JAR, final verification, then exact-JAR real-user
 
 ## Frozen green
 
-- `P0_UPSTREAM_IMPORT_PROVENANCE`: source HEAD `04b3228435ea14bc34de0646363a985cf6b2ba59`; run `35304871880`; exact upstream commit/tree/LICENSE identity verified.
+- `P0_UPSTREAM_IMPORT_PROVENANCE`: original frozen source HEAD `04b3228435ea14bc34de0646363a985cf6b2ba59`; run `35304871880`; exact upstream commit/tree/LICENSE identity verified.
+- Current P0 reconfirmation: source-port HEAD `7043d6dc2916ce86268ad2501bfc6d24cf781daf`; run `35324164899`; success.
 
 ## Unproven
 
-- 26.2 compile
+- 26.2 full compile
 - standalone client/server boot
 - VSCore/Krunch/native chain
 - ship lifecycle
@@ -145,6 +167,7 @@ Full target stack, final exact JAR, final verification, then exact-JAR real-user
 - collision
 - player/body/camera
 - entity dragging
+- Sable compatibility on 26.2
 - Create bridge
 - SNR
 - Copycats
@@ -153,6 +176,8 @@ Full target stack, final exact JAR, final verification, then exact-JAR real-user
 ## Failed hypotheses / forbidden reintroductions
 
 Do not reintroduce without new direct evidence:
+- **FALSE HYPOTHESIS RETIRED:** `no VS2 source imports Sable`. Compiler evidence and upstream source inspection prove `SableCompat.kt` imports/uses Sable for real entity-dragging state. Never use that false premise to delete the subsystem.
+- treating temporary omission of the unavailable pinned Sable artifact as final architecture; a traceable 26.2 Sable compatibility solution is still required before entity-dragging can be considered ported;
 - Gradle 9 with the removed legacy `archivesBaseName` convention property;
 - regular `dev.architectury.loom` on Minecraft 26.x with the mappings dependency removed;
 - `modImplementation`/`modApi`/`modCompileOnly` configurations under `dev.architectury.loom-no-remap`;
@@ -180,12 +205,17 @@ This proves that floor-only automated green is insufficient. It does NOT authori
 
 ## next_safe_action
 
-1. Keep P0 and the exact upstream submodule pin frozen unchanged.
-2. Omit only the pinned upstream optional common-side Sable compile-only dependency `dev.ryanhcode.sable:sable-common-${minecraft_version}:${sable_version}`; upstream already documents that coordinate as non-resolving and no VS2 source imports it.
-3. Run the same standalone common + Fabric compile proof.
-4. If the proof advances, classify the next direct blocker from the new log before changing anything else.
-5. Continue P1 only through evidence-backed Minecraft/Fabric/build/API port changes; do not add Create/SNR/Copycats.
-6. Update this ledger with exact resulting HEAD/run/blocker after the next proof-changing result.
+1. Treat source-port HEAD `7043d6dc2916ce86268ad2501bfc6d24cf781daf` and P1 run `35324164902` as the active proof pair; do not patch again while that workflow is still active.
+2. When run `35324164902` completes, inspect its exact compile log and classify the next direct compiler blocker/cluster.
+3. If the `BlockStateInfoProvider.kt` Identifier cluster is gone, preserve it and choose only the smallest next compiler-proven API adaptation. If it regressed, repair only that direct regression.
+4. Do not alter Sable/entity-dragging semantics merely to make compilation green. Resolve Sable as a separate traceable compatibility gap based on upstream architecture/API evidence.
+5. Continue P1 standalone only. Do not add Create/SNR/Copycats until real standalone VS2 26.2 boot/core initialization is proven.
+6. Update this ledger with the exact run conclusion, next blocker, resulting HEAD, and next safe action after the proof result lands.
+
+## Video validation state
+
+- No video is authorized or needed during compile/API-port debugging.
+- Video is closure-only after a user-visible runtime blocker is already closure-ready from data/runtime proof.
 
 ## Final gate
 
