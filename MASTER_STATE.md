@@ -24,13 +24,13 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 
 ## Current reconciliation — 2026-09-18
 
-- Actual implementation HEAD before this ledger-only update: `a2951cab7d0a5b32756b45dc361a040d7212cdea` (`P1: port entity manager Identifier API cluster`).
+- Actual repository HEAD before this ledger-only update: `8d0315beb32e7830d03cf16149a0afa950046fa9` (`watchdog: sync active P1 proof state`). This is ledger-only; the latest implementation/source-port HEAD remains `a2951cab7d0a5b32756b45dc361a040d7212cdea` (`P1: port entity manager Identifier API cluster`).
 - Parent source patch: `2ddb21a410c91ca257db3c73b444f651326b1493` (`P1: port ship sound Identifier API cluster`).
-- P0 at `2ddb21a410c91ca257db3c73b444f651326b1493`: run `35324792335` completed `success`.
-- P1 at `2ddb21a410c91ca257db3c73b444f651326b1493`: run `35324792402`, job `105535234468`, completed `failure` at `:common:compileKotlin` after checkout, Java 25, build overlay, source overlay, diff validation, and Gradle startup all succeeded.
-- Run `35324792402` proves the prior `SimpleSoundInstanceOnShip.kt` `ResourceLocation -> Identifier` adaptation worked: that file no longer appears in compile errors.
-- The next smallest compiler-proven cluster was `VSEntityManager.kt`: seven `ResourceLocation` occurrences caused direct missing-type errors plus generic/overload inference cascades. HEAD `a2951cab7d0a5b32756b45dc361a040d7212cdea` adapts exactly those seven occurrences to `Identifier`; handler selection, Create compat routing, caches, networking calls, and entity/reference-frame semantics are unchanged.
-- Active P1 proof for `a2951cab7d0a5b32756b45dc361a040d7212cdea`: run `35325476529`, currently `in_progress` when this ledger entry was written.
+- P0 at ledger HEAD `8d0315beb32e7830d03cf16149a0afa950046fa9`: run `35325575601` completed `success`.
+- P1 at `a2951cab7d0a5b32756b45dc361a040d7212cdea`: run `35325476529`, job `105537397785`, completed `failure` at `:common:compileKotlin` after checkout, Java 25, build overlay, source overlay, diff validation, and Gradle startup all succeeded.
+- Run `35325476529` proves the `VSEntityManager.kt` seven-occurrence `ResourceLocation -> Identifier` adaptation worked: `VSEntityManager.kt` no longer appears anywhere in compile errors, including the previous missing-type, generic-inference, and overload-ambiguity cascades.
+- Diagnostic artifact for run `35325476529`: `p1-compile-log-a2951cab7d0a5b32756b45dc361a040d7212cdea`, artifact ID `10539163151`, uploaded ZIP SHA-256 `9b8e64739baa4cad226269b543cb2573a3e9d4cc2d0b484febb990bd9571d2ff`.
+- The next smallest direct compiler-proven standalone cluster is `common/src/main/kotlin/org/valkyrienskies/mod/util/EntityData.kt`. Every reported error in that file comes from Minecraft 26.2's `EntityDataSerializer<T : Any>` / `EntityDataAccessor<T : Any>` non-null generic bounds. Pinned upstream and current `1.21.1/main` are identical, so the proposed adaptation is limited to adding `R : Any` to `defineSynced` and `T : Any` to `EntityDataDelegate`, preserving all data delegate get/set semantics.
 - No code from `apm23/VS2-Create_Interactive` has been imported. The retired workaround project remains forbidden as implementation source.
 
 ## Target runtime baseline
@@ -49,8 +49,8 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
 - active_proof_head: `a2951cab7d0a5b32756b45dc361a040d7212cdea`
-- active_proof_run: `35325476529`
-- active_hypothesis: `Continue only compiler-proven, traceable 26.2 API adaptations in small clusters while preserving actual upstream VS2 subsystem semantics.`
+- active_proof_run: `35325476529` (`completed/failure`; VSEntityManager cluster proven clean)
+- active_hypothesis: `Add only the compiler-required non-null generic bounds in EntityData.kt, with no behavior or VS2 architecture rewrite.`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 
@@ -67,10 +67,11 @@ Build/toolchain work already established:
 Source API clusters proven clean in successive runs:
 - data-provider `ResourceLocation -> Identifier` plus registry-holder `location() -> identifier()`;
 - `BlockStateInfoProvider.kt` Identifier cluster;
-- `SimpleSoundInstanceOnShip.kt` Identifier cluster.
+- `SimpleSoundInstanceOnShip.kt` Identifier cluster;
+- `VSEntityManager.kt` Identifier cluster.
 
-Current candidate under proof:
-- `VSEntityManager.kt` seven-occurrence `ResourceLocation -> Identifier` cluster.
+Next candidate:
+- `EntityData.kt` non-null generic bounds required by Minecraft 26.2 entity-data API.
 
 Representative remaining compiler areas include renderer/render-state APIs, direction/position/build-height changes, SavedData/NBT `ValueInput`/`ValueOutput`, command permissions, resource reload listener generics, entity save/hurt/network APIs, tickets/ticks/structure processors, Create-compat classpath/API drift, and Sable compatibility.
 
@@ -97,7 +98,7 @@ Forbidden final substitutes include custom VS2-style reference frames, synthetic
 ## Milestones
 
 ### P0 — Upstream import + provenance
-Frozen green. Original proof run `35304871880`; later confirmations include `35324164899` and `35324792335`.
+Frozen green. Original proof run `35304871880`; later confirmations include `35324164899`, `35324792335`, and `35325575601`.
 
 ### P1 — Standalone VS2 26.2 compile/boot
 Port actual VS2 until common/Fabric compile, standalone client/server boot, and core/native initialization are proven without Create/SNR/Copycats hiding failures.
@@ -133,12 +134,13 @@ Do not reintroduce without new direct evidence:
 
 ## next_safe_action
 
-1. Treat implementation HEAD `a2951cab7d0a5b32756b45dc361a040d7212cdea` and P1 run `35325476529` as the active proof pair.
-2. **Do not patch while run `35325476529` is active.**
-3. When it completes, inspect the exact compile log. If `VSEntityManager.kt` ResourceLocation/type-inference cluster is gone, preserve the patch and select only the next smallest direct compiler-proven API cluster. If it regressed, repair only that regression.
-4. Do not alter renderer, NBT, Sable/entity-dragging, physics, collision, networking, player/camera, or Create semantics merely to remove unrelated compiler errors; each needs its own evidence-backed adaptation.
-5. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet.
-6. Update this ledger after the active run lands before any subsequent patch.
+1. Preserve implementation HEAD `a2951cab7d0a5b32756b45dc361a040d7212cdea`; run `35325476529` proves its `VSEntityManager.kt` cluster clean.
+2. Apply the smallest next source adaptation only in `EntityData.kt`: `R -> R : Any` for `defineSynced` and `T -> T : Any` for `EntityDataDelegate`, using exact fail-closed replacements in the existing 26.2 source overlay.
+3. Include `EntityData.kt` in P1 workflow delta display, commit atomically, and let the resulting P1 run prove whether that file disappears from compiler errors.
+4. Do not stack another source patch while that new P1 workflow is active.
+5. Do not alter renderer, NBT, Sable/entity-dragging, physics, collision, networking, player/camera, or Create semantics merely to remove unrelated compiler errors; each needs its own evidence-backed adaptation.
+6. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet.
+7. Update this ledger with the new implementation HEAD/run after the patch lands.
 
 ## Video validation
 
