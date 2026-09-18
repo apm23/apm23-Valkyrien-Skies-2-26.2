@@ -76,6 +76,15 @@ replace_once(
     '''    base {\n        archivesName = rootProject.archives_base_name\n    }''',
 )
 
+# Minecraft 26.2 is unobfuscated and loom-no-remap uses the official namespace directly.
+# The pinned upstream AW was authored against the older named namespace, so adapt only
+# its namespace header first; individual entries remain untouched until Loom gives direct evidence.
+replace_once(
+    "common/src/main/resources/valkyrienskies-common.accesswidener",
+    "accessWidener\tv2\tnamed\n",
+    "accessWidener\tv2\tofficial\n",
+)
+
 # Shadow 7.x predates the Gradle-9 toolchain used by Minecraft 26.2.
 replace_once(
     "fabric/build.gradle",
