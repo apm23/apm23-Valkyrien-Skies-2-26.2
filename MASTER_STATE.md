@@ -22,7 +22,7 @@ GitHub code is the implementation source of truth. This file is the durable cont
 
 The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are applied by explicit fail-closed overlay scripts so every adaptation stays traceable to upstream VS2 source.
 
-## Current reconciliation — TestChair Direction proof completed
+## Current reconciliation — after TestChair Direction proof / EmptyRenderer Identifier proof selected
 
 - Latest proven exact proof HEAD: `369d042ee7d86c109825ae00b637c1230a70e7e5` (`P1: wire TestChair Direction proof`).
 - The isolated TestChair source adaptation landed at `48a760bc1bfcc7f6e7bd49be1e9cb205e0dd1e80`; workflow wiring landed at `369d042ee7d86c109825ae00b637c1230a70e7e5`.
@@ -37,6 +37,11 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 - TestChair diagnostic artifact: `p1-compile-log-369d042ee7d86c109825ae00b637c1230a70e7e5`, artifact ID `10562768230`, size `8336` bytes, ZIP SHA-256 `4f3ad14af6cf671d9c5f43a3e356dbd4c03dbd866f549ff6b8937d30c7cc5bc4`.
 - Pinned baseline and current `1.21.1/main` were previously confirmed byte-identical for `TestChairBlock.kt` at blob `e830d6c3afd12b3c330ee13335a71e1d2c8021d8`.
 - Entity creation, seat position, `moveTo`, `lookAt` anchor/target arithmetic, controller flag, addFreshEntity, and riding semantics were otherwise preserved.
+- Ledger-only reconciliation commit `8ae08b032db583b0f064ef59c9bf52d2505f253c` has exact-head P0 run `35384153339` completed `success`; it made no source-port change and did not trigger P1.
+- Exact P1 run `35383401868` reports three `EmptyRenderer.kt` diagnostics: unresolved `ResourceLocation` at the import, the independent Minecraft 26.2 `EntityRenderer<T, S : EntityRenderState>` two-type-argument migration, and unresolved `ResourceLocation` at the nullable texture return type.
+- Pinned baseline `f39132148e717d325933b4ce6e9e9fb13d929390` and current `1.21.1/main` are byte-identical for `EmptyRenderer.kt` at blob `ff3253aa068256ae06c92a6b29d247acabce0532`.
+- The resource vocabulary migration is independently mechanical and already proven at multiple VS2 sites: replace only `net.minecraft.resources.ResourceLocation` with `net.minecraft.resources.Identifier` and the `getTextureLocation` return type `ResourceLocation?` with `Identifier?`.
+- The `EntityRenderer<Entity>(context)` inheritance, render-state generic migration, renderer lifecycle, and all behavior are intentionally untouched by this proof. Expected targeted evidence is that both `ResourceLocation` diagnostics disappear while the independent render-state/type-argument diagnostic remains.
 - The earlier EntityDragger Direction proof remains preserved at implementation HEAD `f86f606e2f51e42513f4ae558bb740164d3d9f23`, exact-head P0 `35381321480`, P1 `35381321453`, artifact `10563195663`, ZIP SHA-256 `619e4759fee46606f2a93e94e8b42cbd463b27110e46e8590ae98e861fe70ffa`.
 - `EntityDragger.kt` line-342 private `Direction.normal` remains gone while the intentionally independent line-148 `isControlledByLocalInstance` error remains.
 - Previous Remass permission proof remains preserved at implementation HEAD `6762f2022756506b282f176f4ea4a5d6b40b8ea7`, exact-head P0 `35379217178`, P1 `35379217305`, artifact `10561352586`, ZIP SHA-256 `4885fb7979234c4e32621cd21bfc83f21d14f6b8128c7c5b76b59338de396dd9`.
@@ -61,9 +66,9 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
-- active_proof_head: `369d042ee7d86c109825ae00b637c1230a70e7e5; TestChair Direction proof completed`
-- active_proof_run: `35383401868; targeted TestChair Direction proof succeeded although overall compile remains red on later independent API drift`
-- active_hypothesis: `none; TestChair Direction hypothesis is proven and frozen. Reconcile this ledger commit and then select exactly one next independent Minecraft 26.2 source/API cluster from run 35383401868 before mutating source.`
+- active_proof_head: `pending exact proof HEAD; EmptyRenderer Identifier proof setup selected in this commit`
+- active_proof_run: `pending; exact-head P0/P1 proof will be triggered by the isolated overlay/workflow wiring`
+- active_hypothesis: `EmptyRenderer.kt uses removed ResourceLocation only at the resource import and nullable texture return type, while the EntityRenderer two-type-argument/render-state diagnostic is independent. Pinned/current source is byte-identical at blob ff3253aa068256ae06c92a6b29d247acabce0532. Replace only ResourceLocation -> Identifier at those two sites and leave EntityRenderer<Entity>(context) and render-state semantics untouched.`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 
@@ -125,7 +130,7 @@ Forbidden final substitutes: custom VS2-style reference frames, synthetic carry 
 ## Milestones
 
 ### P0 — Upstream import + provenance
-Frozen green. Exact upstream identity/pin/license/provenance is established and repeatedly re-confirmed, including exact proof-head P0 run `35383401723` for `369d042ee7d86c109825ae00b637c1230a70e7e5`.
+Frozen green. Exact upstream identity/pin/license/provenance is established and repeatedly re-confirmed, including ledger-head P0 run `35384153339` for `8ae08b032db583b0f064ef59c9bf52d2505f253c`.
 
 ### P1 — Standalone VS2 26.2 compile/boot
 Port actual VS2 until common/Fabric compile, standalone client/server boot, and core/native initialization are proven without Create/SNR/Copycats hiding failures.
@@ -164,12 +169,14 @@ Do not reintroduce without new direct evidence:
 ## next_safe_action
 
 1. Preserve exact TestChair Direction proof HEAD `369d042ee7d86c109825ae00b637c1230a70e7e5`, exact-head P0 `35383401723`, P1 `35383401868` / job `105724661254`, and artifact `10562768230` / ZIP SHA-256 `4f3ad14af6cf671d9c5f43a3e356dbd4c03dbd866f549ff6b8937d30c7cc5bc4`.
-2. Preserve `TestChairBlock.kt` entity creation, seat position, `moveTo`, `lookAt` anchor/target arithmetic, controller flag, addFreshEntity, and riding semantics. The remaining line-54 entity-create/signature errors and line-57 `moveTo` error are independent and must not be silently folded into another cluster.
-3. Reconcile the actual HEAD after this ledger-only commit and allow any automatically triggered provenance workflow to settle before source mutation.
-4. Then select exactly one smallest independent Minecraft 26.2 source/API cluster from the exact compiler set of run `35383401868`, using direct upstream/source/API evidence before patching. Record the selected hypothesis in this ledger before or together with its isolated proof setup.
-5. Do not batch deferred nullable-message fixes, `VSKeyBindings`, Create compat, render-state migration, Sable dependency work, tickets, networking/local-control semantics, or unrelated TestChair changes unless that exact subsystem becomes the separately evidenced active hypothesis.
-6. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet.
-7. No video is authorized during compile/API-port work.
+2. Preserve ledger reconciliation HEAD `8ae08b032db583b0f064ef59c9bf52d2505f253c` and exact-head P0 `35384153339` completed `success`.
+3. Apply exactly two fail-closed `EmptyRenderer.kt` vocabulary changes: import `ResourceLocation` -> `Identifier`, and `getTextureLocation(...): ResourceLocation?` -> `Identifier?`.
+4. Preserve `EntityRenderer<Entity>(context)`, renderer inheritance/lifecycle, and the independent Minecraft 26.2 render-state/type-argument migration completely unchanged in this proof.
+5. Wire only the new EmptyRenderer Identifier overlay into P1 and add only `EmptyRenderer.kt` to the diff-display path. Trigger the smallest exact-head P0/P1 proof. Expected targeted evidence: both unresolved `ResourceLocation` diagnostics disappear while the independent `EntityRenderer` two-type-argument/render-state diagnostic remains.
+6. Do not batch render-state migration, deferred nullable-message fixes, `VSKeyBindings`, Create compat, Sable dependency work, tickets, networking/local-control semantics, TestChair create/`moveTo`, or any unrelated cluster into this proof.
+7. After the EmptyRenderer Identifier proof completes, reconcile this ledger before selecting another source/API cluster.
+8. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet.
+9. No video is authorized during compile/API-port work.
 
 ## Video validation
 
