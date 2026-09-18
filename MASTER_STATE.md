@@ -22,7 +22,7 @@ GitHub code is the implementation source of truth. This file is the durable cont
 
 The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are applied by explicit fail-closed overlay scripts so every adaptation stays traceable to upstream VS2 source.
 
-## Current reconciliation — after EntityDragger Direction proof
+## Current reconciliation — after EntityDragger Direction proof / TestChair Direction candidate selected
 
 - Latest proven implementation/source-port HEAD: `f86f606e2f51e42513f4ae558bb740164d3d9f23` (`P1: port EntityDragger Direction accessor`).
 - Exact-head P0 run `35381321480` completed `success`.
@@ -34,6 +34,12 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 - Pinned baseline and current `1.21.1/main` were confirmed byte-identical for `EntityDragger.kt` at blob `4048b116af9c5dc37223490ffdc49e97be1fb3be`.
 - The proven adaptation changed exactly `result.direction.normal.toJOMLD()` to `result.direction.getUnitVec3i().toJOMLD()`.
 - `EntityDragger` ship/world transforms, ray clip, hit-ship lookup, dot-product threshold, back-off loops, movement/yaw dragging behavior, and the independent `isControlledByLocalInstance` site were preserved.
+- Ledger-only proof commit `e72073e9b5afd3f33626fa1df2b2ebffc93946f8` has exact-head P0 run `35383124583` completed `success`; it did not trigger P1.
+- Exact run `35381321453` leaves three independent `TestChairBlock.kt` API areas: changed entity creation signature at line 54, removed `moveTo` at line 57, and private `Direction.normal` at line 58.
+- Read-only provenance confirms pinned baseline `f39132148e717d325933b4ce6e9e9fb13d929390` and current `1.21.1/main` are byte-identical for `TestChairBlock.kt` at blob `e830d6c3afd12b3c330ee13335a71e1d2c8021d8`.
+- The line-58 `Direction.normal` is used only as the chair-facing unit vector, converted by existing `toDoubles()`, offset by the mounting entity position, and passed as the existing `lookAt` target. The same public `Direction.getUnitVec3i()` accessor migration is already proven at multiple isolated VS2 sites.
+- Therefore the next isolated proof is authorized to replace only `state.getValue(FACING).normal.toDoubles()` with `state.getValue(FACING).getUnitVec3i().toDoubles()`.
+- `TestChairBlock` entity creation, seat position, `moveTo`, `lookAt` anchor/target arithmetic, controller flag, addFreshEntity, and riding semantics must otherwise remain unchanged. In particular, the independent line-54 create-signature and line-57 `moveTo` errors must remain untouched in this proof.
 - Previous Remass permission proof remains preserved at implementation HEAD `6762f2022756506b282f176f4ea4a5d6b40b8ea7`, exact-head P0 `35379217178`, P1 `35379217305`, artifact `10561352586`, ZIP SHA-256 `4885fb7979234c4e32621cd21bfc83f21d14f6b8128c7c5b76b59338de396dd9`.
 - The dynamic command-permission-only cluster remains exhausted in the exact compiler error set: Delete/GetShip/Remass retain only independent nullable-message errors; no legacy `hasPermission` error remains in those commands.
 - `DeleteCommand.kt` nullable `r[0].slug: String?`, `GetShipCommand.kt` nullable `ship.slug: String?`, and `RemassCommand.kt` nullable `ship.slug: String?` remain explicitly deferred; no fallback name/string may be invented merely to satisfy Kotlin vararg nullability.
@@ -56,9 +62,9 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
-- active_proof_head: `none`
+- active_proof_head: `none; next proof selected but not yet patched`
 - active_proof_run: `none`
-- active_hypothesis: `none; EntityDragger Direction accessor proof is complete, and the next source/API cluster must be selected from current exact-run evidence with read-only provenance first.`
+- active_hypothesis: `TestChairBlock.kt line 58 uses the now-private Direction.normal only as the chair-facing unit vector for the existing lookAt target. Pinned/current source is byte-identical at blob e830d6c3afd12b3c330ee13335a71e1d2c8021d8. Replace only state.getValue(FACING).normal.toDoubles() with state.getValue(FACING).getUnitVec3i().toDoubles(); leave independent create-signature and moveTo errors and all mounting/riding semantics untouched.`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 
@@ -158,13 +164,14 @@ Do not reintroduce without new direct evidence:
 ## next_safe_action
 
 1. Preserve implementation HEAD `f86f606e2f51e42513f4ae558bb740164d3d9f23`, exact-head P0 `35381321480`, P1 `35381321453`, and artifact `10563195663` / ZIP SHA-256 `619e4759fee46606f2a93e94e8b42cbd463b27110e46e8590ae98e861fe70ffa` as the EntityDragger Direction accessor proof.
-2. Preserve the independent `EntityDragger.kt:148` `isControlledByLocalInstance` error; do not infer its Minecraft 26.2 replacement without direct API/semantic evidence.
-3. Select the next smallest source/API cluster from exact run `35381321453` only after read-only pinned/current provenance and semantic inspection.
-4. Prefer an isolated mechanical API migration whose neighboring independent errors can remain untouched and whose behavior is traceable to the original VS2 source.
-5. Record the selected hypothesis in this ledger before the next source patch, then trigger the smallest exact-head P0/P1 proof.
-6. Do not batch nullable-message fixes, Create compat, render-state migrations, Sable dependency work, tickets, networking/local-control semantics, or unrelated entity-dragging changes without direct evidence.
-7. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet.
-8. No video is authorized during compile/API-port work.
+2. Preserve byte-identical pinned/current `TestChairBlock.kt` blob `e830d6c3afd12b3c330ee13335a71e1d2c8021d8` and the independent exact-run create-signature, `moveTo`, and Direction accessor errors.
+3. Adapt exactly one expression: `state.getValue(FACING).normal.toDoubles()` -> `state.getValue(FACING).getUnitVec3i().toDoubles()`.
+4. Preserve entity creation, mounting entity position, `moveTo`, `lookAt` anchor/target arithmetic, controller flag, entity spawn, and riding behavior unchanged. Do not touch line-54 create-signature or line-57 `moveTo` in this proof.
+5. Add only `TestChairBlock.kt` to the P1 workflow diff-display path and trigger the smallest exact-head P0/P1 proof. Expected targeted evidence: the line-58 private `Direction.normal` error disappears while the independent create-signature and `moveTo` errors remain.
+6. Do not batch nullable-message fixes, Create compat, render-state migrations, Sable dependency work, tickets, networking/local-control semantics, or unrelated TestChair changes into this proof.
+7. After the TestChair Direction proof completes, update this ledger before selecting another source/API cluster.
+8. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet.
+9. No video is authorized during compile/API-port work.
 
 ## Video validation
 
