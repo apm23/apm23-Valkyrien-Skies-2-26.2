@@ -164,4 +164,15 @@ replace_count(
     1,
 )
 
+# Run 35333733932 proved TestFlapBlock.kt is now clean and reports the same single private
+# Direction.normal access in TestWingBlock#getWing. Pinned baseline and current 1.21.1/main
+# are byte-identical at blob 0728a94852bd0adbe5fe9d3bcbd7ee719d54bb6b. Replace only
+# that unit-vector accessor; Wing construction, coefficients, camber bias, and toJOMLD stay unchanged.
+replace_count(
+    "common/src/main/kotlin/org/valkyrienskies/mod/common/block/TestWingBlock.kt",
+    "blockState.getValue(FACING).normal.toJOMLD()",
+    "blockState.getValue(FACING).getUnitVec3i().toJOMLD()",
+    1,
+)
+
 print("P1_SOURCE_API_26_2_OVERLAY_APPLIED")
