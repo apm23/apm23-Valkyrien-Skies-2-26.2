@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'scripts/apply_p1_build_baseline.py'
+      - 'scripts/apply_p1_source_api_26_2.py'
       - '.github/workflows/p1-compile.yml'
       - 'upstream-vs2'
       - 'BASELINE_LOCK.json'
@@ -31,12 +32,16 @@ jobs:
       - name: Apply traceable P1 build-only overlay
         run: python3 scripts/apply_p1_build_baseline.py upstream-vs2
 
+      - name: Apply traceable P1 Minecraft 26.2 source API overlay
+        run: python3 scripts/apply_p1_source_api_26_2.py upstream-vs2
+
       - name: Show and validate port delta
         shell: bash
         run: |
           set -euo pipefail
           git -C upstream-vs2 diff --check
           git -C upstream-vs2 diff -- gradle.properties settings.gradle gradle/wrapper/gradle-wrapper.properties build.gradle fabric/build.gradle
+          git -C upstream-vs2 diff -- common/src/main/kotlin/org/valkyrienskies/mod/api/datagen/VSBlockInfoDataProvider.kt common/src/main/kotlin/org/valkyrienskies/mod/api/datagen/VSShipyardEntityDataProvider.kt
 
       - name: Show Gradle runtime
         working-directory: upstream-vs2
