@@ -24,19 +24,21 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 
 ## Current reconciliation — 2026-09-18
 
-- Actual implementation/source-port HEAD before this ledger-only update: `d8ce7a92c00d027fa7fe4fe15ee9a1abd6bdb4e9` (`P1: port TestThrusterBlock neighborChanged signature`).
-- Parent ledger commit before that implementation change: `5402a39a04a647d6caa75f6479327a6ed58d5706` (`watchdog: record TestThrusterBlockEntity proof result`).
-- Prior implementation HEAD `7485e9503a53b4fd086cbd29087aedbb2dfc5056` is proven clean for its targeted `TestThrusterBlockEntity.kt` Direction accessor by P1 run `35336506362`, job `105572463018`.
-- Diagnostic artifact for run `35336506362`: `p1-compile-log-7485e9503a53b4fd086cbd29087aedbb2dfc5056`, artifact ID `10543132608`, ZIP SHA-256 `1e545474aa2bd062156ee09d42524cc1eae741b95aaed6a40a369d2c976a338f`.
-- HEAD `d8ce7a92c00d027fa7fe4fe15ee9a1abd6bdb4e9` adds exactly one fail-closed source adaptation in `common/src/main/kotlin/org/valkyrienskies/mod/common/block/TestThrusterBlock.kt`: import `net.minecraft.world.level.redstone.Orientation` and migrate only the obsolete `neighborChanged` override tail from `blockPos2: BlockPos, bl: Boolean` to `orientation: Orientation?, movedByPiston: Boolean`; the method body is unchanged. Only that file was additionally added to the P1 workflow diff-display path.
-- Pinned upstream `f39132148e717d325933b4ce6e9e9fb13d929390` and current upstream `1.21.1/main` are byte-identical for `TestThrusterBlock.kt` at blob `d8bd39c9d3c92de942968cfb95bd807f1cfd3f19`.
-- Exact-head P0 run `35337116561` completed `success` for implementation HEAD `d8ce7a92c00d027fa7fe4fe15ee9a1abd6bdb4e9`.
-- Exact-head P1 run `35337116568`, job `105574399200`, completed `failure` only because later independent Minecraft 26.2 API errors remain. `TestThrusterBlock.kt` is absent from the final compiler error set, so its targeted `neighborChanged` adaptation is proven clean.
+- Actual implementation/source-port HEAD before this ledger-only update: `8c21cb63a80678c92214c980ec40686853fe33d3` (`P1: port RaycastUtils 26.2 API`).
+- Parent ledger commit before that implementation change: `65c0472071716c89698c19834b7cc27fc83671ba` (`watchdog: record TestThrusterBlock proof result`).
+- Prior implementation HEAD `d8ce7a92c00d027fa7fe4fe15ee9a1abd6bdb4e9` is proven clean for its targeted `TestThrusterBlock.kt` `neighborChanged` migration by P1 run `35337116568`, job `105574399200`.
 - Diagnostic artifact for run `35337116568`: `p1-compile-log-d8ce7a92c00d027fa7fe4fe15ee9a1abd6bdb4e9`, artifact ID `10543253407`, ZIP SHA-256 `911187ae103bb91cb61f528a1c2e272a2dd9d26ebf56f932013045b0319701ed`.
-- The same compiler log reports a compact two-error standalone cluster in `common/src/main/kotlin/org/valkyrienskies/mod/common/world/RaycastUtils.kt`: line 63 still calls the removed floating-point overload `Direction.getNearest(line.x, line.y, line.z)`, while Minecraft 26.2 exposes `Direction.getApproximateNearest(double, double, double)` for this vector-direction operation; line 209 passes nullable Kotlin `location: Vec3?` to the non-null `EntityHitResult(Entity, Vec3)` constructor.
-- Pinned upstream and current `1.21.1/main` are byte-identical for `RaycastUtils.kt` at blob `97fa4f9fcc776cd1b6445d130087306f7c8fe800`.
-- In upstream `raytraceEntities`, every branch that assigns non-null `resultEntity` assigns non-null `location` in the same branch before return. Therefore `location!!` in the already-guarded `resultEntity != null` return branch is a nullability expression of the existing upstream invariant, not a new fallback or gameplay behavior.
-- `VSKeyBindings.kt` was also inspected as a one-error candidate and is byte-identical pinned/current at blob `609fcbbfa8b5c80f560d71b2076a461f4db1ffc1`, but Minecraft 26.2's `KeyMapping.Category` migration also changes category translation-key handling. It is deferred so a compile-only type edit does not silently break the existing `category.valkyrienskies.driving` translations.
+- HEAD `8c21cb63a80678c92214c980ec40686853fe33d3` adds exactly two fail-closed source adaptations in `common/src/main/kotlin/org/valkyrienskies/mod/common/world/RaycastUtils.kt`: `Direction.getNearest(line.x, line.y, line.z)` -> `Direction.getApproximateNearest(line.x, line.y, line.z)`, and only in the existing `resultEntity != null` return branch `EntityHitResult(resultEntity, location)` -> `EntityHitResult(resultEntity, location!!)`.
+- Pinned upstream `f39132148e717d325933b4ce6e9e9fb13d929390` and current upstream `1.21.1/main` are byte-identical for `RaycastUtils.kt` at blob `97fa4f9fcc776cd1b6445d130087306f7c8fe800`.
+- The Raycast patch preserves the upstream paired invariant that every branch assigning non-null `resultEntity` also assigns non-null `location`; no fallback hit position, synthetic result, transform, collision, entity filtering, or ship-space behavior was added.
+- Exact-head P0 run `35338858973` completed `success` for implementation HEAD `8c21cb63a80678c92214c980ec40686853fe33d3`.
+- Exact-head P1 run `35338858979`, job `105579924065`, completed `failure` only because later independent Minecraft 26.2 API errors remain. `RaycastUtils.kt` is absent from the final compiler error set, so both targeted adaptations are proven clean.
+- Diagnostic artifact for run `35338858979`: `p1-compile-log-8c21cb63a80678c92214c980ec40686853fe33d3`, artifact ID `10544043269`, ZIP SHA-256 `37c742271c1e79c424a93fa326b39692bb7e109cceda885371b50a109123be8a`.
+- The final compiler log reports exactly two errors in `common/src/main/kotlin/org/valkyrienskies/mod/common/util/MinecraftPlayer.kt`, both from removed `Player.hasPermissions(4)` calls in `isAdmin` and `canModifyServerConfig`.
+- Minecraft 26.2 replaces integer command levels with `PermissionSet` / `Permission` APIs. `PermissionLevel.OWNERS` has id `4`, and `Permissions.COMMANDS_OWNER` is defined as `new Permission.HasCommandLevel(PermissionLevel.OWNERS)`, making `player.permissions().hasPermission(Permissions.COMMANDS_OWNER)` the direct semantic equivalent of the old level-4 threshold.
+- Pinned upstream and current `1.21.1/main` are byte-identical for `MinecraftPlayer.kt` at blob `c11d83b71dc7be4144fb9473ac76636f458898a5`.
+- `ShipAssemblerItem.kt` was inspected as a one-error candidate but is deferred: its compiler error is nullable `shipData.slug: String?` passed into a non-null vararg `Any`, and inventing a fallback string would change user-visible behavior without evidence.
+- `VSKeyBindings.kt` remains deferred because Minecraft 26.2's `KeyMapping.Category` migration also changes category translation-key handling; a compile-only type replacement must not silently break `category.valkyrienskies.driving` translations.
 - No code from `apm23/VS2-Create_Interactive` has been imported. The retired workaround project remains forbidden as implementation source.
 
 ## Target runtime baseline
@@ -54,9 +56,9 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
-- active_proof_head: `none; previous proof d8ce7a92c00d027fa7fe4fe15ee9a1abd6bdb4e9 landed`
-- active_proof_run: `none; previous P1 run 35337116568 landed`
-- active_hypothesis: `The next smallest safe standalone adaptation is the two-error RaycastUtils Minecraft 26.2 API/nullability migration: getNearest(double,double,double) -> getApproximateNearest(double,double,double), plus an assertion of the existing resultEntity/location paired invariant at EntityHitResult construction.`
+- active_proof_head: `none; previous proof 8c21cb63a80678c92214c980ec40686853fe33d3 landed`
+- active_proof_run: `none; previous P1 run 35338858979 landed`
+- active_hypothesis: `The next smallest safe standalone adaptation is MinecraftPlayer's two direct permission API migrations from old command level 4 to the explicit Minecraft 26.2 owner-level PermissionSet predicate.`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 
@@ -82,9 +84,10 @@ Source API clusters proven clean in successive runs:
 - `TestFlapBlock.kt` public Direction unit-vector accessor;
 - `TestWingBlock.kt` public Direction unit-vector accessor;
 - `TestThrusterBlockEntity.kt` public Direction unit-vector accessor, with upstream force semantics unchanged;
-- `TestThrusterBlock.kt` Minecraft 26.2 `neighborChanged` signature migration, with upstream redstone/thruster semantics unchanged.
+- `TestThrusterBlock.kt` Minecraft 26.2 `neighborChanged` signature migration, with upstream redstone/thruster semantics unchanged;
+- `RaycastUtils.kt` floating-direction API plus Kotlin non-null expression of the existing paired entity/location invariant, with upstream world/ship raycast semantics unchanged.
 
-Representative remaining compiler areas include Create compat classpath/API drift, position/build-height changes, renderer/render-state APIs, SavedData/NBT `ValueInput`/`ValueOutput`, command permissions, resource reload listener generics, entity save/hurt/network APIs, tickets/ticks/structure processors, keybinding category migration, raycast API/nullability, and Sable compatibility.
+Representative remaining compiler areas include Create compat classpath/API drift, position/build-height changes, renderer/render-state APIs, SavedData/NBT `ValueInput`/`ValueOutput`, command permissions, resource reload listener generics, entity save/hurt/network APIs, tickets/ticks/structure processors, keybinding category migration, player permission API, and Sable compatibility.
 
 ## Sable contract
 
@@ -109,7 +112,7 @@ Forbidden final substitutes include custom VS2-style reference frames, synthetic
 ## Milestones
 
 ### P0 — Upstream import + provenance
-Frozen green. Original proof run `35304871880`; later confirmations include `35324164899`, `35324792335`, `35325575601`, `35327172660`, `35327644515`, `35327819629`, `35329592607`, `35331485247`, `35333733917`, `35334205890`, `35336506332`, and exact implementation confirmation `35337116561`.
+Frozen green. Original proof run `35304871880`; later confirmations include `35324164899`, `35324792335`, `35325575601`, `35327172660`, `35327644515`, `35327819629`, `35329592607`, `35331485247`, `35333733917`, `35334205890`, `35336506332`, `35337116561`, and exact implementation confirmation `35338858973`.
 
 ### P1 — Standalone VS2 26.2 compile/boot
 Port actual VS2 until common/Fabric compile, standalone client/server boot, and core/native initialization are proven without Create/SNR/Copycats hiding failures.
@@ -142,19 +145,18 @@ Do not reintroduce without new direct evidence:
 - per-tick teleport/reanchor;
 - retired project gameplay patches;
 - fixture/input mutations solely to manufacture green;
-- compile-only `VSKeyBindings` category type replacement that drops or changes the existing category translations without explicitly migrating that resource contract.
+- compile-only `VSKeyBindings` category type replacement that drops or changes the existing category translations without explicitly migrating that resource contract;
+- inventing a fallback value for nullable ship slug/name merely to satisfy Kotlin vararg nullability.
 
 ## next_safe_action
 
-1. Preserve implementation HEAD `d8ce7a92c00d027fa7fe4fe15ee9a1abd6bdb4e9`, P0 run `35337116561`, and P1 run `35337116568` as proven clean for `TestThrusterBlock.kt`.
-2. Preserve diagnostic artifact `p1-compile-log-d8ce7a92c00d027fa7fe4fe15ee9a1abd6bdb4e9`, artifact ID `10543253407`, ZIP SHA-256 `911187ae103bb91cb61f528a1c2e272a2dd9d26ebf56f932013045b0319701ed`.
-3. Use the confirmed byte-identical pinned/current `RaycastUtils.kt` source at blob `97fa4f9fcc776cd1b6445d130087306f7c8fe800`.
-4. Add exactly two fail-closed Minecraft 26.2 adaptations in that file:
-   - `Direction.getNearest(line.x, line.y, line.z)` -> `Direction.getApproximateNearest(line.x, line.y, line.z)` to use the current floating-point/vector-direction API;
-   - in the existing `resultEntity != null` return branch only, `EntityHitResult(resultEntity, location)` -> `EntityHitResult(resultEntity, location!!)` to express the upstream paired non-null invariant required by the current Java constructor.
-5. Preserve all other raycast semantics unchanged: world/ship clip selection, `ClipContextDuck`, ship intersection/AABB chopping, transforms, closest-hit distance selection, entity filtering, scale handling, world/ship entity queries, and returned hit positions. Do not add fallback positions, synthetic results, or alter physics/reference-space behavior.
-6. Add only `RaycastUtils.kt` to the P1 workflow diff-display path and trigger the smallest exact-head P0/P1 proof. If its P1 run is active, do not stack another source patch.
-7. Do not alter Create compat, renderer, Sable/entity-dragging, physics architecture, collision, networking, player/camera, or unrelated semantics merely to remove compiler errors; each needs its own evidence-backed adaptation.
+1. Preserve implementation HEAD `8c21cb63a80678c92214c980ec40686853fe33d3`, P0 run `35338858973`, and P1 run `35338858979` as proven clean for `RaycastUtils.kt`.
+2. Preserve diagnostic artifact `p1-compile-log-8c21cb63a80678c92214c980ec40686853fe33d3`, artifact ID `10544043269`, ZIP SHA-256 `37c742271c1e79c424a93fa326b39692bb7e109cceda885371b50a109123be8a`.
+3. Use the confirmed byte-identical pinned/current `MinecraftPlayer.kt` source at blob `c11d83b71dc7be4144fb9473ac76636f458898a5`.
+4. Add exactly one Minecraft 26.2 permission API import, `net.minecraft.server.permissions.Permissions`, and replace exactly both `player.hasPermissions(4)` callsites with `player.permissions().hasPermission(Permissions.COMMANDS_OWNER)`.
+5. Preserve all other wrapper semantics unchanged: weak player reference, UUID identity, physical-client config shortcut, dimension, mounted-ship state, position and velocity-derived state, equality, and force-watching set.
+6. Add only `MinecraftPlayer.kt` to the P1 workflow diff-display path and trigger the smallest exact-head P0/P1 proof. If its P1 run is active, do not stack another source patch.
+7. Do not alter command-wide permissions, Create compat, renderer, Sable/entity-dragging, physics architecture, collision, networking, player/camera, or unrelated semantics merely to remove compiler errors; each needs its own evidence-backed adaptation.
 8. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet.
 9. Update this ledger after the next proof lands before any subsequent source patch.
 
