@@ -175,4 +175,16 @@ replace_count(
     1,
 )
 
+# Run 35334206051 proved TestWingBlock.kt clean and reports exactly one private
+# Direction.normal access in TestThrusterBlockEntity#physTick. Pinned baseline and current
+# 1.21.1/main are byte-identical at blob e1491b05b5b8f91cb8a6ffd1de2fdd3df7554e53.
+# Replace only the direction unit-vector accessor; applyModelForce, force magnitude,
+# application point, activity/null guards, and physics-listener semantics stay unchanged.
+replace_count(
+    "common/src/main/kotlin/org/valkyrienskies/mod/common/blockentity/TestThrusterBlockEntity.kt",
+    "facing.normal.toJOMLD()",
+    "facing.getUnitVec3i().toJOMLD()",
+    1,
+)
+
 print("P1_SOURCE_API_26_2_OVERLAY_APPLIED")
