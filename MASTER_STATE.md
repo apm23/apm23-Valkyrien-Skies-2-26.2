@@ -22,7 +22,7 @@ GitHub code is the implementation source of truth. This file is the durable cont
 
 The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are applied by explicit fail-closed overlay scripts so every adaptation stays traceable to upstream VS2 source.
 
-## Current reconciliation — after RemassCommand permission proof
+## Current reconciliation — after RemassCommand proof / EntityDragger Direction candidate selected
 
 - Latest proven implementation/source-port HEAD: `6762f2022756506b282f176f4ea4a5d6b40b8ea7` (`P1: port RemassCommand permission API`).
 - Exact-head P0 run `35379217178` completed `success`.
@@ -34,6 +34,12 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 - Pinned baseline and current `1.21.1/main` were confirmed byte-identical for `RemassCommand.kt` at blob `616c1d8071da930729ee1610834c3d5a23f988c9`; `remassShipCommandPerms` is documented `0 <= x <= 4`, default `2`.
 - Remass literal, ship argument/selection, `BlockStateInfo.remassShip` calls, success counter, message keys, return value, and nullable `ship.slug` were preserved.
 - The dynamic command-permission-only cluster is now exhausted in the exact compiler error set: Delete/GetShip/Remass retain only independent nullable-message errors; no legacy `hasPermission` error remains in those commands.
+- Latest ledger-only HEAD before this candidate selection is `7a2f08075bd658c190adec87464f03c5a0736113`; its exact-head P0 run `35381022834` completed `success`, and it did not trigger P1.
+- Exact run `35379217305` leaves two independent `EntityDragger.kt` errors: unresolved `isControlledByLocalInstance` at line 148 and private `Direction.normal` access at line 342.
+- Read-only provenance check confirms pinned baseline `f39132148e717d325933b4ce6e9e9fb13d929390` and current `1.21.1/main` are byte-identical for `EntityDragger.kt` at blob `4048b116af9c5dc37223490ffdc49e97be1fb3be`.
+- The line-342 value is solely the hit-face `Direction` unit vector, converted to JOML and transformed into worldspace before the existing up-vector dot-product walkability test. The same `Direction.normal -> Direction.getUnitVec3i()` accessor migration is already proven elsewhere in this port.
+- Therefore the next isolated proof is authorized to replace only `result.direction.normal.toJOMLD()` with `result.direction.getUnitVec3i().toJOMLD()`.
+- `EntityDragger` ship/world transforms, ray clip, hit-ship lookup, dot-product threshold, back-off loops, movement/yaw dragging behavior, and especially the independent `isControlledByLocalInstance` site must remain unchanged in that proof.
 - `DeleteCommand.kt` nullable `r[0].slug: String?`, `GetShipCommand.kt` nullable `ship.slug: String?`, and `RemassCommand.kt` nullable `ship.slug: String?` remain explicitly deferred; no fallback name/string may be invented merely to satisfy Kotlin vararg nullability.
 - `ShipAssemblerItem.kt`, `ShipCreatorItem.kt`, and `ShipRemoverItem.kt` nullable ship names remain deferred for the same reason.
 - `VSKeyBindings.kt` remains deferred because Minecraft 26.2 `KeyMapping.Category` migration changes category translation-key handling; a compile-only type swap must not silently break `category.valkyrienskies.driving`.
@@ -54,9 +60,9 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
-- active_proof_head: `none; Remass proof closed`
+- active_proof_head: `none; next proof selected but not yet patched`
 - active_proof_run: `none`
-- active_hypothesis: `none; select the next smallest source/API adaptation only after read-only provenance and semantic checks against exact run 35379217305`
+- active_hypothesis: `EntityDragger.kt line 342 uses the now-private Direction.normal only as the hit-face unit vector for the existing worldspace walkability normal test. Pinned/current source is byte-identical at blob 4048b116af9c5dc37223490ffdc49e97be1fb3be. Replace only result.direction.normal.toJOMLD() with result.direction.getUnitVec3i().toJOMLD(); leave the independent isControlledByLocalInstance error and all dragging/collision semantics untouched.`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 
@@ -155,13 +161,14 @@ Do not reintroduce without new direct evidence:
 ## next_safe_action
 
 1. Preserve implementation HEAD `6762f2022756506b282f176f4ea4a5d6b40b8ea7`, exact-head P0 `35379217178`, P1 `35379217305`, and artifact `10561352586` / ZIP SHA-256 `4885fb7979234c4e32621cd21bfc83f21d14f6b8128c7c5b76b59338de396dd9` as the Remass permission proof.
-2. Do not touch the deferred nullable ship-name/message errors without direct semantic evidence for the intended non-null representation.
-3. Classify the next smallest compiler cluster from exact run `35379217305` using read-only pinned/current source and Minecraft 26.2 API evidence before authorizing another source patch.
-4. Prefer a one-site, already-established mechanical API migration over a multi-semantic cluster. A candidate worth read-only checking is `EntityDragger.kt`'s private `Direction.normal` access at line 342 because the same Direction unit-vector accessor migration is already proven elsewhere; its independent `isControlledByLocalInstance` error at line 148 must remain untouched if that candidate is selected.
-5. Do not select that candidate unless pinned/current source provenance and surrounding semantics confirm it is the same mechanical vector accessor adaptation. If not, choose another smaller traceable cluster.
-6. Update this ledger with the selected hypothesis before applying the next source overlay.
-7. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet.
-8. No video is authorized during compile/API-port work.
+2. Preserve byte-identical pinned/current `EntityDragger.kt` blob `4048b116af9c5dc37223490ffdc49e97be1fb3be` and the two independent exact-run errors at lines 148 and 342.
+3. Adapt exactly one expression: `result.direction.normal.toJOMLD()` -> `result.direction.getUnitVec3i().toJOMLD()`.
+4. Preserve `EntityDragger` movement/yaw dragging, ship/world transforms, ray clipping, hit-ship lookup, up-vector dot threshold, back-off logic, and all other code unchanged. Do not touch line-148 `isControlledByLocalInstance` in this proof.
+5. Add only `EntityDragger.kt` to the P1 workflow diff-display path and trigger the smallest exact-head P0/P1 proof. Expected targeted evidence: the line-342 private `Direction.normal` error disappears while line-148 `isControlledByLocalInstance` remains.
+6. Do not batch nullable-message fixes, Create compat, renderers, Sable dependency work, tickets, networking, or unrelated entity-dragging semantics into this proof.
+7. After the EntityDragger Direction proof completes, update this ledger before selecting another source/API cluster.
+8. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet.
+9. No video is authorized during compile/API-port work.
 
 ## Video validation
 
