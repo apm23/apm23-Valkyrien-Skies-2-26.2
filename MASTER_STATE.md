@@ -24,15 +24,14 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 
 ## Current reconciliation — 2026-09-18
 
-- Actual repository HEAD before this ledger-only update: `019dbd43b0735dfdc0566f5acaf3d7b615761c1b` (`watchdog: sync ValkyrienSkies accessor active proof state`).
-- Current implementation/source-port HEAD remains `d0a33c0c7ff2ca49db1a69420c0b51d0064a92dc` (`P1: port ValkyrienSkies Direction accessor`).
-- Prior implementation HEAD `d761c5039176213c4a57530866463ad09368fbb3` remains proven clean for its targeted `VectorConversionsMC.kt` cluster by P1 run `35329592695`, job `105550595539`.
-- Diagnostic artifact for run `35329592695`: `p1-compile-log-d761c5039176213c4a57530866463ad09368fbb3`, artifact ID `10541060747`, ZIP SHA-256 `6e24f6f59f05a955fc0173dfb8918f6f2f42b2732f3ade89deb8cd27f09df115`.
-- HEAD `d0a33c0c7ff2ca49db1a69420c0b51d0064a92dc` adds only one fail-closed source adaptation in `common/src/main/kotlin/org/valkyrienskies/mod/api/ValkyrienSkies.kt`: `transformDirection(dir.normal, dest)` -> `transformDirection(dir.getUnitVec3i(), dest)`, plus the P1 workflow diff-display path. Pinned upstream and current `1.21.1/main` are identical at this callsite; transform overload structure and JOML math are unchanged.
-- P0 at exact implementation HEAD `d0a33c0c7ff2ca49db1a69420c0b51d0064a92dc`: run `35331485247` completed `success`.
-- P1 run `35331485313`, job `105556599506`, completed `failure` only because later independent Minecraft 26.2 API errors remain. Crucially, `ValkyrienSkies.kt` is absent from the compiler error set, so the single `Direction.getUnitVec3i()` adaptation is preserved as proven clean for its targeted error.
+- Actual implementation/source-port HEAD before this ledger-only update: `c8128c30bb29d9c454bf0045b873dea3bc76a17c` (`P1: port TestFlapBlock Direction accessor`).
+- Parent ledger-only commit before that implementation change: `4802db60c5c5302509023de9bba8fb922bbd9c71` (`watchdog: record ValkyrienSkies accessor proof result`).
+- Prior implementation HEAD `d0a33c0c7ff2ca49db1a69420c0b51d0064a92dc` is proven clean for its targeted `ValkyrienSkies.kt` accessor cluster by P1 run `35331485313`, job `105556599506`.
 - Diagnostic artifact for run `35331485313`: `p1-compile-log-d0a33c0c7ff2ca49db1a69420c0b51d0064a92dc`, artifact ID `10541221766`, ZIP SHA-256 `2a1d8ef765e1770e8f67970d66253ad337470a012e7ed45450b2a0b4a8be9b47`.
-- First compiler errors after that proven cluster include Create compat classpath/API drift in `DeployerScrollOptionSlot.kt`, renderer drift, build-height/BlockPos drift, SavedData/NBT `ValueInput`/`ValueOutput`, command permissions, multiple remaining private `Direction.normal` callsites, tickets/ticks/structure processors, networking/entity APIs, and Sable compatibility.
+- HEAD `c8128c30bb29d9c454bf0045b873dea3bc76a17c` adds one new fail-closed source adaptation in `common/src/main/kotlin/org/valkyrienskies/mod/common/block/TestFlapBlock.kt`: `blockState.getValue(FACING).normal.toJOMLD()` -> `blockState.getValue(FACING).getUnitVec3i().toJOMLD()`, plus that file's P1 workflow diff-display path.
+- Pinned upstream `f39132148e717d325933b4ce6e9e9fb13d929390` and current upstream `1.21.1/main` are byte-identical for `TestFlapBlock.kt` at blob `03f9db336c337fb1d531e00ebad81ed61db1f4b1`; Wing construction, coefficients, and `toJOMLD()` conversion are otherwise unchanged.
+- Exact-head P0 run `35333733917` completed `success` for `c8128c30bb29d9c454bf0045b873dea3bc76a17c`.
+- Exact-head P1 run `35333733932`, job `105563689862`, is active. Overlay application and port-delta validation completed successfully before compilation, proving the fail-closed replacement matched exactly once and the displayed delta was valid at this ledger write.
 - No code from `apm23/VS2-Create_Interactive` has been imported. The retired workaround project remains forbidden as implementation source.
 
 ## Target runtime baseline
@@ -50,9 +49,9 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
-- active_proof_head: `d0a33c0c7ff2ca49db1a69420c0b51d0064a92dc`
-- active_proof_run: `35331485313` (`completed/failure`; targeted `ValkyrienSkies.kt` accessor error cleared)
-- active_hypothesis: `The next source mutation must be the smallest non-Create compiler-proven Minecraft 26.2 API cluster, preserving the just-proven ValkyrienSkies Direction accessor patch.`
+- active_proof_head: `c8128c30bb29d9c454bf0045b873dea3bc76a17c`
+- active_proof_run: `35333733932` (`active` at ledger write; job `105563689862`)
+- active_hypothesis: `The single TestFlapBlock.kt Direction.getUnitVec3i() accessor adaptation is sufficient to clear that exact private Direction.normal compiler error while preserving upstream Wing semantics.`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 
@@ -75,6 +74,9 @@ Source API clusters proven clean in successive runs:
 - `NbtUtil.kt` guarded `Optional<Double>` reads;
 - `VectorConversionsMC.kt` public Direction unit-vector accessor;
 - `ValkyrienSkies.kt` public Direction unit-vector accessor.
+
+Current candidate under proof:
+- `TestFlapBlock.kt` single `Direction.normal -> Direction.getUnitVec3i()` accessor adaptation.
 
 Representative remaining compiler areas include Create compat classpath/API drift, other Direction/position/build-height changes, renderer/render-state APIs, SavedData/NBT `ValueInput`/`ValueOutput`, command permissions, resource reload listener generics, entity save/hurt/network APIs, tickets/ticks/structure processors, and Sable compatibility.
 
@@ -101,7 +103,7 @@ Forbidden final substitutes include custom VS2-style reference frames, synthetic
 ## Milestones
 
 ### P0 — Upstream import + provenance
-Frozen green. Original proof run `35304871880`; later confirmations include `35324164899`, `35324792335`, `35325575601`, `35327172660`, `35327644515`, `35327819629`, `35329592607`, and exact implementation confirmation `35331485247`.
+Frozen green. Original proof run `35304871880`; later confirmations include `35324164899`, `35324792335`, `35325575601`, `35327172660`, `35327644515`, `35327819629`, `35329592607`, `35331485247`, and exact current implementation confirmation `35333733917`.
 
 ### P1 — Standalone VS2 26.2 compile/boot
 Port actual VS2 until common/Fabric compile, standalone client/server boot, and core/native initialization are proven without Create/SNR/Copycats hiding failures.
@@ -137,13 +139,13 @@ Do not reintroduce without new direct evidence:
 
 ## next_safe_action
 
-1. Preserve implementation HEAD `d0a33c0c7ff2ca49db1a69420c0b51d0064a92dc`; P1 run `35331485313` proves its targeted `ValkyrienSkies.kt` accessor error is cleared even though unrelated later errors keep the compile red.
-2. Inspect the exact pinned upstream source and current `1.21.1/main` source for the smallest **non-Create** compiler-proven `Direction.normal` callsite reported by run `35331485313`.
-3. Apply only one fail-closed source adaptation if the 26.2 public accessor replacement is semantically direct; include that file in the P1 workflow diff display.
-4. Trigger/observe the exact-head P0 + P1 proof pair. Do not stack another source patch while the new P1 run is active.
+1. Treat implementation HEAD `c8128c30bb29d9c454bf0045b873dea3bc76a17c` and P1 run `35333733932` as the active proof pair.
+2. **Do not patch while run `35333733932` is active.**
+3. When it completes, inspect the exact compile log. If `TestFlapBlock.kt` is absent from compiler errors, preserve the patch and select only the next smallest direct compiler-proven API cluster. If it regressed, repair only that regression.
+4. Preserve P0 run `35333733917` as green provenance for the exact implementation HEAD.
 5. Do not alter Create compat, renderer, Sable/entity-dragging, physics, collision, networking, player/camera, or unrelated semantics merely to remove compiler errors; each needs its own evidence-backed adaptation.
 6. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet.
-7. Update this ledger after the next active run lands before any subsequent source patch.
+7. Update this ledger after the active run lands before any subsequent source patch.
 
 ## Video validation
 
