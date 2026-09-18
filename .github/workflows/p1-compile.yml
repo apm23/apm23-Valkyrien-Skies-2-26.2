@@ -18,6 +18,7 @@ on:
       - 'scripts/apply_p1_entitydragger_direction_26_2.py'
       - 'scripts/apply_p1_testchair_direction_26_2.py'
       - 'scripts/apply_p1_emptyrenderer_identifier_26_2.py'
+      - 'scripts/apply_p1_emptyrenderer_renderstate_26_2.py'
       - 'scripts/apply_p1_valkyrienskiesmod_identifier_26_2.py'
       - 'scripts/apply_p1_testhinge_getshape_signature_26_2.py'
       - 'scripts/apply_p1_testhinge_getticker_bound_26_2.py'
@@ -96,6 +97,9 @@ jobs:
 
       - name: Apply traceable P1 EmptyRenderer Identifier overlay
         run: python3 scripts/apply_p1_emptyrenderer_identifier_26_2.py upstream-vs2
+
+      - name: Apply traceable P1 EmptyRenderer render-state overlay
+        run: python3 scripts/apply_p1_emptyrenderer_renderstate_26_2.py upstream-vs2
 
       - name: Apply traceable P1 ValkyrienSkiesMod Identifier overlay
         run: python3 scripts/apply_p1_valkyrienskiesmod_identifier_26_2.py upstream-vs2
