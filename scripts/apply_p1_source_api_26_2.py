@@ -86,4 +86,20 @@ replace_count(
     7,
 )
 
+# Run 35325476529 proved VSEntityManager is now clean. Minecraft 26.2's entity-data API
+# constrains EntityDataSerializer/EntityDataAccessor values to non-null T : Any. Preserve the
+# exact upstream delegate/get/set behavior and add only the compiler-required Kotlin bounds.
+replace_count(
+    "common/src/main/kotlin/org/valkyrienskies/mod/util/EntityData.kt",
+    "inline fun <reified T : Entity, R> defineSynced(serializer: EntityDataSerializer<R>) =",
+    "inline fun <reified T : Entity, R : Any> defineSynced(serializer: EntityDataSerializer<R>) =",
+    1,
+)
+replace_count(
+    "common/src/main/kotlin/org/valkyrienskies/mod/util/EntityData.kt",
+    "class EntityDataDelegate<T>(val data: EntityDataAccessor<T>) {",
+    "class EntityDataDelegate<T : Any>(val data: EntityDataAccessor<T>) {",
+    1,
+)
+
 print("P1_SOURCE_API_26_2_OVERLAY_APPLIED")
