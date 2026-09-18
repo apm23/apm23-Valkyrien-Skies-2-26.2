@@ -131,4 +131,15 @@ replace_count(
     1,
 )
 
+# Run 35327644535 proved NbtUtil is now clean. Minecraft 26.x keeps Direction's unit
+# block-vector semantics behind the public getUnitVec3i() accessor while the normal backing
+# field is private. Adapt only the single VectorConversionsMC callsite; transform overload
+# structure and JOML math stay unchanged.
+replace_count(
+    "common/src/main/kotlin/org/valkyrienskies/mod/util/VectorConversionsMC.kt",
+    "transformDirection(dir.normal, dest)",
+    "transformDirection(dir.getUnitVec3i(), dest)",
+    1,
+)
+
 print("P1_SOURCE_API_26_2_OVERLAY_APPLIED")
