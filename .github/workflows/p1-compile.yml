@@ -27,6 +27,7 @@ on:
       - 'scripts/apply_p1_shipsaveddata_bytearray_optional_26_2.py'
       - 'scripts/apply_p1_compatutil_center_26_2.py'
       - 'scripts/apply_p1_compatutil_buildheight_26_2.py'
+      - 'scripts/apply_p1_compatutil_collision_context_26_2.py'
       - '.github/workflows/p1-compile.yml'
       - 'upstream-vs2'
       - 'BASELINE_LOCK.json'
@@ -122,6 +123,9 @@ jobs:
 
       - name: Apply traceable P1 CompatUtil build-height overlay
         run: python3 scripts/apply_p1_compatutil_buildheight_26_2.py upstream-vs2
+
+      - name: Apply traceable P1 CompatUtil empty collision-context overlay
+        run: python3 scripts/apply_p1_compatutil_collision_context_26_2.py upstream-vs2
 
       - name: Show and validate port delta
         shell: bash
