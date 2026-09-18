@@ -41,7 +41,7 @@ jobs:
           set -euo pipefail
           git -C upstream-vs2 diff --check
           git -C upstream-vs2 diff -- gradle.properties settings.gradle gradle/wrapper/gradle-wrapper.properties build.gradle fabric/build.gradle
-          git -C upstream-vs2 diff -- common/src/main/kotlin/org/valkyrienskies/mod/api/datagen/VSBlockInfoDataProvider.kt common/src/main/kotlin/org/valkyrienskies/mod/api/datagen/VSShipyardEntityDataProvider.kt common/src/main/kotlin/org/valkyrienskies/mod/common/BlockStateInfoProvider.kt
+          git -C upstream-vs2 diff -- common/src/main/kotlin/org/valkyrienskies/mod/api/datagen/VSBlockInfoDataProvider.kt common/src/main/kotlin/org/valkyrienskies/mod/api/datagen/VSShipyardEntityDataProvider.kt common/src/main/kotlin/org/valkyrienskies/mod/common/BlockStateInfoProvider.kt common/src/main/kotlin/org/valkyrienskies/mod/client/audio/SimpleSoundInstanceOnShip.kt
 
       - name: Show Gradle runtime
         working-directory: upstream-vs2

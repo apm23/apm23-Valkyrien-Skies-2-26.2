@@ -63,4 +63,15 @@ replace_count(
     4,
 )
 
+# Run 35324164902 proved BlockStateInfoProvider is now clean and exposed the same direct
+# ResourceLocation -> Identifier rename in SimpleSoundInstanceOnShip. There are exactly two
+# occurrences: the import and constructor parameter type. Ship-space sound positioning,
+# transform use, velocity computation, and constructor flow are left unchanged.
+replace_count(
+    "common/src/main/kotlin/org/valkyrienskies/mod/client/audio/SimpleSoundInstanceOnShip.kt",
+    "ResourceLocation",
+    "Identifier",
+    2,
+)
+
 print("P1_SOURCE_API_26_2_OVERLAY_APPLIED")
