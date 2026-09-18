@@ -92,6 +92,16 @@ replace_once(
     'id "com.gradleup.shadow" version "9.2.2"',
 )
 
+# P1 compile/boot does not publish artifacts. The upstream publication script is wired
+# directly to Loom's remapJar task, which intentionally does not exist under no-remap.
+# Disable only that distribution-time script here; production publishing is revisited
+# after the standalone 26.2 build/runtime path is proven.
+replace_once(
+    "fabric/build.gradle",
+    "apply from: '../gradle-scripts/publish-curseforge.gradle'\n",
+    "",
+)
+
 # 26.x is unobfuscated: use Architectury Loom's no-remap path and remove the
 # upstream remapJar task, which is not part of the no-remap build model.
 replace_once(
