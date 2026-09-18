@@ -9,31 +9,48 @@ GitHub code is the implementation source of truth. This file is the durable cont
 - Hard contract: **VS2 ASLI. BUKAN SYSTEM MIRIP VS2.**
 - Architecture contract: `PORT_CONTRACT.md`
 - Exact dependency/environment lock: `BASELINE_LOCK.json`
+- Upstream provenance: `UPSTREAM_PROVENANCE.md`
 
-## Current reconciliation — initial repository bootstrap
+## Current reconciliation — 2026-09-18 watchdog resume
 
-- Actual repository HEAD immediately before this ledger write: `18874d91c572293e7dad9b6bb75f974923ef4ef8`.
-- Repository was intentionally created fresh. No code from `apm23/VS2-Create_Interactive` has been imported.
-- Official upstream baseline is pinned to:
-  - repository: `ValkyrienSkies/Valkyrien-Skies-2`
-  - branch: `1.21.1/main`
-  - commit: `f39132148e717d325933b4ce6e9e9fb13d929390`
-  - upstream mod version: `2.4.12`
-- Target runtime baseline:
-  - Minecraft `26.2`
-  - Java `25`
-  - Fabric Loader `0.19.3`
-  - Fabric API `0.160.0+26.2`
-  - Create Fly `6.0.9-1`
-  - Steam 'n' Rails embedded version `SNR.FLY-STABLE-1.2.2+fabric-mc26.2`
-  - Copycats embedded version `3.0.7-createfly+mc.26.2-v1.14`
+- Actual repository HEAD at watchdog start: `1e90c3aa93240092a1c1a3f3dd8b0c9afb7afc89`.
+- No GitHub Actions runs existed at reconciliation time.
+- Previous ledger correctly identified P0 upstream import as the next safe action.
+- No code from `apm23/VS2-Create_Interactive` has been imported.
+
+## Official upstream baseline
+
+- repository: `ValkyrienSkies/Valkyrien-Skies-2`
+- branch used to select baseline: `1.21.1/main`
+- exact commit: `f39132148e717d325933b4ce6e9e9fb13d929390`
+- exact upstream root tree: `91116399605d3ecd1c93b0011560e09281ee1fa4`
+- upstream mod version: `2.4.12`
+- upstream `LICENSE` blob: `0a041280bd00a9d068f503b8ee7ce35214bd24a1`
+
+## P0 import implementation
+
+The exact official source baseline is imported as the Git submodule/gitlink `upstream-vs2/` pinned directly to `f39132148e717d325933b4ce6e9e9fb13d929390`.
+
+This is intentional: the baseline remains byte-for-byte upstream source instead of being reconstructed through the connector. Minecraft 26.2 adaptations must be explicit, reviewable port changes layered on that exact baseline. The source identity and license are verified by `.github/workflows/p0-provenance.yml`.
+
+No Create/SNR/Copycats integration is part of P0.
+
+## Target runtime baseline
+
+- Minecraft `26.2`
+- Java `25`
+- Fabric Loader `0.19.3`
+- Fabric API `0.160.0+26.2`
+- Create Fly `6.0.9-1`
+- Steam 'n' Rails embedded version `SNR.FLY-STABLE-1.2.2+fabric-mc26.2`
+- Copycats embedded version `3.0.7-createfly+mc.26.2-v1.14`
 - Dependency bytes are locked by SHA-256 in `BASELINE_LOCK.json`. Filenames are not authoritative when they disagree with embedded metadata.
 
 ## Project state
 
-- project_state: `P0_UPSTREAM_IMPORT_PENDING`
-- active_blocker: `OFFICIAL_UPSTREAM_SOURCE_NOT_YET_IMPORTED`
-- active_hypothesis: `NONE — begin from upstream provenance, not from old-project behavior`
+- project_state: `P0_PROVENANCE_VERIFY_PENDING`
+- active_blocker: `P0_PROVENANCE_WORKFLOW_NOT_YET_GREEN`
+- active_hypothesis: `Exact upstream gitlink plus source-tree identity proof is the cleanest reproducible import baseline`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 
@@ -56,7 +73,7 @@ The previous project's custom carry/reference-frame chains, floor fixes, camera 
 ## Milestones
 
 ### P0 — Upstream import + provenance
-Import exact official upstream pin, preserve license/notices, and record deviations.
+Exact upstream baseline imported as `upstream-vs2/` gitlink. P0 remains pending until the provenance workflow proves exact commit/tree/license identity from a clean checkout.
 
 ### P1 — Standalone VS2 26.2 boot
 Port real VS2 to 26.2 until client/server boot and core/native initialization work without Create/SNR/Copycats hiding failures.
@@ -94,7 +111,7 @@ Full target stack, final exact JAR, final verification, then exact-JAR real-user
 
 ## Unproven
 
-- upstream import/provenance
+- P0 provenance workflow
 - 26.2 build
 - standalone boot
 - VSCore/Krunch/native chain
@@ -138,15 +155,12 @@ This proves that floor-only automated green is insufficient. It does NOT authori
 
 ## next_safe_action
 
-1. Inspect actual HEAD and this ledger.
-2. Import the exact official upstream VS2 source pin `f39132148e717d325933b4ce6e9e9fb13d929390` with upstream license/notices preserved.
-3. Record import provenance and a source-tree identity check.
-4. Do **not** add Create/SNR/Copycats integration yet.
-5. Make the smallest reproducible Minecraft 26.2 build-system/mapping/loader adaptation necessary to get a first standalone compile signal.
-6. Trigger the smallest relevant CI proof.
-7. Update this ledger with the exact resulting HEAD/run/blocker.
-
-No old-project code should be copied merely because it already compiled.
+1. Commit the exact upstream gitlink + provenance workflow without gameplay/build adaptation.
+2. Inspect the resulting P0 provenance Actions run.
+3. If provenance is green, record exact import HEAD/run and freeze P0.
+4. Only then begin P1 with the smallest deterministic Minecraft 26.2 build-system/mapping/loader adaptation necessary to produce the first standalone compile signal from the real upstream source.
+5. Do not add Create/SNR/Copycats integration during P1.
+6. Update this ledger with exact resulting HEAD/run/blocker after every proof-changing action.
 
 ## Final gate
 

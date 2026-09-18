@@ -1,0 +1,33 @@
+name: P0 provenance
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-upstream-identity:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout port repository and exact upstream submodule
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Verify exact upstream VS2 source identity
+        shell: bash
+        env:
+          EXPECTED_COMMIT: f39132148e717d325933b4ce6e9e9fb13d929390
+          EXPECTED_TREE: 91116399605d3ecd1c93b0011560e09281ee1fa4
+          EXPECTED_LICENSE_BLOB: 0a041280bd00a9d068f503b8ee7ce35214bd24a1
+        run: |
+          set -euo pipefail
+          test "$(git ls-tree HEAD upstream-vs2 | awk '{print $3}')" = "$EXPECTED_COMMIT"
+          test "$(git -C upstream-vs2 rev-parse HEAD)" = "$EXPECTED_COMMIT"
+          test "$(git -C upstream-vs2 rev-parse 'HEAD^{tree}')" = "$EXPECTED_TREE"
+          test "$(git -C upstream-vs2 hash-object LICENSE)" = "$EXPECTED_LICENSE_BLOB"
+          test -z "$(git -C upstream-vs2 status --porcelain)"
+          echo "P0_SOURCE_IDENTITY_OK commit=$EXPECTED_COMMIT tree=$EXPECTED_TREE"

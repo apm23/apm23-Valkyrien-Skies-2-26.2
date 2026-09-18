@@ -1,0 +1,3 @@
+[submodule "upstream-vs2"]
+	path = upstream-vs2
+	url = https://github.com/ValkyrienSkies/Valkyrien-Skies-2.git
