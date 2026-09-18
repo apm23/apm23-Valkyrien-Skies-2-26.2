@@ -1,0 +1,58 @@
+{
+  "project": "apm23/apm23-Valkyrien-Skies-2-26.2",
+  "purpose": "Exact initial dependency/environment lock for real VS2 26.2 port",
+  "minecraft": "26.2",
+  "java": "25",
+  "fabric_loader_observed": "0.19.3",
+  "upstream_vs2": {
+    "repository": "ValkyrienSkies/Valkyrien-Skies-2",
+    "branch": "1.21.1/main",
+    "commit": "f39132148e717d325933b4ce6e9e9fb13d929390",
+    "mod_version_at_pin": "2.4.12",
+    "rule": "Official upstream source is the implementation baseline. Do not substitute the old custom VS2/Create project."
+  },
+  "provided_inputs": [
+    {
+      "filename": "create-fly-26.2-rc-2-6.0.9-1(5).jar",
+      "mod_id": "create",
+      "embedded_version": "6.0.9-1",
+      "sha256": "d9c6cb6116d5caa1174a289ecd7d3cdd463ccef6e8db1249ab0bcfcd8c935870",
+      "source_hint": "https://github.com/ZurrTum/Create-Fly"
+    },
+    {
+      "filename": "SNR.FLY-STABLE-1.2.2.jar",
+      "mod_id": "railways",
+      "embedded_version": "SNR.FLY-STABLE-1.2.2+fabric-mc26.2",
+      "sha256": "33c87d5a7da0d468d3b6c0e99f726b835c63b693e7447fdaeca5e1f204caab84",
+      "source_hint": "https://github.com/cat4blep/Create-Steam-n-Rails-Fly",
+      "note": "Runtime initializer text may still print 1.2.1; lock identity by SHA-256 + fabric.mod.json, not log display string."
+    },
+    {
+      "filename": "Copycats-Fabric-26.2-v1.13.jar",
+      "mod_id": "copycats",
+      "embedded_version": "3.0.7-createfly+mc.26.2-v1.14",
+      "sha256": "1922db10a49dfab42c4c272fbaee41cdc149287cd08ca84148b497e598029858",
+      "note": "Filename says v1.13 but fabric.mod.json says v1.14. Embedded metadata + SHA-256 are authoritative."
+    },
+    {
+      "filename": "fabric-api-0.160.0+26.2.jar",
+      "mod_id": "fabric-api",
+      "embedded_version": "0.160.0+26.2",
+      "sha256": "5f3dff88e1661166e222213302b25ace6c36dc3683804cbd4b5acf93138ea05e"
+    },
+    {
+      "filename": "latest(20260918-030749).log",
+      "sha256": "ef72397521a9b0b4a3bf8cfa329081e753c4ad40f34a4fdff671cd45fe9e0ce7",
+      "note": "Environment evidence only; contains instrumentation from the retired previous project and must not be treated as source architecture."
+    }
+  ],
+  "runtime_observed": {
+    "create": "6.0.9-1",
+    "railways": "SNR.FLY-STABLE-1.2.2+fabric-mc26.2",
+    "fabric_api": "0.160.0+26.2",
+    "fabric_loader": "0.19.3",
+    "minecraft": "26.2",
+    "java": "25"
+  },
+  "identity_rule": "When filename/version strings disagree, use SHA-256 plus embedded mod metadata. Never silently swap dependency bytes."
+}
