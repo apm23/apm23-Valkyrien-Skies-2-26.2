@@ -229,4 +229,23 @@ replace_count(
     1,
 )
 
+# Run 35338858979 proved RaycastUtils.kt clean and reports exactly two removed legacy
+# integer permission-level calls in MinecraftPlayer.kt. Pinned baseline and current
+# 1.21.1/main are byte-identical at blob c11d83b71dc7be4144fb9473ac76636f458898a5.
+# Minecraft 26.2 maps the old command level 4 to PermissionLevel.OWNERS and exposes that
+# threshold as Permissions.COMMANDS_OWNER. Adapt only the permission predicate; keep the
+# physical-client shortcut and every VsiPlayer wrapper/reference-state behavior unchanged.
+replace_count(
+    "common/src/main/kotlin/org/valkyrienskies/mod/common/util/MinecraftPlayer.kt",
+    "import net.minecraft.world.entity.player.Player\n",
+    "import net.minecraft.server.permissions.Permissions\nimport net.minecraft.world.entity.player.Player\n",
+    1,
+)
+replace_count(
+    "common/src/main/kotlin/org/valkyrienskies/mod/common/util/MinecraftPlayer.kt",
+    "player.hasPermissions(4)",
+    "player.permissions().hasPermission(Permissions.COMMANDS_OWNER)",
+    2,
+)
+
 print("P1_SOURCE_API_26_2_OVERLAY_APPLIED")
