@@ -206,4 +206,27 @@ replace_count(
     1,
 )
 
+# Run 35337116568 proved TestThrusterBlock.kt clean and exposed exactly two direct
+# Minecraft 26.2 compile errors in RaycastUtils.kt. Pinned baseline and current 1.21.1/main
+# are byte-identical at blob 97fa4f9fcc776cd1b6445d130087306f7c8fe800.
+# 26.2 renamed the floating-point vector-direction lookup to getApproximateNearest(); use
+# that exact replacement without altering miss-position or ship/world clip selection.
+replace_count(
+    "common/src/main/kotlin/org/valkyrienskies/mod/common/world/RaycastUtils.kt",
+    "Direction.getNearest(line.x, line.y, line.z)",
+    "Direction.getApproximateNearest(line.x, line.y, line.z)",
+    1,
+)
+
+# The same run reports Kotlin nullable location at EntityHitResult construction, whose 26.2
+# constructor requires a non-null Vec3. Upstream assigns location in every branch that assigns
+# resultEntity, and construction already occurs only when resultEntity != null. Assert that
+# existing paired invariant only; do not introduce a fallback hit position or raycast behavior.
+replace_count(
+    "common/src/main/kotlin/org/valkyrienskies/mod/common/world/RaycastUtils.kt",
+    "EntityHitResult(resultEntity, location)",
+    "EntityHitResult(resultEntity, location!!)",
+    1,
+)
+
 print("P1_SOURCE_API_26_2_OVERLAY_APPLIED")
