@@ -52,4 +52,15 @@ replace_count(
     1,
 )
 
+# Run 35322680307 proved the same ResourceLocation -> Identifier API rename is still the
+# direct compile blocker in BlockStateInfoProvider. The four occurrences are only the import
+# and Identifier arguments passed to ResourceKey/Registry; VS2 registry and block-state
+# semantics remain untouched.
+replace_count(
+    "common/src/main/kotlin/org/valkyrienskies/mod/common/BlockStateInfoProvider.kt",
+    "ResourceLocation",
+    "Identifier",
+    4,
+)
+
 print("P1_SOURCE_API_26_2_OVERLAY_APPLIED")
