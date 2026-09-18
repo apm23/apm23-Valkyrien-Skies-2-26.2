@@ -45,6 +45,7 @@ replace_once("gradle.properties", "enabled_platforms=fabric,neoforge", "enabled_
 replace_once("gradle.properties", "archives_base_name=valkyrienskies-1-21-1", "archives_base_name=valkyrienskies-26-2")
 replace_once("gradle.properties", "fabric_loader_version=0.18.4", "fabric_loader_version=0.19.3")
 replace_once("gradle.properties", "fabric_api_version=0.115.1+1.21.1", "fabric_api_version=0.160.0+26.2")
+replace_once("gradle.properties", "fcap_version = 21.1.0", "fcap_version = 26.2.1")
 
 # P1 is Fabric-only standalone VS2. NeoForge is intentionally outside this target.
 replace_once("settings.gradle", 'include("forge")\n', "")
@@ -118,6 +119,17 @@ replace_active_dependency_config("common/build.gradle", "modApi", "api", 1)
 replace_active_dependency_config("common/build.gradle", "modCompileOnly", "compileOnly", 18)
 replace_active_dependency_config("fabric/build.gradle", "modImplementation", "implementation", 6)
 replace_active_dependency_config("fabric/build.gradle", "modCompileOnly", "compileOnly", 11)
+
+# Forge Config API Port is required by the real Fabric initializer to register VS2's
+# NeoForge-style ModConfig specs. Keep that upstream integration, but move its Maven
+# coordinate from the pinned 1.21.1 line to the official Minecraft 26.2 release. The
+# pinned Fabric build also carries a redundant old Curse compile-only FCAP jar; remove
+# only that duplicate so Loom does not process its intermediary access widener.
+replace_once(
+    "fabric/build.gradle",
+    '    compileOnly("curse.maven:forge-config-api-port-fabric-547434:$config_api_id")\n',
+    "",
+)
 
 # The pinned upstream itself documents this common-side Sable coordinate as an old
 # optional compatibility dependency that does not resolve on newer Minecraft lines.
