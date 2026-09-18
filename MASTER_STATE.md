@@ -11,37 +11,27 @@ GitHub code is the implementation source of truth. This file is the durable cont
 - Exact dependency/environment lock: `BASELINE_LOCK.json`
 - Upstream provenance: `UPSTREAM_PROVENANCE.md`
 
-## Current reconciliation — 2026-09-18 watchdog timeout recovery
-
-- Actual source-port HEAD reconciled at watchdog start: `b38ff3f36b3c5ad831cbfee6999423f0df08a038` (`P1: port first 26.2 Identifier API cluster`).
-- Previous P1 run `35322680307`, job `105528498940`, completed `failure` at that exact HEAD **after reaching real `:common:compileKotlin` source compilation**. Build/toolchain setup, Java 25, no-remap Loom setup, dependency resolution, and the first source overlay all completed before compiler errors.
-- The compiler proved the first source overlay worked and exposed a broad Minecraft-26.2 source-API migration surface. It also proved the old ledger statement that no VS2 source imports Sable was false: pinned upstream `common/src/main/kotlin/org/valkyrienskies/mod/compat/SableCompat.kt` imports and uses Sable companion APIs for real VS2 entity-dragging state.
-- Official upstream branch `1.21.1/main` still contains `SableCompat.kt` and still declares a Sable common dependency (with newer coordinates/API). Therefore Sable is a real upstream compatibility dependency/API gap, not dead code that may be discarded from final architecture.
-- The earlier build overlay currently omits the unavailable pinned Sable artifact only to let the standalone compile probe reach source compilation. That omission is **temporary compile-probe scaffolding**, not an accepted final removal of Sable/entity-dragging behavior.
-- Smallest compiler-proven next source adaptation landed at source-port HEAD `7043d6dc2916ce86268ad2501bfc6d24cf781daf`: the exact four `ResourceLocation` references in upstream `BlockStateInfoProvider.kt` are adapted to Minecraft 26.2 `Identifier`. No VS2 registry/block-state/physics semantics were changed.
-- P0 provenance at source-port HEAD `7043d6dc2916ce86268ad2501bfc6d24cf781daf`: run `35324164899` completed `success`.
-- P1 compile proof for source-port HEAD `7043d6dc2916ce86268ad2501bfc6d24cf781daf`: run `35324164902`, job `105533249735`, is in progress at the time of this ledger update. It has already passed checkout, Java 25 setup, build overlay, 26.2 source overlay, delta validation, and Gradle runtime; it is currently executing the standalone common + Fabric compile step.
-- No code from `apm23/VS2-Create_Interactive` has been imported. The retired workaround project remains forbidden as an implementation source.
-
-## Official upstream baseline
+## Authoritative upstream baseline
 
 - repository: `ValkyrienSkies/Valkyrien-Skies-2`
 - branch used to select baseline: `1.21.1/main`
 - exact commit: `f39132148e717d325933b4ce6e9e9fb13d929390`
-- exact upstream root tree: `91116399605d3ecd1c93b0011560e09281ee1fa4`
+- exact root tree: `91116399605d3ecd1c93b0011560e09281ee1fa4`
 - upstream mod version: `2.4.12`
-- upstream `LICENSE` blob: `0a041280bd00a9d068f503b8ee7ce35214bd24a1`
+- imported as git submodule/gitlink `upstream-vs2/`
 
-## P0 import implementation
+The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are applied by explicit fail-closed overlay scripts so every adaptation stays traceable to upstream VS2 source.
 
-The exact official source baseline is imported as the Git submodule/gitlink `upstream-vs2/` pinned directly to `f39132148e717d325933b4ce6e9e9fb13d929390`.
+## Current reconciliation — 2026-09-18
 
-This is intentional: the baseline remains byte-for-byte upstream source instead of being reconstructed through the connector. Minecraft 26.2 adaptations are explicit, reviewable port changes layered on that exact baseline. `.github/workflows/p0-provenance.yml` verifies the gitlink commit, checked-out submodule HEAD, root tree, upstream LICENSE blob, and clean checkout.
-
-P0 original frozen proof: run `35304871880`, conclusion `success`, source HEAD `04b3228435ea14bc34de0646363a985cf6b2ba59`.
-Latest P0 confirmation for current source-port patch: run `35324164899`, conclusion `success`, source-port HEAD `7043d6dc2916ce86268ad2501bfc6d24cf781daf`.
-
-No Create/SNR/Copycats integration is part of P0/P1.
+- Actual implementation HEAD before this ledger-only update: `a2951cab7d0a5b32756b45dc361a040d7212cdea` (`P1: port entity manager Identifier API cluster`).
+- Parent source patch: `2ddb21a410c91ca257db3c73b444f651326b1493` (`P1: port ship sound Identifier API cluster`).
+- P0 at `2ddb21a410c91ca257db3c73b444f651326b1493`: run `35324792335` completed `success`.
+- P1 at `2ddb21a410c91ca257db3c73b444f651326b1493`: run `35324792402`, job `105535234468`, completed `failure` at `:common:compileKotlin` after checkout, Java 25, build overlay, source overlay, diff validation, and Gradle startup all succeeded.
+- Run `35324792402` proves the prior `SimpleSoundInstanceOnShip.kt` `ResourceLocation -> Identifier` adaptation worked: that file no longer appears in compile errors.
+- The next smallest compiler-proven cluster was `VSEntityManager.kt`: seven `ResourceLocation` occurrences caused direct missing-type errors plus generic/overload inference cascades. HEAD `a2951cab7d0a5b32756b45dc361a040d7212cdea` adapts exactly those seven occurrences to `Identifier`; handler selection, Create compat routing, caches, networking calls, and entity/reference-frame semantics are unchanged.
+- Active P1 proof for `a2951cab7d0a5b32756b45dc361a040d7212cdea`: run `35325476529`, currently `in_progress` when this ledger entry was written.
+- No code from `apm23/VS2-Create_Interactive` has been imported. The retired workaround project remains forbidden as implementation source.
 
 ## Target runtime baseline
 
@@ -52,176 +42,108 @@ No Create/SNR/Copycats integration is part of P0/P1.
 - Create Fly `6.0.9-1`
 - Steam 'n' Rails embedded version `SNR.FLY-STABLE-1.2.2+fabric-mc26.2`
 - Copycats embedded version `3.0.7-createfly+mc.26.2-v1.14`
-- Dependency bytes are locked by SHA-256 in `BASELINE_LOCK.json`. Filenames are not authoritative when they disagree with embedded metadata.
+- Exact dependency bytes are locked by SHA-256 in `BASELINE_LOCK.json`.
 
 ## Project state
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
-- active_hypothesis: `Continue only compiler-proven, traceable Minecraft/Fabric 26.2 API adaptations in small clusters; preserve real upstream VS2 subsystem semantics. Resolve Sable with a traceable compatibility path rather than deleting VS2 entity-dragging behavior.`
-- active_proof_head: `7043d6dc2916ce86268ad2501bfc6d24cf781daf`
-- active_proof_run: `35324164902`
+- active_proof_head: `a2951cab7d0a5b32756b45dc361a040d7212cdea`
+- active_proof_run: `35325476529`
+- active_hypothesis: `Continue only compiler-proven, traceable 26.2 API adaptations in small clusters while preserving actual upstream VS2 subsystem semantics.`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 
-## P1 build-port evidence
+## Proven P1 progress
 
-Early P1 probes established and preserved:
-- exact upstream submodule checkout succeeds;
-- Java 25 and Gradle 9.5.1 start correctly;
-- Gradle-9 `archivesBaseName` removal was adapted;
-- Minecraft 26.x uses `dev.architectury.loom-no-remap` with no mappings/remapJar path;
-- dependency configurations were migrated away from `modImplementation`/`modApi`/`modCompileOnly` under no-remap Loom;
-- common/Fabric dependency selection was adapted far enough to enter source compilation.
+Build/toolchain work already established:
+- Java 25 + Gradle 9.5.1 starts;
+- Minecraft 26.x build uses `dev.architectury.loom-no-remap` without Mojang mappings/remapJar;
+- Gradle 9 `archivesBaseName` removal adapted;
+- old `modImplementation` / `modApi` / `modCompileOnly` configurations migrated for no-remap Loom;
+- dependency resolution advances into real `:common:compileKotlin`;
+- explicit source overlay is active and fail-closed.
 
-Important run history:
-- `35305188689`: first P1 probe; stopped on removed Gradle 9 `archivesBaseName`.
-- `35305340412`: advanced to Loom mappings blocker.
-- `35305492616`: exposed strict overlay matcher issue.
-- `35305553848`: no-remap overlay applied; exposed missing `modImplementation` under no-remap Loom.
-- `35306643156`: advanced dependency resolution to Sable artifact issue.
-- Subsequent build-overlay work omitted the unavailable pinned Sable artifact for compile probing and advanced to actual source compilation.
-- `35322680307` at `b38ff3f36b3c5ad831cbfee6999423f0df08a038`: reached `:common:compileKotlin`, proving the first explicit 26.2 source overlay is active. Compiler errors now primarily reflect Minecraft/Fabric API drift rather than build-system setup.
-- `35324164902` at `7043d6dc2916ce86268ad2501bfc6d24cf781daf`: active proof after adding the compiler-proven `BlockStateInfoProvider.kt` `ResourceLocation -> Identifier` cluster; run still in progress when this ledger entry was written.
+Source API clusters proven clean in successive runs:
+- data-provider `ResourceLocation -> Identifier` plus registry-holder `location() -> identifier()`;
+- `BlockStateInfoProvider.kt` Identifier cluster;
+- `SimpleSoundInstanceOnShip.kt` Identifier cluster.
 
-Representative compiler-proven source migration areas from `35322680307` include:
-- additional `ResourceLocation -> Identifier` and related registry/key API renames;
-- block/direction/position/build-height API changes;
-- saved-data / NBT / `ValueInput` / `ValueOutput` changes;
-- command permission API changes;
-- resource reload listener generics;
-- renderer/render-state changes;
-- entity save/hurt/networking/data-tracker changes;
-- ticket/tick/processor API changes;
-- Create-compat source references that must remain isolated until standalone VS2 P1 is proven;
-- Sable API/dependency incompatibility in upstream `SableCompat.kt`.
+Current candidate under proof:
+- `VSEntityManager.kt` seven-occurrence `ResourceLocation -> Identifier` cluster.
 
-These compiler errors authorize only narrow, source-traceable port adaptations. They do not authorize replacing VS2 architecture.
+Representative remaining compiler areas include renderer/render-state APIs, direction/position/build-height changes, SavedData/NBT `ValueInput`/`ValueOutput`, command permissions, resource reload listener generics, entity save/hurt/network APIs, tickets/ticks/structure processors, Create-compat classpath/API drift, and Sable compatibility.
+
+## Sable contract
+
+A previous hypothesis that no VS2 source imported Sable was disproven by compiler output and upstream source inspection. `common/src/main/kotlin/org/valkyrienskies/mod/compat/SableCompat.kt` is real upstream VS2 code and uses Sable companion state for entity-dragging/reference behavior.
+
+Official upstream `1.21.1/main` still carries Sable compat with newer coordinates/API. The current build overlay's omission of the unavailable pinned artifact is **temporary compile-probe scaffolding only**. Final architecture must resolve Sable through a traceable compatible dependency/API path or an explicitly documented minimal compatibility shim into existing VS2 architecture. Deleting/replacing VS2 entity-dragging semantics is forbidden.
 
 ## Mandatory architecture
 
-This repository is a version port of real VS2. Porting Minecraft/Fabric APIs is allowed. Replacing VS2 internals with a new home-grown system that only imitates VS2 behavior is forbidden.
-
-Core final behavior must remain based on actual upstream VS2 machinery for:
+Final behavior must remain based on real upstream VS2 machinery for:
 - ship lifecycle / ship-space;
 - transforms;
 - physics-core integration;
 - collision integration;
-- entity/reference-frame behavior;
+- entity dragging/reference-frame behavior;
 - player/body/camera integration;
-- networking / synchronization;
+- networking/synchronization;
 - rendering.
 
-The previous project's custom carry/reference-frame chains, floor fixes, camera corrections, manual clamps, synthetic velocity, per-tick teleport/reanchor logic, and workaround history are not an implementation source.
+Forbidden final substitutes include custom VS2-style reference frames, synthetic carry velocity/inertia, fake gravity, manual floor/wall/ceiling clamps, per-tick teleport/setPos chase, camera counter-rotation/forcing, duplicate authority, floor-only success, and the retired `VS2-Create_Interactive` workaround chain.
 
 ## Milestones
 
 ### P0 — Upstream import + provenance
-Frozen green at source HEAD `04b3228435ea14bc34de0646363a985cf6b2ba59`, Actions run `35304871880` success. Exact upstream commit/tree/license identity proven. Current source-port patch also reconfirmed by P0 run `35324164899` success.
+Frozen green. Original proof run `35304871880`; later confirmations include `35324164899` and `35324792335`.
 
-### P1 — Standalone VS2 26.2 boot
-Port real VS2 to 26.2 until client/server boot and core/native initialization work without Create/SNR/Copycats hiding failures.
+### P1 — Standalone VS2 26.2 compile/boot
+Port actual VS2 until common/Fabric compile, standalone client/server boot, and core/native initialization are proven without Create/SNR/Copycats hiding failures.
 
-### P2 / M1 — Standalone real VS2 ship runtime
-Prove on 26.2 using a real VS2 ship:
-- actual VS2 ship creation/lifecycle;
-- ship transform translation + rotation;
-- player standing and walking;
-- jump -> airborne -> natural landing while staying in the ship frame;
-- solid floor/walls/ceiling;
-- free stable mouse look/camera;
-- entity dragging/reference-frame behavior;
-- client/server synchronization;
-- no fake carry, no per-tick teleport chase.
-
-Only after all of this may `M1_COMPLETE` be emitted.
+### P2 / M1 — Standalone real VS2 runtime
+Must prove a real VS2 ship: lifecycle, translation/rotation, standing/walking, jump-airborne-natural landing, solid floor/walls/ceiling, stable free camera, entity dragging/reference frame, client/server sync, and no fake carry/teleport chase.
 
 ### P3 — Create Fly bridge
-Only after standalone VS2 is frozen green. Initial architecture target:
-- one Create carriage = one real VS2 ship/reference space;
-- Create owns track graph, bogey, station, schedule, speed and desired carriage trajectory;
-- VS2 owns the moving ship/reference-space semantics;
-- do not fake a VS2 ship with a matrix/helper object.
+Only after standalone VS2 is frozen green. Create owns railway gameplay/trajectory; VS2 owns the real moving ship/reference-space semantics.
 
-### P4 — Steam 'n' Rails + Copycats
-Integrate exact locked dependencies after the Create bridge works.
+### P4 — SNR + Copycats
+Only after Create bridge is proven.
 
 ### P5 — Production/final
-Full target stack, final exact JAR, final verification, then exact-JAR real-user runtime acceptance.
-
-## Frozen green
-
-- `P0_UPSTREAM_IMPORT_PROVENANCE`: original frozen source HEAD `04b3228435ea14bc34de0646363a985cf6b2ba59`; run `35304871880`; exact upstream commit/tree/LICENSE identity verified.
-- Current P0 reconfirmation: source-port HEAD `7043d6dc2916ce86268ad2501bfc6d24cf781daf`; run `35324164899`; success.
-
-## Unproven
-
-- 26.2 full compile
-- standalone client/server boot
-- VSCore/Krunch/native chain
-- ship lifecycle
-- ship transforms
-- physics
-- rendering
-- networking
-- collision
-- player/body/camera
-- entity dragging
-- Sable compatibility on 26.2
-- Create bridge
-- SNR
-- Copycats
-- final artifact
+Exact final build, final verification, and exact-JAR real-user acceptance.
 
 ## Failed hypotheses / forbidden reintroductions
 
 Do not reintroduce without new direct evidence:
-- **FALSE HYPOTHESIS RETIRED:** `no VS2 source imports Sable`. Compiler evidence and upstream source inspection prove `SableCompat.kt` imports/uses Sable for real entity-dragging state. Never use that false premise to delete the subsystem.
-- treating temporary omission of the unavailable pinned Sable artifact as final architecture; a traceable 26.2 Sable compatibility solution is still required before entity-dragging can be considered ported;
-- Gradle 9 with the removed legacy `archivesBaseName` convention property;
-- regular `dev.architectury.loom` on Minecraft 26.x with the mappings dependency removed;
-- `modImplementation`/`modApi`/`modCompileOnly` configurations under `dev.architectury.loom-no-remap`;
-- custom "VS2-style" reference-frame system as a substitute for VS2;
-- grounded floor carry as proof of real ship-space correctness;
-- per-tick player teleport/setPos chase;
-- synthetic carry velocity/inertia;
-- fake gravity;
-- manual floor/wall/ceiling clamps;
-- camera forcing/counter-rotation;
-- duplicate Create/custom/VS2 ownership;
-- old `VS2-Create_Interactive` gameplay patches as a starting architecture;
-- fixture/input mutations whose purpose is only to manufacture green.
-
-## Direct user-runtime evidence from retired project
-
-Historical warning only, not implementation source:
-- exact previous candidate had floor/grounded behavior working;
-- jump teleported/failed badly;
-- camera was dragged on turns;
-- walls were penetrable;
-- turns could throw the player out of the train.
-
-This proves that floor-only automated green is insufficient. It does NOT authorize copying or patching the retired project here.
+- `no VS2 source imports Sable` — FALSE;
+- treating temporary Sable dependency omission as final architecture;
+- regular `dev.architectury.loom` + mappings on Minecraft 26.x;
+- old Gradle `archivesBaseName`;
+- `modImplementation` / `modApi` / `modCompileOnly` under no-remap Loom;
+- custom imitation ship/reference-frame implementation;
+- grounded-floor behavior as sufficient runtime proof;
+- synthetic carry/inertia/gravity;
+- manual collision clamps;
+- camera forcing;
+- per-tick teleport/reanchor;
+- retired project gameplay patches;
+- fixture/input mutations solely to manufacture green.
 
 ## next_safe_action
 
-1. Treat source-port HEAD `7043d6dc2916ce86268ad2501bfc6d24cf781daf` and P1 run `35324164902` as the active proof pair; do not patch again while that workflow is still active.
-2. When run `35324164902` completes, inspect its exact compile log and classify the next direct compiler blocker/cluster.
-3. If the `BlockStateInfoProvider.kt` Identifier cluster is gone, preserve it and choose only the smallest next compiler-proven API adaptation. If it regressed, repair only that direct regression.
-4. Do not alter Sable/entity-dragging semantics merely to make compilation green. Resolve Sable as a separate traceable compatibility gap based on upstream architecture/API evidence.
-5. Continue P1 standalone only. Do not add Create/SNR/Copycats until real standalone VS2 26.2 boot/core initialization is proven.
-6. Update this ledger with the exact run conclusion, next blocker, resulting HEAD, and next safe action after the proof result lands.
+1. Treat implementation HEAD `a2951cab7d0a5b32756b45dc361a040d7212cdea` and P1 run `35325476529` as the active proof pair.
+2. **Do not patch while run `35325476529` is active.**
+3. When it completes, inspect the exact compile log. If `VSEntityManager.kt` ResourceLocation/type-inference cluster is gone, preserve the patch and select only the next smallest direct compiler-proven API cluster. If it regressed, repair only that regression.
+4. Do not alter renderer, NBT, Sable/entity-dragging, physics, collision, networking, player/camera, or Create semantics merely to remove unrelated compiler errors; each needs its own evidence-backed adaptation.
+5. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet.
+6. Update this ledger after the active run lands before any subsequent patch.
 
-## Video validation state
+## Video validation
 
-- No video is authorized or needed during compile/API-port debugging.
-- Video is closure-only after a user-visible runtime blocker is already closure-ready from data/runtime proof.
+No video is authorized during compile/API-port debugging. Video is closure-only for a user-visible runtime blocker that is already closure-ready from runtime/data proof.
 
 ## Final gate
 
-`FINAL_READY` is forbidden until:
-- exact final source/build is verified;
-- exact final JAR SHA-256 is recorded;
-- the user tests that exact JAR in the real Minecraft setup and accepts runtime behavior.
-
-CI alone cannot satisfy this gate.
+`FINAL_READY` is forbidden until the exact final source/build and JAR SHA-256 are recorded and the user tests and accepts that exact JAR in the real Minecraft setup. CI alone cannot satisfy the final gate.
