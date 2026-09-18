@@ -22,22 +22,22 @@ GitHub code is the implementation source of truth. This file is the durable cont
 
 The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are applied by explicit fail-closed overlay scripts so every adaptation stays traceable to upstream VS2 source.
 
-## Current reconciliation — TestHinge removal hook proven; ShipSavedData byte-array Optional proof selected
+## Current reconciliation — ShipSavedData byte-array Optional proven; CompatUtil BlockPos center proof selected
 
-- Current proven implementation HEAD: `58e978bf8841e8bbb26e4658e9b7b566d4800e14` (`P1: wire TestHinge removal hook proof`).
-- Exact-head P0 provenance run `35398688368`, job `105773330399`, completed `success` for `58e978bf8841e8bbb26e4658e9b7b566d4800e14`.
-- Exact-head P1 standalone compile run `35398688325`, job `105773336393`, completed `failure` only because later independent Minecraft 26.2 source/API errors remain.
-- Every traceable overlay applied successfully, including `apply_p1_testhinge_removal_hook_26_2.py`; explicit port-delta validation and Gradle runtime steps succeeded.
-- Exact TestHinge removal delta migrates the pinned `onRemove(BlockState, Level, BlockPos, BlockState, Boolean)` hook to Minecraft 26.2 `affectNeighborsAfterRemoval(BlockState, ServerLevel, BlockPos, Boolean)`. The obsolete `newState` parameter and redundant runtime `ServerLevel` type guard disappear, while block-entity lookup, `constraintId` early return, `getOrCreateGTPA(...).removeJoint(...)`, execution ordering and superclass delegation are preserved.
-- The previous `TestHingeBlock.kt:200` `onRemove overrides nothing` diagnostic and line 208 unresolved `super.onRemove` diagnostic are absent from run `35398688325`.
-- Independent `TestHingeBlockEntity.kt` persistence diagnostics remain exactly where expected: `saveAdditional` expects `ValueOutput`, `loadAdditional` expects `ValueInput`, and the old CompoundTag/provider calls no longer match.
-- Therefore the isolated TestHinge removal-hook migration is proven clean and frozen independently from block-entity persistence migration.
-- Diagnostic artifact: `p1-compile-log-58e978bf8841e8bbb26e4658e9b7b566d4800e14`, artifact ID `10570252019`, size `7974` bytes, ZIP SHA-256 `9ec5ff7f63122b365dfa8460e176dfbcd4be0d86235fa35b9fe803e9959a2f58`.
-- Pinned upstream `TestHingeBlock.kt` blob remains `073936536693be20171032cf53fbee99f6addad3`.
-- Pinned upstream `ShipSavedData.kt` blob is `5d666d924ba228e235fb9ad065e9dd6d113f93d8`.
-- Exact run `35398688325` shows `ShipSavedData.load()` now receives `Optional<ByteArray>` from the three `CompoundTag.getByteArray` calls (`queryable_ship_data`, `chunk_allocator`, `vs_pipeline`), while the unchanged downstream VS2 code requires `ByteArray` for `.size`, `.isNotEmpty()`, `newPipeline(...)` and `newPipelineLegacyData(...)`.
-- The pinned 1.21.1 code treats a missing/wrong-type byte-array tag as an empty byte array before the existing fallback/error logic. Selected next hypothesis: unwrap exactly those three `getByteArray` results with an empty `ByteArray` default, preserving key names, pipeline-vs-legacy precedence, logging, exception handling and all serialization semantics.
-- Expected proof: the `ShipSavedData.kt:36-43` Optional<ByteArray>/ByteArray member and argument diagnostics disappear; the independent `ShipSavedData.kt:61` `save overrides nothing` persistence-signature diagnostic remains. Do not migrate `SavedData.save` in the same proof.
+- Current proven implementation HEAD: `262f6140ea3f94239d47541d46c694b8b076444e` (`P1: wire ShipSavedData byte-array Optional proof`).
+- Exact-head P0 provenance run `35400474206`, job `105778970673`, completed `success` for `262f6140ea3f94239d47541d46c694b8b076444e`.
+- Exact-head P1 standalone compile run `35400474672`, job `105778971617`, completed `failure` only because later independent Minecraft 26.2 source/API errors remain.
+- Every traceable overlay applied successfully, including `apply_p1_shipsaveddata_bytearray_optional_26_2.py`; explicit port-delta validation and Gradle runtime steps succeeded.
+- Exact ShipSavedData delta changes only the three pinned `CompoundTag.getByteArray(...)` reads for `queryable_ship_data`, `chunk_allocator`, and `vs_pipeline` to `.orElse(byteArrayOf())`. Key names, log messages, pipeline-vs-legacy precedence, exception behavior, pipeline creation and serialization behavior are otherwise unchanged.
+- The previous `ShipSavedData.kt:36-43` Optional<ByteArray>/ByteArray `.size`, `.isNotEmpty()`, `newPipeline(...)`, and `newPipelineLegacyData(...)` diagnostics are absent from run `35400474672`.
+- Independent `ShipSavedData.kt:61` `save overrides nothing` remains exactly as expected. This modern SavedData persistence migration is broader than a signature-only edit and must not be replaced by a fake `save(ValueOutput)` patch without reconciling the current SavedDataType/codec/factory path.
+- Therefore the isolated ShipSavedData byte-array Optional migration is proven clean and frozen independently from SavedData persistence migration.
+- Diagnostic artifact: `p1-compile-log-262f6140ea3f94239d47541d46c694b8b076444e`, artifact ID `10571260073`, size `8162` bytes, ZIP SHA-256 `9c118a71c2a9c207110fd7e6fe85bef7f11f56ee12aa1d5fac72e6d38f9e404d`.
+- Pinned upstream `ShipSavedData.kt` blob remains `5d666d924ba228e235fb9ad065e9dd6d113f93d8`.
+- Pinned upstream `CompatUtil.kt` blob is `8404d99341cb8d015ede57b49079f2b371bd7aba`.
+- Exact run `35400474672` shows three `CompatUtil.kt` failures rooted in removed `BlockPos.center` access: line 109 heightmap position, line 128 heightmap ray end, and line 194 compound-brightness world transform. Current Fabric/Minecraft 26.2 source uses `Vec3.atCenterOf(BlockPos)` for block-center positions.
+- Selected next hypothesis: migrate only those three `BlockPos.center` call sites to `Vec3.atCenterOf(...)`, preserving coordinates and all surrounding VS2 transform/raycast/light semantics. Do not touch the independent `minBuildHeight`/`maxBuildHeight`, nullable Entity, or other CompatUtil diagnostics in this proof.
+- Expected proof: the three `Unresolved reference 'center'` diagnostics disappear. At line 194 the current secondary overload/type diagnostic may also disappear if it is only a consequence of the unresolved center expression; independent build-height/nullability diagnostics must remain. Overall compile may remain red.
 - `VSGameUtils.kt` Identifier migration is not selected yet because its resource-key path crosses `ResourceKeyAccessor` and `MixinLevel`; do not apply a partial one-file replacement.
 - `VSKeyBindings.kt` remains deferred because Minecraft 26.2 `KeyMapping.Category` migration changes category translation-key handling; a compile-only type swap must not silently break `category.valkyrienskies.driving`.
 - Nullable ship slug/name command/item messages remain deferred; do not invent fallback strings merely to satisfy Kotlin vararg nullability.
@@ -58,9 +58,9 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
-- active_proof_head: `none; ShipSavedData CompoundTag.getByteArray Optional-to-ByteArray proof selected but not yet patched/wired`
+- active_proof_head: `none; CompatUtil BlockPos.center -> Vec3.atCenterOf proof selected but not yet patched/wired`
 - active_proof_run: `none`
-- active_hypothesis: `Minecraft 26.2 CompoundTag.getByteArray returns Optional<ByteArray>. In pinned ShipSavedData.load(), unwrap exactly the queryable_ship_data, chunk_allocator and vs_pipeline reads to empty ByteArray defaults so the existing pipeline/legacy selection semantics remain unchanged. Expected proof: ShipSavedData lines 36-43 Optional/ByteArray diagnostics disappear while the independent SavedData.save signature error remains.`
+- active_hypothesis: `Minecraft 26.2 no longer exposes the pinned BlockPos.center property at CompatUtil lines 109, 128 and 194. Replace exactly those three center expressions with Vec3.atCenterOf(BlockPos), preserving the same center coordinates and existing VS2 transform/raycast/light flow. Expected proof: all three center diagnostics disappear while independent CompatUtil build-height/nullability errors remain.`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 
@@ -90,9 +90,10 @@ Source/API clusters proven clean in exact-head runs:
 - `TestHingeBlock.kt` `getTicker` non-null generic-bound migration;
 - `TestHingeBlock.kt` `onPaste` four `CompoundTag.getLong` Optional unwraps preserving legacy zero defaults;
 - `TestHingeBlockEntity.kt` two load-time `CompoundTag.getLong` Optional unwraps preserving legacy zero defaults;
-- `TestHingeBlock.kt` removal hook migrated to `affectNeighborsAfterRemoval` while preserving joint-removal behavior and superclass delegation.
+- `TestHingeBlock.kt` removal hook migrated to `affectNeighborsAfterRemoval` while preserving joint-removal behavior and superclass delegation;
+- `ShipSavedData.kt` three load-time `CompoundTag.getByteArray` Optional unwraps preserving legacy empty-byte-array behavior.
 
-Representative remaining compiler areas from exact run `35398688325`: Create compat classpath/API drift; `EmptyRenderer` render-state/type-argument migration; `CompatUtil` position/build-height/nullability drift; `ShipSavedData` Optional byte arrays plus separate SavedData save-signature migration; `VSGameUtils` resource-key/Identifier plus build-height/chunk-position APIs; `ValkyrienSkiesMod` creative-tab output API; assembly/tick/ValueInput-ValueOutput/structure processor migrations; TestChair entity-create/`moveTo`; TestHingeBlockEntity persistence; deferred nullable command/item messages; reload-listener/Identifier generics; keybinding category; ShipMountingEntity persistence/hurt; entity-handler rendering; networking/local-control/lerp; `EntityDragger` local-control; chunk tickets; Sable; relocation.
+Representative remaining compiler areas from exact run `35400474672`: Create compat classpath/API drift; `EmptyRenderer` render-state/type-argument migration; `CompatUtil` center/build-height/nullability/Position drift; separate `ShipSavedData` SavedData persistence migration; `VSGameUtils` resource-key/Identifier plus build-height/chunk-position APIs; `ValkyrienSkiesMod` creative-tab output API; assembly/tick/ValueInput-ValueOutput/structure processor migrations; TestChair entity-create/`moveTo`; TestHingeBlockEntity persistence; deferred nullable command/item messages; reload-listener/Identifier generics; keybinding category; ShipMountingEntity persistence/hurt; entity-handler rendering; networking/local-control/lerp; `EntityDragger` local-control; chunk tickets; Sable; relocation.
 
 ## Proof chain retained
 
@@ -118,6 +119,7 @@ Representative remaining compiler areas from exact run `35398688325`: Create com
 - `4e3dbdd2d26b1861f93f5ac651c3f8cf615ffde6`: TestHinge onPaste getLong; P0 `35396104505`; job `105765179878`; P1 `35396104498`; job `105765179621`; artifact `10567986686`; SHA-256 `4f06b192a022770df0687a244ae0db2da049c2a227dcd117202404ac440e8425`.
 - `2152734918d4e4938af5aad17476f35f1ae361cf`: TestHingeBlockEntity getLong; P0 `35396770555`; job `105767287832`; P1 `35396770532`; job `105767287715`; artifact `10568142768`; SHA-256 `c677210fb53c9b716521063eb6e48d567559bb76b4154dc88d24a38aad3505d9`.
 - `58e978bf8841e8bbb26e4658e9b7b566d4800e14`: TestHinge removal hook; P0 `35398688368`; job `105773330399`; P1 `35398688325`; job `105773336393`; artifact `10570252019`; SHA-256 `9ec5ff7f63122b365dfa8460e176dfbcd4be0d86235fa35b9fe803e9959a2f58`.
+- `262f6140ea3f94239d47541d46c694b8b076444e`: ShipSavedData byte-array Optional; P0 `35400474206`; job `105778970673`; P1 `35400474672`; job `105778971617`; artifact `10571260073`; SHA-256 `9c118a71c2a9c207110fd7e6fe85bef7f11f56ee12aa1d5fac72e6d38f9e404d`.
 
 ## Sable contract
 
@@ -134,7 +136,7 @@ Forbidden final substitutes: custom VS2-style reference frames, synthetic carry 
 ## Milestones
 
 ### P0 — Upstream import + provenance
-Frozen green. Exact upstream identity/pin/license/provenance is established and repeatedly re-confirmed. Latest proven implementation HEAD `58e978bf8841e8bbb26e4658e9b7b566d4800e14` has exact-head P0 run `35398688368` success.
+Frozen green. Exact upstream identity/pin/license/provenance is established and repeatedly re-confirmed. Latest proven implementation HEAD `262f6140ea3f94239d47541d46c694b8b076444e` has exact-head P0 run `35400474206` success.
 
 ### P1 — Standalone VS2 26.2 compile/boot
 Port actual VS2 until common/Fabric compile, standalone client/server boot, and core/native initialization are proven without Create/SNR/Copycats hiding failures.
@@ -169,15 +171,16 @@ Do not reintroduce without new direct evidence:
 - fixture/input mutations solely to manufacture green;
 - compile-only `VSKeyBindings` category replacement that changes/drops existing translation behavior;
 - invented fallback values for nullable ship slug/name just to satisfy Kotlin vararg nullability;
-- partial `VSGameUtils` ResourceLocation replacement without reconciling the `ResourceKeyAccessor`/`MixinLevel` boundary.
+- partial `VSGameUtils` ResourceLocation replacement without reconciling the `ResourceKeyAccessor`/`MixinLevel` boundary;
+- treating `ShipSavedData.save` as a signature-only `ValueOutput` migration without reconciling the Minecraft 26.2 SavedDataType/codec/factory persistence path.
 
 ## next_safe_action
 
-1. Preserve exact TestHinge removal-hook proof HEAD `58e978bf8841e8bbb26e4658e9b7b566d4800e14`, P0 `35398688368` / job `105773330399`, P1 `35398688325` / job `105773336393`, artifact `10570252019`, ZIP SHA-256 `9ec5ff7f63122b365dfa8460e176dfbcd4be0d86235fa35b9fe803e9959a2f58`.
+1. Preserve exact ShipSavedData byte-array proof HEAD `262f6140ea3f94239d47541d46c694b8b076444e`, P0 `35400474206` / job `105778970673`, P1 `35400474672` / job `105778971617`, artifact `10571260073`, ZIP SHA-256 `9c118a71c2a9c207110fd7e6fe85bef7f11f56ee12aa1d5fac72e6d38f9e404d`.
 2. Reconcile actual HEAD after this ledger update and allow its automatically triggered P0 provenance workflow to settle before proof setup.
-3. Add one fail-closed overlay for `ShipSavedData.kt` that changes exactly the three load-time `compoundTag.getByteArray(...)` expressions for `QUERYABLE_SHIP_DATA_NBT_KEY`, `CHUNK_ALLOCATOR_NBT_KEY`, and `PIPELINE_NBT_KEY` to unwrap their Minecraft 26.2 Optional values with an empty `ByteArray` default. Preserve all keys, log messages, pipeline precedence, legacy fallback, exception behavior and serialization semantics.
-4. Wire only that overlay into P1 and add `ShipSavedData.kt` to the explicit port-delta display. Do not change `ShipSavedData.save`, `SavedData` factory/signatures, TestHingeBlockEntity persistence, resource-key accessors, physics, rendering or unrelated clusters.
-5. Proof target: `ShipSavedData.kt:36-43` Optional<ByteArray>/ByteArray member and argument diagnostics disappear; independent `ShipSavedData.kt:61` `save overrides nothing` remains. Overall compile may remain red on unrelated clusters.
+3. Add one fail-closed overlay for pinned `CompatUtil.kt` that migrates exactly the three removed `BlockPos.center` expressions at the heightmap world position, heightmap ray end, and compound-brightness transform to `Vec3.atCenterOf(BlockPos)`. Do not change any other expression or method.
+4. Wire only that overlay into P1 and add `CompatUtil.kt` to the explicit port-delta display. Do not change `minBuildHeight`/`maxBuildHeight`, nullable Entity handling, ShipSavedData persistence, VSGameUtils resource-key accessors, physics, rendering or unrelated clusters.
+5. Proof target: the three `CompatUtil.kt` `Unresolved reference 'center'` diagnostics disappear. The line-194 secondary Position/overload diagnostic may disappear only if it was cascading from the unresolved center expression. Independent CompatUtil build-height/nullability diagnostics remain. Overall compile may remain red on unrelated clusters.
 6. After proof completes, record exact HEAD, P0/P1 runs, job/artifact/hash and targeted diagnostic result before selecting another cluster.
 7. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet. No video is authorized during compile/API-port work.
 
