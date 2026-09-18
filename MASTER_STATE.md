@@ -22,20 +22,20 @@ GitHub code is the implementation source of truth. This file is the durable cont
 
 The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are applied by explicit fail-closed overlay scripts so every adaptation stays traceable to upstream VS2 source.
 
-## Current reconciliation — after GetShipCommand permission proof
+## Current reconciliation — after GetShipCommand proof / RemassCommand candidate selected
 
 - Latest proven implementation/source-port HEAD: `3d93c0041a59c0b78adfa9e2ff313cdbbe5f74aa` (`P1: port GetShipCommand permission API`).
-- Its parent ledger commit is `0abe4c7de493683a3b7461f283e1e8b4e5cad100` (`watchdog: record DeleteCommand permission proof`).
-- `3d93c0041a59c0b78adfa9e2ff313cdbbe5f74aa` adds only the isolated fail-closed `GetShipCommand` permission overlay plus P1 workflow wiring/diff-display path.
-- The overlay changes exactly one legacy predicate from `CommandSourceStack.hasPermission(VSGameConfig.SERVER.Commands.getShipCommandPerms)` to `CommandSourceStack.permissions().hasPermission(Permission.HasCommandLevel(PermissionLevel.byId(VSGameConfig.SERVER.Commands.getShipCommandPerms)))`, adding only the required `Permission` and `PermissionLevel` imports.
-- `/vs get-ship` uses `VSGameConfig.SERVER.Commands.getShipCommandPerms`, documented as `0 <= x <= 4`, default `0`; the adaptation preserves that configured threshold.
-- Pinned upstream and current `1.21.1/main` are byte-identical for `GetShipCommand.kt` at blob `056766bf1ee40ebd266d88a3e28c8f6b87d22a7d`.
-- Exact-head P0 run `35377210067` completed `success` for HEAD `3d93c0041a59c0b78adfa9e2ff313cdbbe5f74aa`.
-- Exact-head P1 run `35377209937`, job `105704591262`, completed `failure` only because later independent Minecraft 26.2 API errors remain. The `GetShipCommand.kt` legacy permission error is absent from the final compiler error set; the intentionally untouched nullable `ship.slug: String?` success-message error remains at line 32, so the targeted permission adaptation is proven clean in isolation.
-- Diagnostic artifact: `p1-compile-log-3d93c0041a59c0b78adfa9e2ff313cdbbe5f74aa`, artifact ID `10560773482`, size `8437` bytes, ZIP SHA-256 `8697b7badb3f739a29be29be14e2b0e0373ac7b98057a7e47245d565b535ad34`.
-- `DeleteCommand.kt`'s nullable `r[0].slug: String?` message argument remains explicitly deferred; no fallback name/string may be invented merely to satisfy Kotlin vararg nullability.
-- `GetShipCommand.kt`'s nullable `ship.slug: String?` success-message argument remains explicitly deferred; no fallback name/string may be invented merely to satisfy Kotlin vararg nullability.
-- `RemassCommand.kt` still reports one removed legacy `CommandSourceStack.hasPermission(Int)` error at line 22 plus an independent nullable `ship.slug: String?` message error at line 32. It is only a candidate for the next isolated permission proof; no patch is authorized until its pinned/current provenance and configured permission semantics are checked read-only.
+- Exact-head P0 run `35377210067` completed `success`; exact-head P1 run `35377209937`, job `105704591262`, completed `failure` only because later independent Minecraft 26.2 API errors remain.
+- The `GetShipCommand.kt` legacy permission error is absent from the final compiler error set; the intentionally untouched nullable `ship.slug: String?` success-message error remains at line 32, so the targeted permission adaptation is proven clean.
+- GetShip diagnostic artifact: `p1-compile-log-3d93c0041a59c0b78adfa9e2ff313cdbbe5f74aa`, artifact ID `10560773482`, size `8437` bytes, ZIP SHA-256 `8697b7badb3f739a29be29be14e2b0e0373ac7b98057a7e47245d565b535ad34`.
+- Pinned upstream and current `1.21.1/main` are byte-identical for `GetShipCommand.kt` at blob `056766bf1ee40ebd266d88a3e28c8f6b87d22a7d`; `getShipCommandPerms` is documented `0 <= x <= 4`, default `0`.
+- Latest ledger-only HEAD before this candidate selection was `66b2f73e001f4263b84921f33bba87f716559a6a`; its exact-head P0 run `35378902642` completed `success`, and it did not trigger P1.
+- Exact run `35377209937` leaves `RemassCommand.kt` with two independent errors: removed `CommandSourceStack.hasPermission(Int)` at line 22 and nullable `ship.slug: String?` translated-message argument at line 32.
+- Read-only provenance check confirms pinned baseline `f39132148e717d325933b4ce6e9e9fb13d929390` and current `1.21.1/main` are byte-identical for `RemassCommand.kt` at blob `616c1d8071da930729ee1610834c3d5a23f988c9`.
+- Read-only config check confirms pinned and current `VSGameConfig.SERVER.Commands.remassShipCommandPerms` is documented `0 <= x <= 4`, default `2`.
+- Therefore the next isolated proof is authorized to change only the Remass dynamic command-level predicate to Minecraft 26.2 `Permission.HasCommandLevel(PermissionLevel.byId(remassShipCommandPerms))`, adding only the required imports.
+- Remass literal, ship argument/selection, `BlockStateInfo.remassShip` calls, success counting, success/failure message keys, return value, and especially nullable `ship.slug` must remain unchanged in that proof.
+- `DeleteCommand.kt` nullable `r[0].slug: String?` and `GetShipCommand.kt` nullable `ship.slug: String?` remain explicitly deferred; no fallback name/string may be invented merely to satisfy Kotlin vararg nullability.
 - `ShipAssemblerItem.kt` remains deferred: nullable `shipData.slug: String?` into non-null vararg `Any` must not be papered over with an invented fallback string.
 - `VSKeyBindings.kt` remains deferred because Minecraft 26.2 `KeyMapping.Category` migration changes category translation-key handling; a compile-only type swap must not silently break `category.valkyrienskies.driving`.
 - No code from retired `apm23/VS2-Create_Interactive` has been imported or reused as implementation source.
@@ -55,9 +55,9 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
-- active_proof_head: `none; previous proof 3d93c0041a59c0b78adfa9e2ff313cdbbe5f74aa landed`
-- active_proof_run: `none; previous P1 run 35377209937 landed`
-- active_hypothesis: `none after GetShipCommand proof; select the next smallest source/API cluster only after this proof is durably recorded and its candidate provenance/semantics are checked read-only.`
+- active_proof_head: `none; next proof selected but not yet patched`
+- active_proof_run: `none`
+- active_hypothesis: `RemassCommand has one isolated legacy dynamic permission predicate that can be migrated using Permission.HasCommandLevel(PermissionLevel.byId(VSGameConfig.SERVER.Commands.remassShipCommandPerms)); pinned/current source is byte-identical at blob 616c1d8071da930729ee1610834c3d5a23f988c9 and the configured level is 0..4 default 2. The independent nullable ship.slug message error must remain untouched.`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 
@@ -91,8 +91,8 @@ Source/API clusters proven clean in exact-head runs:
 - `SplittingCommand.kt` same dynamic permission migration, ship selection/boolean argument/loaded-ship attachment behavior and messages unchanged;
 - `StaticCommand.kt` same dynamic permission migration, ship selection/boolean `is-static` assignment and messages unchanged;
 - `TeleportCommand.kt` same dynamic permission migration, all position/euler/velocity/angular-velocity branches, `ShipTeleportData`, teleport calls, messages, and return values unchanged;
-- `DeleteCommand.kt` same dynamic permission migration, literal/ship selection/optional `deleteBlocks`/`ShipAssembler.deleteShip`/success-failure branching/messages/return values unchanged; nullable ship slug remains deferred;
-- `GetShipCommand.kt` same dynamic permission migration, literal/source-entity check/ray trace/ship lookup/success-failure branching/message keys/ship ID/return values unchanged; nullable ship slug remains deferred.
+- `DeleteCommand.kt` same dynamic permission migration, delete behavior unchanged; nullable ship slug remains deferred;
+- `GetShipCommand.kt` same dynamic permission migration, get-ship behavior unchanged; nullable ship slug remains deferred.
 
 Representative remaining compiler areas: Create compat classpath/API drift, position/build-height changes, renderer/render-state APIs, SavedData/NBT `ValueInput`/`ValueOutput`, remaining command permission/nullability work, resource reload listener generics, entity save/hurt/network APIs, tickets/ticks/structure processors, keybinding category migration, and Sable compatibility.
 
@@ -166,12 +166,14 @@ Do not reintroduce without new direct evidence:
 
 1. Preserve implementation HEAD `3d93c0041a59c0b78adfa9e2ff313cdbbe5f74aa`, exact-head P0 `35377210067`, and P1 `35377209937` as the `GetShipCommand.kt` permission proof.
 2. Preserve artifact `p1-compile-log-3d93c0041a59c0b78adfa9e2ff313cdbbe5f74aa`, ID `10560773482`, size `8437` bytes, ZIP SHA-256 `8697b7badb3f739a29be29be14e2b0e0373ac7b98057a7e47245d565b535ad34`.
-3. Reconcile the remaining exact compiler evidence from run `35377209937`; do not infer the next patch from older chat state.
-4. The smallest obvious remaining command candidate is `RemassCommand.kt`, but first perform read-only checks only: confirm pinned baseline versus current `1.21.1/main` blob identity and inspect the exact `VSGameConfig.SERVER.Commands.remassCommandPerms` range/default semantics.
-5. If and only if those read-only checks confirm a traceable permission-only adaptation, record that candidate/hypothesis durably before patching it. Keep the independent nullable `ship.slug` message error untouched.
-6. Do not batch nullable-message fixes, Create compat, renderer, Sable/entity-dragging, physics, collision, networking, player/camera, or unrelated semantics.
-7. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet.
-8. No video is authorized during compile/API-port work.
+3. Preserve confirmed byte-identical pinned/current `RemassCommand.kt` blob `616c1d8071da930729ee1610834c3d5a23f988c9` and config semantics `remassShipCommandPerms` 0..4, default 2.
+4. Adapt exactly the one Remass predicate from `CommandSourceStack.hasPermission(VSGameConfig.SERVER.Commands.remassShipCommandPerms)` to `CommandSourceStack.permissions().hasPermission(Permission.HasCommandLevel(PermissionLevel.byId(VSGameConfig.SERVER.Commands.remassShipCommandPerms)))`, adding only the two required Minecraft 26.2 permission imports.
+5. Preserve literal `remass`, ship argument/selection, `BlockStateInfo.remassShip` calls, success counter, success/failure message keys, and return value unchanged. Do not touch nullable `ship.slug` in this proof.
+6. Add only `RemassCommand.kt` to the P1 workflow diff-display path and trigger the smallest exact-head P0/P1 proof. Expected targeted evidence: the `hasPermission` error disappears while the independent nullable `ship.slug` error remains.
+7. Do not batch nullable-message fixes, Create compat, renderer, Sable/entity-dragging, physics, collision, networking, player/camera, or unrelated semantics into this proof.
+8. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet.
+9. After the Remass permission proof completes, update this ledger before selecting the next source/API cluster.
+10. No video is authorized during compile/API-port work.
 
 ## Video validation
 
