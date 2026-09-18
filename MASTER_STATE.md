@@ -24,14 +24,14 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 
 ## Current reconciliation — 2026-09-18
 
-- Actual implementation/source-port HEAD before this ledger-only update: `c8128c30bb29d9c454bf0045b873dea3bc76a17c` (`P1: port TestFlapBlock Direction accessor`).
-- Parent ledger-only commit before that implementation change: `4802db60c5c5302509023de9bba8fb922bbd9c71` (`watchdog: record ValkyrienSkies accessor proof result`).
+- Actual repository HEAD before this ledger-only update: `3eab624caed1ff836a4eb2b3d034da7866d6ddef` (`watchdog: record TestFlapBlock active proof state`).
+- Current implementation/source-port HEAD remains `c8128c30bb29d9c454bf0045b873dea3bc76a17c` (`P1: port TestFlapBlock Direction accessor`).
 - Prior implementation HEAD `d0a33c0c7ff2ca49db1a69420c0b51d0064a92dc` is proven clean for its targeted `ValkyrienSkies.kt` accessor cluster by P1 run `35331485313`, job `105556599506`.
 - Diagnostic artifact for run `35331485313`: `p1-compile-log-d0a33c0c7ff2ca49db1a69420c0b51d0064a92dc`, artifact ID `10541221766`, ZIP SHA-256 `2a1d8ef765e1770e8f67970d66253ad337470a012e7ed45450b2a0b4a8be9b47`.
 - HEAD `c8128c30bb29d9c454bf0045b873dea3bc76a17c` adds one new fail-closed source adaptation in `common/src/main/kotlin/org/valkyrienskies/mod/common/block/TestFlapBlock.kt`: `blockState.getValue(FACING).normal.toJOMLD()` -> `blockState.getValue(FACING).getUnitVec3i().toJOMLD()`, plus that file's P1 workflow diff-display path.
 - Pinned upstream `f39132148e717d325933b4ce6e9e9fb13d929390` and current upstream `1.21.1/main` are byte-identical for `TestFlapBlock.kt` at blob `03f9db336c337fb1d531e00ebad81ed61db1f4b1`; Wing construction, coefficients, and `toJOMLD()` conversion are otherwise unchanged.
 - Exact-head P0 run `35333733917` completed `success` for `c8128c30bb29d9c454bf0045b873dea3bc76a17c`.
-- Exact-head P1 run `35333733932`, job `105563689862`, is active. Overlay application and port-delta validation completed successfully before compilation, proving the fail-closed replacement matched exactly once and the displayed delta was valid at this ledger write.
+- Exact-head P1 run `35333733932`, job `105563689862`, remains active. Overlay application, port-delta validation, and Gradle runtime all completed successfully; the job is still executing `Compile standalone common + Fabric sources` at this reconciliation.
 - No code from `apm23/VS2-Create_Interactive` has been imported. The retired workaround project remains forbidden as implementation source.
 
 ## Target runtime baseline
@@ -50,7 +50,7 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
 - active_proof_head: `c8128c30bb29d9c454bf0045b873dea3bc76a17c`
-- active_proof_run: `35333733932` (`active` at ledger write; job `105563689862`)
+- active_proof_run: `35333733932` (`in_progress`; job `105563689862` compiling standalone common + Fabric sources)
 - active_hypothesis: `The single TestFlapBlock.kt Direction.getUnitVec3i() accessor adaptation is sufficient to clear that exact private Direction.normal compiler error while preserving upstream Wing semantics.`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
