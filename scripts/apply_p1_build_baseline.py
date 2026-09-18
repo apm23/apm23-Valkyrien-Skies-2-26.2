@@ -105,7 +105,7 @@ replace_active_dependency_config("fabric/build.gradle", "modCompileOnly", "compi
 # It is not imported by VS2 source, so omit only this unavailable compile-only artifact.
 replace_once(
     "common/build.gradle",
-    '    compileOnly("dev.ryanhcode.sable:sable-common-${minecraft_version}:${sable_version}")\\n',
+    '    compileOnly("dev.ryanhcode.sable:sable-common-${minecraft_version}:${sable_version}")\n',
     "",
 )
 
