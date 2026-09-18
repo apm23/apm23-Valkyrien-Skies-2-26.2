@@ -22,21 +22,27 @@ GitHub code is the implementation source of truth. This file is the durable cont
 
 The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are applied by explicit fail-closed overlay scripts so every adaptation stays traceable to upstream VS2 source.
 
-## Current reconciliation — ValkyrienSkiesMod Identifier proof completed
+## Current reconciliation — ValkyrienSkiesMod Identifier proof completed; TestHinge getShape signature proof selected
 
 - Latest implementation/proof HEAD: `4a1ea3c136ab6640c51405129e5286896e00b483` (`P1: wire ValkyrienSkiesMod Identifier proof`).
-- Hypothesis-selection ledger HEAD `004bc43cfa7b0b99bf9283c9df7a3d7772501368` completed exact-head P0 provenance run `35386967600` with `success` before proof setup.
+- Ledger-only ValkyrienSkiesMod proof recording HEAD `17994ada34718d788d89bf61afc98979f2b7ef8b` completed exact-head P0 provenance run `35390483281` with `success`; it made no source-port change.
+- Hypothesis-selection ledger HEAD `004bc43cfa7b0b99bf9283c9df7a3d7772501368` completed exact-head P0 provenance run `35386967600` with `success` before the ValkyrienSkiesMod proof setup.
 - Overlay-only commit `01fdeb9403b9e9a5d2a77d04ed976938d698b4f6` added fail-closed `apply_p1_valkyrienskiesmod_identifier_26_2.py`; proof wiring then landed at `4a1ea3c136ab6640c51405129e5286896e00b483`.
 - Exact-head P0 run `35388500261` for `4a1ea3c136ab6640c51405129e5286896e00b483` completed `success`.
 - Exact-head P1 run `35388500277`, job `105741071163`, completed `failure` only because later independent Minecraft 26.2 API errors remain.
 - All traceable overlays, including `apply_p1_valkyrienskiesmod_identifier_26_2.py`, applied successfully; the explicit port-delta validation step also succeeded.
 - Pinned baseline `f39132148e717d325933b4ce6e9e9fb13d929390` and current `1.21.1/main` are byte-identical for `ValkyrienSkiesMod.kt` at blob `6d9b4671b0f95c722f39938d5b74097acd780036`.
 - Exact `ValkyrienSkiesMod.kt` delta is limited to three resource-vocabulary sites: import `ResourceLocation` -> `Identifier`, `ResourceLocation.parse("valkyrienskies")` -> `Identifier.parse("valkyrienskies")`, and `ResourceLocation.fromNamespaceAndPath(MOD_ID, "assemble_blacklist")` -> `Identifier.fromNamespaceAndPath(MOD_ID, "assemble_blacklist")`.
-- `ResourceKey`/`TagKey` construction semantics, creative-tab population/output code, and all other behavior remain intentionally untouched by this proof.
+- `ResourceKey`/`TagKey` construction semantics, creative-tab population/output code, and all other behavior remain intentionally untouched by that proof.
 - Run `35388500277` shows the earlier `ValkyrienSkiesMod.kt` unresolved `ResourceLocation` diagnostics at lines 11/78/81 are gone.
 - The intentionally independent Minecraft 26.2 `CreativeModeTab.Output` protection diagnostics remain at `ValkyrienSkiesMod.kt:192-203`, proving the resource-vocabulary cluster is separated from creative-tab API migration.
 - Therefore the isolated `ValkyrienSkiesMod.kt` ResourceLocation -> Identifier migration is proven clean and frozen independently from later creative-tab migration.
 - Diagnostic artifact: `p1-compile-log-4a1ea3c136ab6640c51405129e5286896e00b483`, artifact ID `10564054948`, size `8301` bytes, ZIP SHA-256 `2d6ebab805f74338db600dd94870753c5f11f2d75bf502827aad0c8056091685`.
+- Exact compiler set of run `35388500277` reports `TestHingeBlock.kt:79` `getShape` overrides nothing and supplies the exact Minecraft 26.2 candidate signature `getShape(state: BlockState, level: BlockGetter, pos: BlockPos, context: CollisionContext): VoxelShape`.
+- Pinned baseline and current `1.21.1/main` are byte-identical for `TestHingeBlock.kt` at blob `073936536693be20171032cf53fbee99f6addad3`.
+- Upstream `getShape` currently differs from the exact compiler candidate only by nullable `BlockGetter?`, `BlockPos?`, and `CollisionContext?` parameters. Its shape-selection body depends only on `state` and does not consume those three parameters.
+- Selected next hypothesis: Minecraft 26.2 tightened this override signature to non-null parameters. Remove exactly the three nullable markers from `level`, `pos`, and `context`; preserve the method body, facing-to-AABB behavior, annotation, and all other TestHinge APIs untouched.
+- Expected proof: the isolated line-79 `getShape overrides nothing` diagnostic disappears while independent `TestHingeBlock.kt` `onRemove`/map-inference/`getTicker` diagnostics and `TestHingeBlockEntity.kt` persistence diagnostics remain.
 - Previous EmptyRenderer Identifier proof remains preserved at HEAD `5a6f41ee258d704fdb91fa9b115854c19623a7eb`, exact-head P0 `35384633799`, P1 `35384633761` / job `105728547942`, artifact `10563931126`, ZIP SHA-256 `ec45c981a8589ae3a93a3e0955cff789172c487472598bd4a5803294d98475ae`; independent `EntityRenderer<T,S>` render-state diagnostic remains.
 - Earlier TestChair Direction proof remains preserved at HEAD `369d042ee7d86c109825ae00b637c1230a70e7e5`, exact-head P0 `35383401723`, P1 `35383401868` / job `105724661254`, artifact `10562768230`, ZIP SHA-256 `4f3ad14af6cf671d9c5f43a3e356dbd4c03dbd866f549ff6b8937d30c7cc5bc4`.
 - `TestChairBlock.kt` line-58 private `Direction.normal` remains gone; intentionally independent line-54 entity-create/signature errors and line-57 `moveTo` error remain.
@@ -63,9 +69,9 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
-- active_proof_head: `4a1ea3c136ab6640c51405129e5286896e00b483; ValkyrienSkiesMod Identifier proof completed`
-- active_proof_run: `35388500277; targeted ValkyrienSkiesMod Identifier proof succeeded although overall compile remains red on later independent API drift`
-- active_hypothesis: `none; ValkyrienSkiesMod Identifier hypothesis is proven and frozen. Reconcile this ledger-only commit and allow its provenance workflow to settle, then select exactly one next independent Minecraft 26.2 source/API cluster from the exact compiler set of run 35388500277 before mutating source.`
+- active_proof_head: `none; TestHinge getShape signature proof selected but not yet patched/wired`
+- active_proof_run: `none`
+- active_hypothesis: `TestHingeBlock.kt getShape differs from the exact Minecraft 26.2 compiler-supplied override signature only by nullable BlockGetter?/BlockPos?/CollisionContext? parameters. Remove exactly those three nullable markers and preserve the body and all other TestHinge behavior. Expected proof: line-79 getShape override error disappears while independent TestHinge onRemove/map/getTicker and TestHingeBlockEntity errors remain.`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 
@@ -94,7 +100,7 @@ Source/API clusters proven clean in exact-head runs:
 - `MinecraftPlayer.kt` level-4 admin/config permission predicates to Minecraft 26.2 `Permissions.COMMANDS_OWNER`;
 - `BackendCommand.kt`, `GetAirCommand.kt`, `GetGravityCommand.kt`, `DryCommand.kt`, `RenameCommand.kt`, `ScaleCommand.kt`, `SplittingCommand.kt`, `StaticCommand.kt`, `TeleportCommand.kt`, `DeleteCommand.kt`, `GetShipCommand.kt`, and `RemassCommand.kt` dynamic configured command-level predicates migrated to `Permission.HasCommandLevel(PermissionLevel.byId(level))` without changing command behavior.
 
-Representative remaining compiler areas from exact run `35388500277`: Create compat classpath/API drift; `EmptyRenderer` render-state/type-argument migration; `CompatUtil` position/build-height/nullability API drift; `ShipSavedData` Optional/SaveData changes; `VSGameUtils` Identifier/build-height/chunk-position APIs; `ValkyrienSkiesMod` creative-tab output API migration; assembly/tick/ValueInput-ValueOutput/structure processor migrations; TestChair entity-create/`moveTo` APIs; TestHinge APIs; deferred nullable command/item messages; reload-listener/Identifier generics; keybinding category migration; ShipMountingEntity save/hurt APIs; entity-handler rendering APIs; networking/local-control/lerp APIs; `EntityDragger` local-control API; chunk tickets; Sable compatibility; and relocation APIs.
+Representative remaining compiler areas from exact run `35388500277`: Create compat classpath/API drift; `EmptyRenderer` render-state/type-argument migration; `CompatUtil` position/build-height/nullability API drift; `ShipSavedData` Optional/SaveData changes; `VSGameUtils` Identifier/build-height/chunk-position APIs; `ValkyrienSkiesMod` creative-tab output API migration; assembly/tick/ValueInput-ValueOutput/structure processor migrations; TestChair entity-create/`moveTo` APIs; TestHinge APIs including the selected isolated `getShape` signature drift plus independent `onRemove`/map/`getTicker` and block-entity persistence drift; deferred nullable command/item messages; reload-listener/Identifier generics; keybinding category migration; ShipMountingEntity save/hurt APIs; entity-handler rendering APIs; networking/local-control/lerp APIs; `EntityDragger` local-control API; chunk tickets; Sable compatibility; and relocation APIs.
 
 ## Proof chain retained
 
@@ -131,7 +137,7 @@ Forbidden final substitutes: custom VS2-style reference frames, synthetic carry 
 ## Milestones
 
 ### P0 — Upstream import + provenance
-Frozen green. Exact upstream identity/pin/license/provenance is established and repeatedly re-confirmed, including exact hypothesis-selection-head P0 run `35386967600` for `004bc43cfa7b0b99bf9283c9df7a3d7772501368`, exact proof-head P0 run `35388500261` for `4a1ea3c136ab6640c51405129e5286896e00b483`, earlier ledger-head P0 `35386650383` for `fe8a50c9f871342b68f37fab47a2316c336739ca`, and earlier proof-head P0 `35384633799` for `5a6f41ee258d704fdb91fa9b115854c19623a7eb`.
+Frozen green. Exact upstream identity/pin/license/provenance is established and repeatedly re-confirmed, including exact ledger-head P0 run `35390483281` for `17994ada34718d788d89bf61afc98979f2b7ef8b`, exact proof-head P0 `35388500261` for `4a1ea3c136ab6640c51405129e5286896e00b483`, exact hypothesis-selection-head P0 `35386967600` for `004bc43cfa7b0b99bf9283c9df7a3d7772501368`, and earlier proof/ledger provenance runs retained above.
 
 ### P1 — Standalone VS2 26.2 compile/boot
 Port actual VS2 until common/Fabric compile, standalone client/server boot, and core/native initialization are proven without Create/SNR/Copycats hiding failures.
@@ -170,12 +176,13 @@ Do not reintroduce without new direct evidence:
 ## next_safe_action
 
 1. Preserve exact `ValkyrienSkiesMod.kt` Identifier proof HEAD `4a1ea3c136ab6640c51405129e5286896e00b483`, exact-head P0 `35388500261`, P1 `35388500277` / job `105741071163`, and artifact `10564054948` / ZIP SHA-256 `2d6ebab805f74338db600dd94870753c5f11f2d75bf502827aad0c8056091685`.
-2. Preserve the exact three-site `ValkyrienSkiesMod.kt` Identifier adaptation and keep creative-tab population/output code and all other behavior untouched until that migration becomes its own separately evidenced hypothesis.
-3. Reconcile actual HEAD after this ledger-only commit and allow any automatically triggered provenance workflow to settle before source mutation.
-4. Then select exactly one smallest independent Minecraft 26.2 source/API cluster from the exact compiler set of run `35388500277`, using direct upstream/source/API evidence before patching. Record the selected hypothesis in this ledger before or together with its isolated proof setup.
-5. Do not batch deferred nullable-message fixes, `VSKeyBindings`, Create compat, renderer migration, creative-tab migration, Sable dependency work, tickets, networking/local-control semantics, TestChair create/`moveTo`, or unrelated clusters unless that exact subsystem becomes the separately evidenced active hypothesis.
-6. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet.
-7. No video is authorized during compile/API-port work.
+2. Preserve ledger-only proof recording HEAD `17994ada34718d788d89bf61afc98979f2b7ef8b` and exact-head P0 `35390483281` success.
+3. Reconcile actual HEAD after this TestHinge hypothesis-selection ledger commit and allow its automatically triggered P0 provenance workflow to settle before proof setup.
+4. Add one fail-closed overlay for `TestHingeBlock.kt` that changes exactly the `getShape` signature from `level: BlockGetter?, pos: BlockPos?, context: CollisionContext?` to `level: BlockGetter, pos: BlockPos, context: CollisionContext`. Preserve method body and all other TestHinge code.
+5. Wire only that overlay into P1 and include `TestHingeBlock.kt` in the explicit port-delta display. Do not change `onRemove`, map access/inference, `getTicker`, `TestHingeBlockEntity`, constraints, physics, or any other hinge behavior.
+6. Proof target: the line-79 `getShape overrides nothing` diagnostic disappears; the independent `TestHingeBlock.kt` line-200+ `onRemove`, line-232+ map inference, line-240+ `getTicker`, and `TestHingeBlockEntity.kt` diagnostics remain. Overall compile may remain red on unrelated clusters.
+7. After proof completes, record exact HEAD, P0/P1 runs, job/artifact/hash and targeted diagnostic result before selecting another cluster.
+8. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet. No video is authorized during compile/API-port work.
 
 ## Video validation
 
