@@ -43,5 +43,16 @@ jobs:
         run: ./gradlew --version
 
       - name: Compile standalone common + Fabric sources
+        shell: bash
         working-directory: upstream-vs2
-        run: ./gradlew :common:compileJava :common:compileKotlin :fabric:compileJava :fabric:compileKotlin --stacktrace --no-daemon
+        run: |
+          set -o pipefail
+          ./gradlew :common:compileJava :common:compileKotlin :fabric:compileJava :fabric:compileKotlin --stacktrace --no-daemon 2>&1 | tee ../p1-compile.log
+
+      - name: Upload compile diagnostic log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-compile-log-${{ github.sha }}
+          path: p1-compile.log
+          if-no-files-found: error
