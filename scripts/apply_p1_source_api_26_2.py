@@ -142,4 +142,15 @@ replace_count(
     1,
 )
 
+# Run 35329592695 proved VectorConversionsMC is now clean. ValkyrienSkies.kt contains the
+# same upstream transformDirection(Direction, ...) overload and the same private Direction
+# backing-field access. Adapt only that one compiler-proven callsite to the public 26.x
+# accessor; API surface, overload structure, and JOML transform behavior remain unchanged.
+replace_count(
+    "common/src/main/kotlin/org/valkyrienskies/mod/api/ValkyrienSkies.kt",
+    "transformDirection(dir.normal, dest)",
+    "transformDirection(dir.getUnitVec3i(), dest)",
+    1,
+)
+
 print("P1_SOURCE_API_26_2_OVERLAY_APPLIED")
