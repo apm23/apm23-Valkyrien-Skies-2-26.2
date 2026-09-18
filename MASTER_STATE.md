@@ -22,22 +22,22 @@ GitHub code is the implementation source of truth. This file is the durable cont
 
 The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are applied by explicit fail-closed overlay scripts so every adaptation stays traceable to upstream VS2 source.
 
-## Current reconciliation — after DryCommand proof
+## Current reconciliation — after RenameCommand proof
 
-- Latest proven implementation/source-port HEAD: `bd796323fa1b49bd4844c0a4089edb1025ca89f9` (`P1: port DryCommand permission API`).
-- Its parent ledger commit is `6f23799e2063f8a52ee78894a01fa9928500dad8` (`watchdog: record GetGravityCommand permission proof`).
-- `bd796323fa1b49bd4844c0a4089edb1025ca89f9` adds only the isolated fail-closed `DryCommand` permission overlay plus P1 workflow wiring/diff-display path.
-- The overlay changes exactly one legacy predicate from `CommandSourceStack.hasPermission(VSGameConfig.SERVER.Commands.dryShipCommandPerms)` to `CommandSourceStack.permissions().hasPermission(Permission.HasCommandLevel(PermissionLevel.byId(VSGameConfig.SERVER.Commands.dryShipCommandPerms)))`, adding only the required `Permission` and `PermissionLevel` imports.
-- `VSGameConfig.SERVER.Commands.dryShipCommandPerms` remains explicitly constrained to `0 <= x <= 4`, default `2`.
-- Pinned upstream and current `1.21.1/main` are byte-identical for `DryCommand.kt` at blob `89439156f2eb6a1f20e017c4d46722bf46d40c2f`.
-- Exact-head P0 run `35359836373` completed `success` for HEAD `bd796323fa1b49bd4844c0a4089edb1025ca89f9`.
-- Exact-head P1 run `35359836381`, job `105648080198`, completed `failure` only because later independent Minecraft 26.2 API errors remain. `DryCommand.kt` is absent from the final compiler error set, so its targeted permission adaptation is proven clean.
-- Diagnostic artifact: `p1-compile-log-bd796323fa1b49bd4844c0a4089edb1025ca89f9`, artifact ID `10554023210`, size `8853` bytes, ZIP SHA-256 `54086e93046ff3e7f113d0dd80e622e7ee4b39a5ee63e5dfed836041dce35b8d`.
-- Remaining permission-only command errors include `RenameCommand.kt`, `ScaleCommand.kt`, `SplittingCommand.kt`, `StaticCommand.kt`, and `TeleportCommand.kt`.
-- `DeleteCommand.kt`, `GetShipCommand.kt`, and `RemassCommand.kt` also have independent nullable-message errors and are not the smallest isolated permission proof.
-- `RenameCommand.kt` reports exactly one compiler error: removed legacy `CommandSourceStack.hasPermission(Int)`. No second compile error is reported for that file.
+- Latest proven implementation/source-port HEAD: `18959ca9823cd790e51580bf9911d1757890acb0` (`P1: port RenameCommand permission API`).
+- Its parent ledger commit is `e739e5ad96346b9acd06e72e1cbefe32078780a5` (`watchdog: record DryCommand permission proof`).
+- `18959ca9823cd790e51580bf9911d1757890acb0` adds only the isolated fail-closed `RenameCommand` permission overlay plus P1 workflow wiring/diff-display path.
+- The overlay changes exactly one legacy predicate from `CommandSourceStack.hasPermission(VSGameConfig.SERVER.Commands.renameShipCommandPerms)` to `CommandSourceStack.permissions().hasPermission(Permission.HasCommandLevel(PermissionLevel.byId(VSGameConfig.SERVER.Commands.renameShipCommandPerms)))`, adding only the required `Permission` and `PermissionLevel` imports.
+- `VSGameConfig.SERVER.Commands.renameShipCommandPerms` remains explicitly constrained to `0 <= x <= 4`, default `2`.
 - Pinned upstream and current `1.21.1/main` are byte-identical for `RenameCommand.kt` at blob `004232736c5ff628794156d826d39bdd0cb53bc7`.
-- `VSGameConfig.SERVER.Commands.renameShipCommandPerms` is explicitly constrained to `0 <= x <= 4`, default `2`, so Minecraft 26.2 `Permission.HasCommandLevel(PermissionLevel.byId(level))` preserves the configured threshold.
+- Exact-head P0 run `35361901997` completed `success` for HEAD `18959ca9823cd790e51580bf9911d1757890acb0`.
+- Exact-head P1 run `35361901965`, job `105654947878`, completed `failure` only because later independent Minecraft 26.2 API errors remain. `RenameCommand.kt` is absent from the final compiler error set, so its targeted permission adaptation is proven clean.
+- Diagnostic artifact: `p1-compile-log-18959ca9823cd790e51580bf9911d1757890acb0`, artifact ID `10555046879`, size `8533` bytes, ZIP SHA-256 `b7c5ee49f8049a48e81b6879a519da0724787cbdbac6012aa07c7517ab9e57be`.
+- Remaining permission-only command errors include `ScaleCommand.kt`, `SplittingCommand.kt`, `StaticCommand.kt`, and `TeleportCommand.kt`.
+- `DeleteCommand.kt`, `GetShipCommand.kt`, and `RemassCommand.kt` also have independent nullable-message errors and are not the smallest isolated permission proof.
+- `ScaleCommand.kt` reports exactly one compiler error: removed legacy `CommandSourceStack.hasPermission(Int)`. No second compile error is reported for that file.
+- Pinned upstream and current `1.21.1/main` are byte-identical for `ScaleCommand.kt` at blob `ae2dc875d8bf146a8e3ffa4c76fae14984866a96`.
+- `VSGameConfig.SERVER.Commands.scaleShipCommandPerms` is explicitly constrained to `0 <= x <= 4`, default `2`, so Minecraft 26.2 `Permission.HasCommandLevel(PermissionLevel.byId(level))` preserves the configured threshold.
 - `ShipAssemblerItem.kt` remains deferred: nullable `shipData.slug: String?` into non-null vararg `Any` must not be papered over with an invented fallback string.
 - `VSKeyBindings.kt` remains deferred because Minecraft 26.2 `KeyMapping.Category` migration changes category translation-key handling; a compile-only type swap must not silently break `category.valkyrienskies.driving`.
 - No code from retired `apm23/VS2-Create_Interactive` has been imported or reused as implementation source.
@@ -57,9 +57,9 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
-- active_proof_head: `none; previous proof bd796323fa1b49bd4844c0a4089edb1025ca89f9 landed`
-- active_proof_run: `none; previous P1 run 35359836381 landed`
-- active_hypothesis: `The next smallest safe standalone adaptation is RenameCommand's single dynamic command-level predicate, preserving renameShipCommandPerms 0..4 through Minecraft 26.2 Permission.HasCommandLevel(PermissionLevel.byId(level)).`
+- active_proof_head: `none; previous proof 18959ca9823cd790e51580bf9911d1757890acb0 landed`
+- active_proof_run: `none; previous P1 run 35361901965 landed`
+- active_hypothesis: `The next smallest safe standalone adaptation is ScaleCommand's single dynamic command-level predicate, preserving scaleShipCommandPerms 0..4 through Minecraft 26.2 Permission.HasCommandLevel(PermissionLevel.byId(level)).`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 
@@ -87,7 +87,8 @@ Source/API clusters proven clean in exact-head runs:
 - `BackendCommand.kt` dynamic configured permission migrated to `Permission.HasCommandLevel(PermissionLevel.byId(level))`;
 - `GetAirCommand.kt` same dynamic permission migration, aerodynamic/dimension/message behavior unchanged;
 - `GetGravityCommand.kt` same dynamic permission migration, gravity/aerodynamic/dimension/message behavior unchanged;
-- `DryCommand.kt` same dynamic permission migration, ship-AABB iteration and liquid/waterlogged handling unchanged.
+- `DryCommand.kt` same dynamic permission migration, ship-AABB iteration and liquid/waterlogged handling unchanged;
+- `RenameCommand.kt` same dynamic permission migration, ship argument/new-name parsing and `vsCore.renameShip` behavior unchanged.
 
 Representative remaining compiler areas: Create compat classpath/API drift, position/build-height changes, renderer/render-state APIs, SavedData/NBT `ValueInput`/`ValueOutput`, remaining command permissions, resource reload listener generics, entity save/hurt/network APIs, tickets/ticks/structure processors, keybinding category migration, and Sable compatibility.
 
@@ -98,6 +99,7 @@ Representative remaining compiler areas: Create compat classpath/API drift, posi
 - `b1a8d44abb54150a5b97e03677a37977702ed65e`: `GetAirCommand.kt` proven clean by P1 `35355388045`; artifact `10552130508`; ZIP SHA-256 `f921fc35d29e54d827fafbb5ca4c2d5664092a72579e3e394e15cede87e212b3`.
 - `7700e2194f96b79db0ffc67b6b754fecd29cc04f`: `GetGravityCommand.kt` proven clean by P1 `35357765377`; artifact `10552603034`; ZIP SHA-256 `dfa0c9eae9e1fc118784975bcf7adcbaa0d2ddca29a4f8318b290b1f30cea877`.
 - `bd796323fa1b49bd4844c0a4089edb1025ca89f9`: `DryCommand.kt` proven clean by P1 `35359836381`; artifact `10554023210`; ZIP SHA-256 `54086e93046ff3e7f113d0dd80e622e7ee4b39a5ee63e5dfed836041dce35b8d`.
+- `18959ca9823cd790e51580bf9911d1757890acb0`: `RenameCommand.kt` proven clean by P1 `35361901965`; artifact `10555046879`; ZIP SHA-256 `b7c5ee49f8049a48e81b6879a519da0724787cbdbac6012aa07c7517ab9e57be`.
 
 ## Sable contract
 
@@ -114,7 +116,7 @@ Forbidden final substitutes: custom VS2-style reference frames, synthetic carry 
 ## Milestones
 
 ### P0 — Upstream import + provenance
-Frozen green. Exact upstream identity/pin/license/provenance is established and repeatedly re-confirmed, including exact implementation P0 run `35359836373` for the latest proven implementation HEAD.
+Frozen green. Exact upstream identity/pin/license/provenance is established and repeatedly re-confirmed, including exact implementation P0 run `35361901997` for the latest proven implementation HEAD.
 
 ### P1 — Standalone VS2 26.2 compile/boot
 Port actual VS2 until common/Fabric compile, standalone client/server boot, and core/native initialization are proven without Create/SNR/Copycats hiding failures.
@@ -152,16 +154,16 @@ Do not reintroduce without new direct evidence:
 
 ## next_safe_action
 
-1. Preserve implementation HEAD `bd796323fa1b49bd4844c0a4089edb1025ca89f9`, exact-head P0 `35359836373`, and P1 `35359836381` as the `DryCommand.kt` proof.
-2. Preserve artifact `p1-compile-log-bd796323fa1b49bd4844c0a4089edb1025ca89f9`, ID `10554023210`, ZIP SHA-256 `54086e93046ff3e7f113d0dd80e622e7ee4b39a5ee63e5dfed836041dce35b8d`.
-3. Use confirmed byte-identical pinned/current `RenameCommand.kt` blob `004232736c5ff628794156d826d39bdd0cb53bc7`.
-4. Adapt exactly the one `RenameCommand` predicate from `CommandSourceStack.hasPermission(VSGameConfig.SERVER.Commands.renameShipCommandPerms)` to `CommandSourceStack.permissions().hasPermission(Permission.HasCommandLevel(PermissionLevel.byId(VSGameConfig.SERVER.Commands.renameShipCommandPerms)))`, adding only the two required Minecraft 26.2 permission imports.
-5. Preserve `renameShipCommandPerms` explicit 0..4/default `2`, ship argument handling, `vsCore.renameShip`, new-name parsing, return value, and command structure unchanged.
-6. Add only `RenameCommand.kt` to the P1 workflow diff-display path and trigger the smallest exact-head P0/P1 proof. If P1 is active, do not stack another source patch.
+1. Preserve implementation HEAD `18959ca9823cd790e51580bf9911d1757890acb0`, exact-head P0 `35361901997`, and P1 `35361901965` as the `RenameCommand.kt` proof.
+2. Preserve artifact `p1-compile-log-18959ca9823cd790e51580bf9911d1757890acb0`, ID `10555046879`, ZIP SHA-256 `b7c5ee49f8049a48e81b6879a519da0724787cbdbac6012aa07c7517ab9e57be`.
+3. Use confirmed byte-identical pinned/current `ScaleCommand.kt` blob `ae2dc875d8bf146a8e3ffa4c76fae14984866a96`.
+4. Adapt exactly the one `ScaleCommand` predicate from `CommandSourceStack.hasPermission(VSGameConfig.SERVER.Commands.scaleShipCommandPerms)` to `CommandSourceStack.permissions().hasPermission(Permission.HasCommandLevel(PermissionLevel.byId(VSGameConfig.SERVER.Commands.scaleShipCommandPerms)))`, adding only the two required Minecraft 26.2 permission imports.
+5. Preserve `scaleShipCommandPerms` explicit 0..4/default `2`, ship argument handling, minimum scale `0.001`, `vsCore.scaleShip`, return value, and command structure unchanged.
+6. Add only `ScaleCommand.kt` to the P1 workflow diff-display path and trigger the smallest exact-head P0/P1 proof. If P1 is active, do not stack another source patch.
 7. Do not batch another permission command into this proof.
 8. Do not alter Create compat, renderer, Sable/entity-dragging, physics, collision, networking, player/camera, or unrelated semantics merely to remove compiler errors.
 9. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet.
-10. After the Rename proof completes, update this ledger before any subsequent source patch.
+10. After the Scale proof completes, update this ledger before any subsequent source patch.
 
 ## Video validation
 
