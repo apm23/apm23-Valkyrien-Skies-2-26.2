@@ -24,14 +24,17 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 
 ## Current reconciliation — 2026-09-18
 
-- Actual implementation/source-port HEAD before this ledger-only update: `7485e9503a53b4fd086cbd29087aedbb2dfc5056` (`P1: port TestThrusterBlockEntity Direction accessor`).
-- Parent ledger-only commit before that implementation change: `5007b9645a5077150c7a2630f4c1c948e9a116f1` (`watchdog: record TestWingBlock proof result`).
+- Actual repository HEAD before this ledger-only update: `d9b7199337352999381f7713a3ec22325592e87a` (`watchdog: record TestThrusterBlockEntity active proof state`).
+- Current implementation/source-port HEAD remains `7485e9503a53b4fd086cbd29087aedbb2dfc5056` (`P1: port TestThrusterBlockEntity Direction accessor`).
 - Prior implementation HEAD `555cc6ddc575061a5e5b9d1f771b9d77d0039324` is proven clean for its targeted `TestWingBlock.kt` accessor by P1 run `35334206051`, job `105565187606`.
 - Diagnostic artifact for run `35334206051`: `p1-compile-log-555cc6ddc575061a5e5b9d1f771b9d77d0039324`, artifact ID `10542480562`, ZIP SHA-256 `0bea91a95095500948ecad45d630b86a2e5fe1b875509cd869f76e2951c05fbc`.
 - HEAD `7485e9503a53b4fd086cbd29087aedbb2dfc5056` adds exactly one fail-closed source adaptation in `common/src/main/kotlin/org/valkyrienskies/mod/common/blockentity/TestThrusterBlockEntity.kt`: `facing.normal.toJOMLD()` -> `facing.getUnitVec3i().toJOMLD()`, plus only that file's P1 workflow diff-display path.
 - Pinned upstream `f39132148e717d325933b4ce6e9e9fb13d929390` and current upstream `1.21.1/main` are byte-identical for `TestThrusterBlockEntity.kt` at blob `e1491b05b5b8f91cb8a6ffd1de2fdd3df7554e53`; `applyModelForce`, force magnitude `100000.0`, block-center force position, activity/null guards, and physics-listener semantics are otherwise unchanged.
 - Exact-head P0 run `35336506332`, job `105572463059`, completed `success` for implementation HEAD `7485e9503a53b4fd086cbd29087aedbb2dfc5056`.
-- Exact-head P1 run `35336506362`, job `105572463018`, is active. Overlay application, port-delta validation, and Gradle runtime completed successfully; step 8 `Compile standalone common + Fabric sources` is currently in progress.
+- Exact-head P1 run `35336506362`, job `105572463018`, completed `failure` only because later independent Minecraft 26.2 API errors remain. `TestThrusterBlockEntity.kt` is absent from the final compiler error set, so the targeted Direction accessor adaptation is proven clean.
+- Diagnostic artifact for run `35336506362`: `p1-compile-log-7485e9503a53b4fd086cbd29087aedbb2dfc5056`, artifact ID `10543132608`, ZIP SHA-256 `1e545474aa2bd062156ee09d42524cc1eae741b95aaed6a40a369d2c976a338f`.
+- The same compiler log reports exactly one direct standalone error in `common/src/main/kotlin/org/valkyrienskies/mod/common/block/TestThrusterBlock.kt:40`: its old `neighborChanged(..., blockPos2: BlockPos, bl: Boolean)` override no longer matches Minecraft 26.2, whose compiler-reported signature is `neighborChanged(state: BlockState, level: Level, pos: BlockPos, block: Block, orientation: Orientation?, movedByPiston: Boolean)`.
+- Pinned upstream and current `1.21.1/main` are byte-identical for `TestThrusterBlock.kt` at blob `d8bd39c9d3c92de942968cfb95bd807f1cfd3f19`. The obsolete `blockPos2` and boolean parameter names are unused by the VS2 method body, so the next candidate can be restricted to the 26.2 override signature/import while preserving all redstone state, block-entity activation, and tick behavior unchanged.
 - No code from `apm23/VS2-Create_Interactive` has been imported. The retired workaround project remains forbidden as implementation source.
 
 ## Target runtime baseline
@@ -49,9 +52,9 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
-- active_proof_head: `7485e9503a53b4fd086cbd29087aedbb2dfc5056`
-- active_proof_run: `35336506362` (`in_progress`; job `105572463018` compiling standalone common + Fabric sources)
-- active_hypothesis: `The single TestThrusterBlockEntity Direction.getUnitVec3i() accessor adaptation is sufficient to clear that exact private Direction.normal compiler error while preserving upstream applyModelForce semantics.`
+- active_proof_head: `none; previous proof 7485e9503a53b4fd086cbd29087aedbb2dfc5056 landed`
+- active_proof_run: `none; previous P1 run 35336506362 landed`
+- active_hypothesis: `The next smallest compiler-proven standalone VS2 adaptation is the single TestThrusterBlock.neighborChanged Minecraft 26.2 signature migration; its removed BlockPos parameter was unused, so VS2 redstone/thruster semantics can remain unchanged.`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 
@@ -75,10 +78,8 @@ Source API clusters proven clean in successive runs:
 - `VectorConversionsMC.kt` public Direction unit-vector accessor;
 - `ValkyrienSkies.kt` public Direction unit-vector accessor;
 - `TestFlapBlock.kt` public Direction unit-vector accessor;
-- `TestWingBlock.kt` public Direction unit-vector accessor.
-
-Current candidate under proof:
-- `TestThrusterBlockEntity.kt` single `Direction.normal -> Direction.getUnitVec3i()` accessor adaptation, with all force semantics otherwise unchanged.
+- `TestWingBlock.kt` public Direction unit-vector accessor;
+- `TestThrusterBlockEntity.kt` public Direction unit-vector accessor, with upstream force semantics unchanged.
 
 Representative remaining compiler areas include Create compat classpath/API drift, other Direction/position/build-height changes, renderer/render-state APIs, SavedData/NBT `ValueInput`/`ValueOutput`, command permissions, resource reload listener generics, entity save/hurt/network APIs, tickets/ticks/structure processors, and Sable compatibility.
 
@@ -105,7 +106,7 @@ Forbidden final substitutes include custom VS2-style reference frames, synthetic
 ## Milestones
 
 ### P0 — Upstream import + provenance
-Frozen green. Original proof run `35304871880`; later confirmations include `35324164899`, `35324792335`, `35325575601`, `35327172660`, `35327644515`, `35327819629`, `35329592607`, `35331485247`, `35333733917`, `35334205890`, and exact current implementation confirmation `35336506332`.
+Frozen green. Original proof run `35304871880`; later confirmations include `35324164899`, `35324792335`, `35325575601`, `35327172660`, `35327644515`, `35327819629`, `35329592607`, `35331485247`, `35333733917`, `35334205890`, and exact implementation confirmation `35336506332`.
 
 ### P1 — Standalone VS2 26.2 compile/boot
 Port actual VS2 until common/Fabric compile, standalone client/server boot, and core/native initialization are proven without Create/SNR/Copycats hiding failures.
@@ -141,13 +142,14 @@ Do not reintroduce without new direct evidence:
 
 ## next_safe_action
 
-1. Treat implementation HEAD `7485e9503a53b4fd086cbd29087aedbb2dfc5056` and P1 run `35336506362` as the active proof pair.
-2. **Do not source-patch while run `35336506362` is active.**
-3. When it completes, inspect the exact compile log. If `TestThrusterBlockEntity.kt` is absent from compiler errors, preserve the patch, record the artifact/run proof, then select only the next smallest direct compiler-proven standalone VS2 API cluster. If it regressed, repair only that regression.
-4. Preserve P0 run `35336506332` as green provenance for the exact implementation HEAD.
-5. Do not alter Create compat, renderer, Sable/entity-dragging, physics architecture, collision, networking, player/camera, or unrelated semantics merely to remove compiler errors; each needs its own evidence-backed adaptation.
-6. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet.
-7. Update this ledger after the active run lands before any subsequent source patch.
+1. Preserve implementation HEAD `7485e9503a53b4fd086cbd29087aedbb2dfc5056`, P0 run `35336506332`, and P1 run `35336506362` as proven clean for `TestThrusterBlockEntity.kt`.
+2. Preserve diagnostic artifact `p1-compile-log-7485e9503a53b4fd086cbd29087aedbb2dfc5056`, artifact ID `10543132608`, ZIP SHA-256 `1e545474aa2bd062156ee09d42524cc1eae741b95aaed6a40a369d2c976a338f`.
+3. Use the confirmed byte-identical pinned/current `TestThrusterBlock.kt` source at blob `d8bd39c9d3c92de942968cfb95bd807f1cfd3f19`.
+4. Add exactly one fail-closed 26.2 signature adaptation in that file: import `net.minecraft.world.level.redstone.Orientation` and change the unused final parameters of `neighborChanged` from `blockPos2: BlockPos, bl: Boolean` to `orientation: Orientation?, movedByPiston: Boolean`. Preserve the method body, redstone state transition, block-entity lookup/activation, placement behavior, tick behavior, and all other semantics unchanged.
+5. Add only `TestThrusterBlock.kt` to the P1 workflow diff-display path and trigger the smallest exact-head P0/P1 proof. If its P1 run is active, do not stack another source patch.
+6. Do not alter Create compat, renderer, Sable/entity-dragging, physics architecture, collision, networking, player/camera, or unrelated semantics merely to remove compiler errors; each needs its own evidence-backed adaptation.
+7. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet.
+8. Update this ledger after the next proof lands before any subsequent source patch.
 
 ## Video validation
 
