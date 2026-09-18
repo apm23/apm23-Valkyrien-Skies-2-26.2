@@ -74,4 +74,16 @@ replace_count(
     2,
 )
 
+# Run 35324792402 proved SimpleSoundInstanceOnShip is now clean. VSEntityManager's direct
+# errors are the same 26.x type rename plus cascaded generic/overload inference from that
+# missing type. Exactly seven occurrences cover only the import, map key/value declarations,
+# two registration IDs, and public handler-name parameter types; handler selection, Create
+# compat routing, caches, networking, and entity-reference semantics remain unchanged.
+replace_count(
+    "common/src/main/kotlin/org/valkyrienskies/mod/common/entity/handling/VSEntityManager.kt",
+    "ResourceLocation",
+    "Identifier",
+    7,
+)
+
 print("P1_SOURCE_API_26_2_OVERLAY_APPLIED")
