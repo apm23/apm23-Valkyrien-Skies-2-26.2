@@ -22,29 +22,26 @@ GitHub code is the implementation source of truth. This file is the durable cont
 
 The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are applied by explicit fail-closed overlay scripts so every adaptation stays traceable to upstream VS2 source.
 
-## Current reconciliation — TestHinge getTicker generic-bound proof completed; onPaste getLong Optional proof selected
+## Current reconciliation — TestHinge onPaste getLong Optional proof completed; block-entity getLong proof selected
 
-- Current proven implementation HEAD: `a4bb9db1749b0cd79e23e2f90cbfbad95202f46d` (`P1: wire TestHinge getTicker generic-bound proof`).
-- Exact-head P0 provenance run `35395323531`, job `105762730896`, completed `success` for `a4bb9db1749b0cd79e23e2f90cbfbad95202f46d`.
-- Exact-head P1 standalone compile run `35395323604`, job `105762731288`, completed `failure` only because later independent Minecraft 26.2 source/API errors remain.
-- Every traceable overlay applied successfully, including `apply_p1_testhinge_getticker_bound_26_2.py`; explicit port-delta validation and Gradle runtime steps succeeded.
-- The exact getTicker delta is one generic-bound change: `override fun <T : BlockEntity?> getTicker(` -> `override fun <T : BlockEntity> getTicker(`. Parameters, return expression, server-side gate, ticker body and TestHingeBlockEntity tick behavior are unchanged.
-- The previous `TestHingeBlock.kt:240 getTicker overrides nothing` diagnostic and associated nullable generic-bound/type-inference diagnostics are absent from run `35395323604`.
-- Independent hinge diagnostics remain exactly where expected: `TestHingeBlock.kt:200` `onRemove` override drift, lines `232-235` map inference, and `TestHingeBlockEntity.kt` ValueInput/ValueOutput plus Optional<Long> persistence drift.
-- Therefore the isolated TestHinge `getTicker` generic-bound migration is proven clean and frozen independently from remaining hinge APIs.
-- Diagnostic artifact: `p1-compile-log-a4bb9db1749b0cd79e23e2f90cbfbad95202f46d`, artifact ID `10567955398`, size `8118` bytes, ZIP SHA-256 `53b4e9a70dfac7122d5f2fe9b040fa2b3097e69f0ad8b7d3fb284e4b678b99d2`.
+- Current proven implementation HEAD before this ledger update: `4e3dbdd2d26b1861f93f5ac651c3f8cf615ffde6` (`P1: wire TestHinge onPaste getLong Optional proof`).
+- Exact-head P0 provenance run `35396104505`, job `105765179878`, completed `success` for `4e3dbdd2d26b1861f93f5ac651c3f8cf615ffde6`.
+- Exact-head P1 standalone compile run `35396104498`, job `105765179621`, completed `failure` only because later independent Minecraft 26.2 source/API errors remain.
+- Every traceable overlay applied successfully, including `apply_p1_testhinge_onpaste_getlong_26_2.py`; explicit port-delta validation and Gradle runtime steps succeeded.
+- Exact TestHinge onPaste delta is four Optional unwraps only: the four `tag.getLong("shipId0"/"shipId1")` map-key expressions now use `.orElse(0L)`. Map contents, pair destructuring, Vector3d transform math, NBT writeback, copy/paste lifecycle, joints and all other TestHinge behavior are unchanged.
+- The previous four `TestHingeBlock.kt:232-235` map-inference/type diagnostics are absent from run `35396104498`.
+- Independent hinge diagnostics remain exactly where expected: `TestHingeBlock.kt:200` `onRemove` override drift and `TestHingeBlockEntity.kt` persistence API drift at lines 32-48, including two `Optional<Long>` -> `Long?` mismatches at lines 47-48.
+- Therefore the isolated `TestHingeBlock.onPaste` Optional-to-Long map-key migration is proven clean and frozen independently from remaining hinge APIs.
+- Diagnostic artifact: `p1-compile-log-4e3dbdd2d26b1861f93f5ac651c3f8cf615ffde6`, artifact ID `10567986686`, size `8019` bytes, ZIP SHA-256 `4f06b192a022770df0687a244ae0db2da049c2a227dcd117202404ac440e8425`.
 - Pinned upstream `TestHingeBlock.kt` blob remains `073936536693be20171032cf53fbee99f6addad3`.
-- Exact run `35395323604` shows four remaining map-inference errors at `TestHingeBlock.kt:232-235`. Pinned upstream uses `tag.getLong("shipId0")` / `tag.getLong("shipId1")` directly as `Map<Long,...>` keys; Minecraft 26.2 now types `CompoundTag.getLong` as `Optional<Long>`, also directly evidenced by the independent `TestHingeBlockEntity.kt:47-48` diagnostics.
-- Selected next hypothesis: unwrap only those four `onPaste` ship-id lookups with `.orElse(0L)`. This preserves the legacy primitive NBT getter's absent/wrong-type default-zero semantics while adapting the Minecraft 26.2 Optional return type. Do not change map contents, transform math, copy/paste lifecycle, joint behavior, block-entity persistence, or `onRemove`.
-- Expected proof: only `TestHingeBlock.kt:232-235` map-inference diagnostics disappear; independent `onRemove` and `TestHingeBlockEntity` persistence diagnostics remain.
+- Pinned upstream `TestHingeBlockEntity.kt` blob is `80a7545bbabc5f871a79ceb7d6eb4a51c5ebc725`.
+- Exact run `35396104498` supplies two isolated block-entity diagnostics: `tag.getLong("shipId0")` and `tag.getLong("shipId1")` now return `Optional<Long>` where the existing `VSRevoluteJoint` constructor path expects `Long?`.
+- Selected next hypothesis: adapt exactly those two load-time ship-id expressions to `.orElse(0L)`. This preserves legacy `CompoundTag.getLong` absent/wrong-type default-zero semantics while leaving the separate `ValueInput`/`ValueOutput` save/load signature migration untouched.
+- Expected proof: only `TestHingeBlockEntity.kt:47-48` Optional<Long>-to-Long? diagnostics disappear; `saveAdditional`/`loadAdditional` ValueInput/ValueOutput diagnostics and `TestHingeBlock.onRemove` remain.
+- Previous isolated `getTicker` proof remains frozen at HEAD `a4bb9db1749b0cd79e23e2f90cbfbad95202f46d`, exact-head P0 `35395323531`, P1 `35395323604` / job `105762731288`, artifact `10567955398`, ZIP SHA-256 `53b4e9a70dfac7122d5f2fe9b040fa2b3097e69f0ad8b7d3fb284e4b678b99d2`.
 - Previous isolated `getShape` proof remains frozen at HEAD `01e86b1dba7f483a6f8363f22e72100a61b887a8`, exact-head P0 `35392499266`, P1 `35392499337` / job `105753820631`, artifact `10567085228`, ZIP SHA-256 `b0022b364c646cf3c65df478a98132b09877b5758768ac9d04abe9721b067f56`.
-- Previous `ValkyrienSkiesMod.kt` Identifier proof remains frozen at HEAD `4a1ea3c136ab6640c51405129e5286896e00b483`, exact-head P0 `35388500261`, P1 `35388500277` / job `105741071163`, artifact `10564054948`, ZIP SHA-256 `2d6ebab805f74338db600dd94870753c5f11f2d75bf502827aad0c8056091685`.
-- Previous `EmptyRenderer.kt` Identifier proof remains frozen at HEAD `5a6f41ee258d704fdb91fa9b115854c19623a7eb`, exact-head P0 `35384633799`, P1 `35384633761` / job `105728547942`, artifact `10563931126`, ZIP SHA-256 `ec45c981a8589ae3a93a3e0955cff789172c487472598bd4a5803294d98475ae`; independent renderer-state migration remains.
-- Previous `TestChairBlock.kt` Direction proof remains frozen at HEAD `369d042ee7d86c109825ae00b637c1230a70e7e5`, exact-head P0 `35383401723`, P1 `35383401868` / job `105724661254`, artifact `10562768230`, ZIP SHA-256 `4f3ad14af6cf671d9c5f43a3e356dbd4c03dbd866f549ff6b8937d30c7cc5bc4`.
-- Previous `EntityDragger.kt` Direction proof remains frozen at HEAD `f86f606e2f51e42513f4ae558bb740164d3d9f23`, exact-head P0 `35381321480`, P1 `35381321453`, artifact `10563195663`, ZIP SHA-256 `619e4759fee46606f2a93e94e8b42cbd463b27110e46e8590ae98e861fe70ffa`; independent local-control migration remains.
-- Previous `RemassCommand.kt` permission proof remains frozen at HEAD `6762f2022756506b282f176f4ea4a5d6b40b8ea7`, exact-head P0 `35379217178`, P1 `35379217305`, artifact `10561352586`, ZIP SHA-256 `4885fb7979234c4e32621cd21bfc83f21d14f6b8128c7c5b76b59338de396dd9`.
-- The dynamic command-permission cluster remains exhausted in the exact compiler set; remaining nullable ship slug/name messages stay deferred and no fallback values may be invented just to satisfy Kotlin vararg nullability.
 - `VSKeyBindings.kt` remains deferred because Minecraft 26.2 `KeyMapping.Category` migration changes category translation-key handling; a compile-only type swap must not silently break `category.valkyrienskies.driving`.
+- Nullable ship slug/name command/item messages remain deferred; do not invent fallback strings merely to satisfy Kotlin vararg nullability.
 - No code from retired `apm23/VS2-Create_Interactive` has been imported or reused as implementation source.
 
 ## Target runtime baseline
@@ -62,9 +59,9 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
-- active_proof_head: `none; TestHinge onPaste CompoundTag.getLong Optional-to-Long proof selected but not yet patched/wired`
+- active_proof_head: `none; TestHingeBlockEntity load-time CompoundTag.getLong Optional-to-Long proof selected but not yet patched/wired`
 - active_proof_run: `none`
-- active_hypothesis: `Minecraft 26.2 CompoundTag.getLong returns Optional<Long>; pinned TestHingeBlock.onPaste uses four getLong results directly as Map<Long,...> keys. Adapt exactly those four lookups with .orElse(0L), preserving legacy default-zero NBT getter behavior and all copy/paste transform semantics. Expected proof: lines 232-235 map-inference diagnostics disappear while onRemove and TestHingeBlockEntity persistence errors remain.`
+- active_hypothesis: `Minecraft 26.2 CompoundTag.getLong returns Optional<Long>; pinned TestHingeBlockEntity.loadAdditional passes shipId0/shipId1 directly into the existing VSRevoluteJoint constructor path expecting Long?. Adapt exactly those two expressions with .orElse(0L), preserving legacy zero-default NBT behavior. Expected proof: only lines 47-48 Optional<Long> mismatches disappear while ValueInput/ValueOutput save/load signature errors and TestHingeBlock.onRemove remain.`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 
@@ -80,44 +77,44 @@ Build/toolchain:
 
 Source/API clusters proven clean in exact-head runs:
 - data-provider `ResourceLocation -> Identifier` plus registry-holder `location() -> identifier()`;
-- `BlockStateInfoProvider.kt` Identifier cluster;
-- `SimpleSoundInstanceOnShip.kt` Identifier cluster;
-- `VSEntityManager.kt` Identifier cluster;
+- `BlockStateInfoProvider.kt`, `SimpleSoundInstanceOnShip.kt`, `VSEntityManager.kt` Identifier clusters;
 - `EmptyRenderer.kt` resource vocabulary `ResourceLocation -> Identifier` only; render-state migration remains separate;
 - `ValkyrienSkiesMod.kt` resource vocabulary `ResourceLocation -> Identifier` only; creative-tab migration remains separate;
 - `EntityData.kt` non-null generic bounds;
-- `NbtUtil.kt` guarded `Optional<Double>` reads with legacy zero defaults;
-- `VectorConversionsMC.kt`, `ValkyrienSkies.kt`, `TestFlapBlock.kt`, `TestWingBlock.kt`, `TestThrusterBlockEntity.kt`, `EntityDragger.kt`, and the isolated facing-vector site in `TestChairBlock.kt` use the public Direction unit-vector accessor at proven sites;
-- `TestThrusterBlock.kt` Minecraft 26.2 `neighborChanged` signature migration with redstone/thruster semantics unchanged;
-- `RaycastUtils.kt` floating-direction API plus explicit non-null expression of its existing paired entity/location invariant;
-- `MinecraftPlayer.kt` level-4 admin/config permission predicates to Minecraft 26.2 `Permissions.COMMANDS_OWNER`;
-- `BackendCommand.kt`, `GetAirCommand.kt`, `GetGravityCommand.kt`, `DryCommand.kt`, `RenameCommand.kt`, `ScaleCommand.kt`, `SplittingCommand.kt`, `StaticCommand.kt`, `TeleportCommand.kt`, `DeleteCommand.kt`, `GetShipCommand.kt`, and `RemassCommand.kt` dynamic configured command-level predicates migrated to `Permission.HasCommandLevel(PermissionLevel.byId(level))` without changing command behavior;
-- isolated `TestHingeBlock.kt` `getShape` nullable-parameter signature migration;
-- isolated `TestHingeBlock.kt` `getTicker` non-null generic-bound migration.
+- `NbtUtil.kt` guarded Optional numeric reads with legacy zero defaults;
+- Direction unit-vector accessor migrations at proven sites in `VectorConversionsMC.kt`, `ValkyrienSkies.kt`, `TestFlapBlock.kt`, `TestWingBlock.kt`, `TestThrusterBlockEntity.kt`, `EntityDragger.kt`, and `TestChairBlock.kt`;
+- `TestThrusterBlock.kt` Minecraft 26.2 `neighborChanged` signature migration;
+- `RaycastUtils.kt` floating-direction API and paired entity/location nullability expression;
+- `MinecraftPlayer.kt` admin/config permission predicates;
+- dynamic command permission migrations through Backend/GetAir/GetGravity/Dry/Rename/Scale/Splitting/Static/Teleport/Delete/GetShip/Remass;
+- `TestHingeBlock.kt` `getShape` non-null signature migration;
+- `TestHingeBlock.kt` `getTicker` non-null generic-bound migration;
+- `TestHingeBlock.kt` `onPaste` four `CompoundTag.getLong` Optional unwraps preserving legacy zero defaults.
 
-Representative remaining compiler areas from exact run `35395323604`: Create compat classpath/API drift; `EmptyRenderer` render-state/type-argument migration; `CompatUtil` position/build-height/nullability API drift; `ShipSavedData` Optional/SaveData changes; `VSGameUtils` Identifier/build-height/chunk-position APIs; `ValkyrienSkiesMod` creative-tab output API migration; assembly/tick/ValueInput-ValueOutput/structure processor migrations; TestChair entity-create/`moveTo` APIs; TestHinge `onRemove`/map-inference plus block-entity persistence drift; deferred nullable command/item messages; reload-listener/Identifier generics; keybinding category migration; ShipMountingEntity save/hurt APIs; entity-handler rendering APIs; networking/local-control/lerp APIs; `EntityDragger` local-control API; chunk tickets; Sable compatibility; and relocation APIs.
+Representative remaining compiler areas from exact run `35396104498`: Create compat classpath/API drift; `EmptyRenderer` render-state/type-argument migration; `CompatUtil` position/build-height/nullability drift; `ShipSavedData` Optional/SaveData changes; `VSGameUtils` Identifier/build-height/chunk-position APIs; `ValkyrienSkiesMod` creative-tab output API; assembly/tick/ValueInput-ValueOutput/structure processor migrations; TestChair entity-create/`moveTo`; TestHinge `onRemove` plus TestHingeBlockEntity persistence; deferred nullable command/item messages; reload-listener/Identifier generics; keybinding category; ShipMountingEntity persistence/hurt; entity-handler rendering; networking/local-control/lerp; `EntityDragger` local-control; chunk tickets; Sable; relocation.
 
 ## Proof chain retained
 
 - `ad922ded33ff46a3028fca1217559a60be54fad6`: `MinecraftPlayer.kt` permission predicates proven clean by P1 `35340545586`.
-- `6253d38ff84785921c95c175563a5b24800979ef`: `BackendCommand.kt` proven clean by P1 `35342297011`; artifact `10545204522`; ZIP SHA-256 `72de18f36f7538bf818ee59f090fea3d009e7c6f4265a9f7f5261517344b4c03`.
-- `b1a8d44abb54150a5b97e03677a37977702ed65e`: `GetAirCommand.kt` proven clean by P1 `35355388045`; artifact `10552130508`; ZIP SHA-256 `f921fc35d29e54d827fafbb5ca4c2d5664092a72579e3e394e15cede87e212b3`.
-- `7700e2194f96b79db0ffc67b6b754fecd29cc04f`: `GetGravityCommand.kt` proven clean by P1 `35357765377`; artifact `10552603034`; ZIP SHA-256 `dfa0c9eae9e1fc118784975bcf7adcbaa0d2ddca29a4f8318b290b1f30cea877`.
-- `bd796323fa1b49bd4844c0a4089edb1025ca89f9`: `DryCommand.kt` proven clean by P1 `35359836381`; artifact `10554023210`; ZIP SHA-256 `54086e93046ff3e7f113d0dd80e622e7ee4b39a5ee63e5dfed836041dce35b8d`.
-- `18959ca9823cd790e51580bf9911d1757890acb0`: `RenameCommand.kt` proven clean by P1 `35361901965`; artifact `10555046879`; ZIP SHA-256 `b7c5ee49f8049a48e81b6879a519da0724787cbdbac6012aa07c7517ab9e57be`.
-- `915d88e3c64ecc49bb502c8fe849b5744d99cea4`: `ScaleCommand.kt` proven clean by P1 `35364622301`; artifact `10554444674`; ZIP SHA-256 `a663d408b9fc0f08ed96545827b1c4e9030d83a77c79e3590798fd5f17870763`.
-- `d919b45d6f35c9917c13e69c3faf8011e0057057`: `SplittingCommand.kt` proven clean by P1 `35366811861`; artifact `10557430465`; ZIP SHA-256 `af0a83997d92d431f31c215ba985d502fc7b35edc1ac8c7fc6f5585e84ea4d8b`.
-- `e1fa31795ba5901fdde0c1238e434faf06be2f49`: `StaticCommand.kt` proven clean by P1 `35370436174`; artifact `10558762061`; ZIP SHA-256 `958012e1dd3cdf1a8bae2d40f423061487c7e9a4b57cd0094e7ad90ebd7328a0`.
-- `c75047ae1f38b92fc39a56911a967ce914952c5c`: `TeleportCommand.kt` proven clean by P1 `35372443583`; artifact `10559450323`; ZIP SHA-256 `5319fc6386f0a87c23893e84c26aeb871c6453ad5c3fa7374134a4cf35024faf`.
-- `6a2901ccbb359d867209195c58dc652b0a39e594`: `DeleteCommand.kt` permission predicate proven clean by P1 `35375165938`; artifact `10559548159`; ZIP SHA-256 `d1ed6dd29874c3dc4c45d1e55d4042315697856e69de18b393f9e97c214666b3`.
-- `3d93c0041a59c0b78adfa9e2ff313cdbbe5f74aa`: `GetShipCommand.kt` permission predicate proven clean by P1 `35377209937`; artifact `10560773482`; ZIP SHA-256 `8697b7badb3f739a29be29be14e2b0e0373ac7b98057a7e47245d565b535ad34`.
-- `6762f2022756506b282f176f4ea4a5d6b40b8ea7`: `RemassCommand.kt` permission predicate proven clean by P1 `35379217305`; exact-head P0 `35379217178`; artifact `10561352586`; ZIP SHA-256 `4885fb7979234c4e32621cd21bfc83f21d14f6b8128c7c5b76b59338de396dd9`.
-- `f86f606e2f51e42513f4ae558bb740164d3d9f23`: isolated `EntityDragger.kt` hit-face Direction accessor proven clean by P1 `35381321453`; exact-head P0 `35381321480`; artifact `10563195663`; ZIP SHA-256 `619e4759fee46606f2a93e94e8b42cbd463b27110e46e8590ae98e861fe70ffa`.
-- `369d042ee7d86c109825ae00b637c1230a70e7e5`: isolated `TestChairBlock.kt` facing Direction accessor proven clean by P1 `35383401868`, job `105724661254`; exact-head P0 `35383401723`; artifact `10562768230`; ZIP SHA-256 `4f3ad14af6cf671d9c5f43a3e356dbd4c03dbd866f549ff6b8937d30c7cc5bc4`.
-- `5a6f41ee258d704fdb91fa9b115854c19623a7eb`: isolated `EmptyRenderer.kt` resource vocabulary migration proven clean by P1 `35384633761`, job `105728547942`; exact-head P0 `35384633799`; artifact `10563931126`; ZIP SHA-256 `ec45c981a8589ae3a93a3e0955cff789172c487472598bd4a5803294d98475ae`.
-- `4a1ea3c136ab6640c51405129e5286896e00b483`: isolated `ValkyrienSkiesMod.kt` resource vocabulary migration proven clean by P1 `35388500277`, job `105741071163`; exact-head P0 `35388500261`; artifact `10564054948`; ZIP SHA-256 `2d6ebab805f74338db600dd94870753c5f11f2d75bf502827aad0c8056091685`.
-- `01e86b1dba7f483a6f8363f22e72100a61b887a8`: isolated `TestHingeBlock.kt` `getShape` non-null parameter signature proven clean by P1 `35392499337`, job `105753820631`; exact-head P0 `35392499266`; artifact `10567085228`; ZIP SHA-256 `b0022b364c646cf3c65df478a98132b09877b5758768ac9d04abe9721b067f56`.
-- `a4bb9db1749b0cd79e23e2f90cbfbad95202f46d`: isolated `TestHingeBlock.kt` `getTicker` generic-bound migration proven clean by P1 `35395323604`, job `105762731288`; exact-head P0 `35395323531`; artifact `10567955398`; ZIP SHA-256 `53b4e9a70dfac7122d5f2fe9b040fa2b3097e69f0ad8b7d3fb284e4b678b99d2`.
+- `6253d38ff84785921c95c175563a5b24800979ef`: Backend permission; P1 `35342297011`; artifact `10545204522`; SHA-256 `72de18f36f7538bf818ee59f090fea3d009e7c6f4265a9f7f5261517344b4c03`.
+- `b1a8d44abb54150a5b97e03677a37977702ed65e`: GetAir permission; P1 `35355388045`; artifact `10552130508`; SHA-256 `f921fc35d29e54d827fafbb5ca4c2d5664092a72579e3e394e15cede87e212b3`.
+- `7700e2194f96b79db0ffc67b6b754fecd29cc04f`: GetGravity permission; P1 `35357765377`; artifact `10552603034`; SHA-256 `dfa0c9eae9e1fc118784975bcf7adcbaa0d2ddca29a4f8318b290b1f30cea877`.
+- `bd796323fa1b49bd4844c0a4089edb1025ca89f9`: Dry permission; P1 `35359836381`; artifact `10554023210`; SHA-256 `54086e93046ff3e7f113d0dd80e622e7ee4b39a5ee63e5dfed836041dce35b8d`.
+- `18959ca9823cd790e51580bf9911d1757890acb0`: Rename permission; P1 `35361901965`; artifact `10555046879`; SHA-256 `b7c5ee49f8049a48e81b6879a519da0724787cbdbac6012aa07c7517ab9e57be`.
+- `915d88e3c64ecc49bb502c8fe849b5744d99cea4`: Scale permission; P1 `35364622301`; artifact `10554444674`; SHA-256 `a663d408b9fc0f08ed96545827b1c4e9030d83a77c79e3590798fd5f17870763`.
+- `d919b45d6f35c9917c13e69c3faf8011e0057057`: Splitting permission; P1 `35366811861`; artifact `10557430465`; SHA-256 `af0a83997d92d431f31c215ba985d502fc7b35edc1ac8c7fc6f5585e84ea4d8b`.
+- `e1fa31795ba5901fdde0c1238e434faf06be2f49`: Static permission; P1 `35370436174`; artifact `10558762061`; SHA-256 `958012e1dd3cdf1a8bae2d40f423061487c7e9a4b57cd0094e7ad90ebd7328a0`.
+- `c75047ae1f38b92fc39a56911a967ce914952c5c`: Teleport permission; P1 `35372443583`; artifact `10559450323`; SHA-256 `5319fc6386f0a87c23893e84c26aeb871c6453ad5c3fa7374134a4cf35024faf`.
+- `6a2901ccbb359d867209195c58dc652b0a39e594`: Delete permission; P1 `35375165938`; artifact `10559548159`; SHA-256 `d1ed6dd29874c3dc4c45d1e55d4042315697856e69de18b393f9e97c214666b3`.
+- `3d93c0041a59c0b78adfa9e2ff313cdbbe5f74aa`: GetShip permission; P1 `35377209937`; artifact `10560773482`; SHA-256 `8697b7badb3f739a29be29be14e2b0e0373ac7b98057a7e47245d565b535ad34`.
+- `6762f2022756506b282f176f4ea4a5d6b40b8ea7`: Remass permission; P0 `35379217178`; P1 `35379217305`; artifact `10561352586`; SHA-256 `4885fb7979234c4e32621cd21bfc83f21d14f6b8128c7c5b76b59338de396dd9`.
+- `f86f606e2f51e42513f4ae558bb740164d3d9f23`: EntityDragger Direction; P0 `35381321480`; P1 `35381321453`; artifact `10563195663`; SHA-256 `619e4759fee46606f2a93e94e8b42cbd463b27110e46e8590ae98e861fe70ffa`.
+- `369d042ee7d86c109825ae00b637c1230a70e7e5`: TestChair Direction; P0 `35383401723`; P1 `35383401868`; job `105724661254`; artifact `10562768230`; SHA-256 `4f3ad14af6cf671d9c5f43a3e356dbd4c03dbd866f549ff6b8937d30c7cc5bc4`.
+- `5a6f41ee258d704fdb91fa9b115854c19623a7eb`: EmptyRenderer Identifier; P0 `35384633799`; P1 `35384633761`; job `105728547942`; artifact `10563931126`; SHA-256 `ec45c981a8589ae3a93a3e0955cff789172c487472598bd4a5803294d98475ae`.
+- `4a1ea3c136ab6640c51405129e5286896e00b483`: ValkyrienSkiesMod Identifier; P0 `35388500261`; P1 `35388500277`; job `105741071163`; artifact `10564054948`; SHA-256 `2d6ebab805f74338db600dd94870753c5f11f2d75bf502827aad0c8056091685`.
+- `01e86b1dba7f483a6f8363f22e72100a61b887a8`: TestHinge getShape; P0 `35392499266`; P1 `35392499337`; job `105753820631`; artifact `10567085228`; SHA-256 `b0022b364c646cf3c65df478a98132b09877b5758768ac9d04abe9721b067f56`.
+- `a4bb9db1749b0cd79e23e2f90cbfbad95202f46d`: TestHinge getTicker bound; P0 `35395323531`; P1 `35395323604`; job `105762731288`; artifact `10567955398`; SHA-256 `53b4e9a70dfac7122d5f2fe9b040fa2b3097e69f0ad8b7d3fb284e4b678b99d2`.
+- `4e3dbdd2d26b1861f93f5ac651c3f8cf615ffde6`: TestHinge onPaste getLong Optional unwrap; P0 `35396104505`; job `105765179878`; P1 `35396104498`; job `105765179621`; artifact `10567986686`; SHA-256 `4f06b192a022770df0687a244ae0db2da049c2a227dcd117202404ac440e8425`.
 
 ## Sable contract
 
@@ -134,7 +131,7 @@ Forbidden final substitutes: custom VS2-style reference frames, synthetic carry 
 ## Milestones
 
 ### P0 — Upstream import + provenance
-Frozen green. Exact upstream identity/pin/license/provenance is established and repeatedly re-confirmed. Latest proven implementation HEAD `a4bb9db1749b0cd79e23e2f90cbfbad95202f46d` has exact-head P0 run `35395323531` success.
+Frozen green. Exact upstream identity/pin/license/provenance is established and repeatedly re-confirmed. Latest proven implementation HEAD `4e3dbdd2d26b1861f93f5ac651c3f8cf615ffde6` has exact-head P0 run `35396104505` success.
 
 ### P1 — Standalone VS2 26.2 compile/boot
 Port actual VS2 until common/Fabric compile, standalone client/server boot, and core/native initialization are proven without Create/SNR/Copycats hiding failures.
@@ -172,11 +169,11 @@ Do not reintroduce without new direct evidence:
 
 ## next_safe_action
 
-1. Preserve exact TestHinge `getTicker` proof HEAD `a4bb9db1749b0cd79e23e2f90cbfbad95202f46d`, exact-head P0 `35395323531`, P1 `35395323604` / job `105762731288`, artifact `10567955398`, ZIP SHA-256 `53b4e9a70dfac7122d5f2fe9b040fa2b3097e69f0ad8b7d3fb284e4b678b99d2`.
+1. Preserve exact TestHinge `onPaste` proof HEAD `4e3dbdd2d26b1861f93f5ac651c3f8cf615ffde6`, exact-head P0 `35396104505` / job `105765179878`, P1 `35396104498` / job `105765179621`, artifact `10567986686`, ZIP SHA-256 `4f06b192a022770df0687a244ae0db2da049c2a227dcd117202404ac440e8425`.
 2. Reconcile actual HEAD after this ledger update and allow its automatically triggered P0 provenance workflow to settle before proof setup.
-3. Add one fail-closed overlay for `TestHingeBlock.kt` that changes exactly the four `onPaste` `tag.getLong("shipId0"/"shipId1")` map-key expressions to `.orElse(0L)` forms. Preserve map contents, pair destructuring, Vector3d transform math, NBT writeback, copy/paste lifecycle, constraints, joints and all other TestHinge code.
-4. Wire only that overlay into P1. `TestHingeBlock.kt` remains in the explicit port-delta display. Do not change `onRemove`, `TestHingeBlockEntity`, physics, rendering or any unrelated cluster.
-5. Proof target: `TestHingeBlock.kt:232-235` map-inference diagnostics disappear; independent `onRemove` and `TestHingeBlockEntity` persistence diagnostics remain. Overall compile may remain red on unrelated clusters.
+3. Add one fail-closed overlay for `TestHingeBlockEntity.kt` that changes exactly the two load-time `tag.getLong("shipId0")` and `tag.getLong("shipId1")` expressions to `.orElse(0L)`. Preserve constructor arguments/order, poses, rotations, `maxForceTorque`, `driveFreeSpin`, `makeConstraint`, tick behavior and all other code.
+4. Wire only that overlay into P1 and add `TestHingeBlockEntity.kt` to the explicit port-delta display. Do not change `saveAdditional`/`loadAdditional` signatures, ValueInput/ValueOutput handling, `TestHingeBlock.onRemove`, physics, rendering or unrelated clusters.
+5. Proof target: only `TestHingeBlockEntity.kt:47-48` Optional<Long>-to-Long? diagnostics disappear; independent ValueInput/ValueOutput persistence signature diagnostics and `TestHingeBlock.onRemove` remain. Overall compile may remain red on unrelated clusters.
 6. After proof completes, record exact HEAD, P0/P1 runs, job/artifact/hash and targeted diagnostic result before selecting another cluster.
 7. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet. No video is authorized during compile/API-port work.
 
