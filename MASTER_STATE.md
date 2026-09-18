@@ -24,14 +24,16 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 
 ## Current reconciliation — 2026-09-18
 
-- Actual repository HEAD before this ledger-only update: `3eab624caed1ff836a4eb2b3d034da7866d6ddef` (`watchdog: record TestFlapBlock active proof state`).
+- Actual repository HEAD before this ledger-only update: `71245da2d1fa83f76859c4ed722518dd8a524f05` (`watchdog: sync TestFlapBlock proof state`).
 - Current implementation/source-port HEAD remains `c8128c30bb29d9c454bf0045b873dea3bc76a17c` (`P1: port TestFlapBlock Direction accessor`).
 - Prior implementation HEAD `d0a33c0c7ff2ca49db1a69420c0b51d0064a92dc` is proven clean for its targeted `ValkyrienSkies.kt` accessor cluster by P1 run `35331485313`, job `105556599506`.
 - Diagnostic artifact for run `35331485313`: `p1-compile-log-d0a33c0c7ff2ca49db1a69420c0b51d0064a92dc`, artifact ID `10541221766`, ZIP SHA-256 `2a1d8ef765e1770e8f67970d66253ad337470a012e7ed45450b2a0b4a8be9b47`.
-- HEAD `c8128c30bb29d9c454bf0045b873dea3bc76a17c` adds one new fail-closed source adaptation in `common/src/main/kotlin/org/valkyrienskies/mod/common/block/TestFlapBlock.kt`: `blockState.getValue(FACING).normal.toJOMLD()` -> `blockState.getValue(FACING).getUnitVec3i().toJOMLD()`, plus that file's P1 workflow diff-display path.
+- HEAD `c8128c30bb29d9c454bf0045b873dea3bc76a17c` adds one fail-closed source adaptation in `common/src/main/kotlin/org/valkyrienskies/mod/common/block/TestFlapBlock.kt`: `blockState.getValue(FACING).normal.toJOMLD()` -> `blockState.getValue(FACING).getUnitVec3i().toJOMLD()`, plus that file's P1 workflow diff-display path.
 - Pinned upstream `f39132148e717d325933b4ce6e9e9fb13d929390` and current upstream `1.21.1/main` are byte-identical for `TestFlapBlock.kt` at blob `03f9db336c337fb1d531e00ebad81ed61db1f4b1`; Wing construction, coefficients, and `toJOMLD()` conversion are otherwise unchanged.
 - Exact-head P0 run `35333733917` completed `success` for `c8128c30bb29d9c454bf0045b873dea3bc76a17c`.
-- Exact-head P1 run `35333733932`, job `105563689862`, remains active. Overlay application, port-delta validation, and Gradle runtime all completed successfully; the job is still executing `Compile standalone common + Fabric sources` at this reconciliation.
+- Exact-head P1 run `35333733932`, job `105563689862`, completed `failure` only because later independent Minecraft 26.2 API errors remain. The exact targeted `TestFlapBlock.kt` error is absent from the final compiler error set, so the accessor adaptation is proven clean.
+- Diagnostic artifact for run `35333733932`: `p1-compile-log-c8128c30bb29d9c454bf0045b873dea3bc76a17c`, artifact ID `10542133841`, ZIP SHA-256 `053cc414fab9522a53e0ba055a604d432359b06ade6e3c86fdd3cdd7286ade7b`.
+- Representative remaining direct private `Direction.normal` errors include standalone VS2 callsites in `TestWingBlock.kt`, `TestThrusterBlockEntity.kt`, `TestChairBlock.kt`, and `EntityDragger.kt`, plus a Create-compat callsite that is intentionally not the next target during standalone P1.
 - No code from `apm23/VS2-Create_Interactive` has been imported. The retired workaround project remains forbidden as implementation source.
 
 ## Target runtime baseline
@@ -49,9 +51,9 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
-- active_proof_head: `c8128c30bb29d9c454bf0045b873dea3bc76a17c`
-- active_proof_run: `35333733932` (`in_progress`; job `105563689862` compiling standalone common + Fabric sources)
-- active_hypothesis: `The single TestFlapBlock.kt Direction.getUnitVec3i() accessor adaptation is sufficient to clear that exact private Direction.normal compiler error while preserving upstream Wing semantics.`
+- active_proof_head: `none; previous proof c8128c30bb29d9c454bf0045b873dea3bc76a17c landed`
+- active_proof_run: `none; previous P1 run 35333733932 landed`
+- active_hypothesis: `Select the next smallest direct compiler-proven standalone VS2 API callsite without touching Create compat or runtime semantics.`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 
@@ -73,10 +75,8 @@ Source API clusters proven clean in successive runs:
 - `EntityData.kt` non-null generic bounds;
 - `NbtUtil.kt` guarded `Optional<Double>` reads;
 - `VectorConversionsMC.kt` public Direction unit-vector accessor;
-- `ValkyrienSkies.kt` public Direction unit-vector accessor.
-
-Current candidate under proof:
-- `TestFlapBlock.kt` single `Direction.normal -> Direction.getUnitVec3i()` accessor adaptation.
+- `ValkyrienSkies.kt` public Direction unit-vector accessor;
+- `TestFlapBlock.kt` public Direction unit-vector accessor.
 
 Representative remaining compiler areas include Create compat classpath/API drift, other Direction/position/build-height changes, renderer/render-state APIs, SavedData/NBT `ValueInput`/`ValueOutput`, command permissions, resource reload listener generics, entity save/hurt/network APIs, tickets/ticks/structure processors, and Sable compatibility.
 
@@ -139,13 +139,13 @@ Do not reintroduce without new direct evidence:
 
 ## next_safe_action
 
-1. Treat implementation HEAD `c8128c30bb29d9c454bf0045b873dea3bc76a17c` and P1 run `35333733932` as the active proof pair.
-2. **Do not patch while run `35333733932` is active.**
-3. When it completes, inspect the exact compile log. If `TestFlapBlock.kt` is absent from compiler errors, preserve the patch and select only the next smallest direct compiler-proven API cluster. If it regressed, repair only that regression.
-4. Preserve P0 run `35333733917` as green provenance for the exact implementation HEAD.
+1. Preserve implementation HEAD `c8128c30bb29d9c454bf0045b873dea3bc76a17c` and P1 run `35333733932` as proven clean for `TestFlapBlock.kt`.
+2. Inspect the exact pinned and current-upstream source for `common/src/main/kotlin/org/valkyrienskies/mod/common/block/TestWingBlock.kt`, which run `35333733932` reports with a single direct private `Direction.normal` error.
+3. If pinned/current source identity and local semantics confirm the same already-proven public unit-vector accessor migration, add exactly one fail-closed `Direction.normal -> Direction.getUnitVec3i()` adaptation for that callsite and its workflow diff-display path.
+4. Trigger the smallest exact-head P0/P1 proof. If the run is active, do not stack another source patch.
 5. Do not alter Create compat, renderer, Sable/entity-dragging, physics, collision, networking, player/camera, or unrelated semantics merely to remove compiler errors; each needs its own evidence-backed adaptation.
 6. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet.
-7. Update this ledger after the active run lands before any subsequent source patch.
+7. Update this ledger after the next proof lands before any subsequent source patch.
 
 ## Video validation
 
