@@ -37,8 +37,9 @@ replace_once(
     "distributionUrl=https\\://services.gradle.org/distributions/gradle-9.5.1-all.zip",
 )
 replace_once("build.gradle", 'id "architectury-plugin" version "3.4.161"', 'id "architectury-plugin" version "3.5.170"')
-replace_once("build.gradle", 'id "dev.architectury.loom" version "1.9.428" apply false', 'id "dev.architectury.loom" version "1.17.493" apply false')
+replace_once("build.gradle", 'id "dev.architectury.loom" version "1.9.428" apply false', 'id "dev.architectury.loom-no-remap" version "1.17.493" apply false')
 replace_once("build.gradle", 'id "org.jetbrains.kotlin.jvm" version "2.0.0" apply false', 'id "org.jetbrains.kotlin.jvm" version "2.4.20" apply false')
+replace_once("build.gradle", '    apply plugin: "dev.architectury.loom"', '    apply plugin: "dev.architectury.loom-no-remap"')
 replace_once("build.gradle", '        mappings loom.officialMojangMappings()\n', "")
 replace_once("build.gradle", "        options.release = 21", "        options.release = 25")
 replace_once(
@@ -60,6 +61,14 @@ replace_once(
     "fabric/build.gradle",
     'id "com.github.johnrengelman.shadow" version "7.1.2"',
     'id "com.gradleup.shadow" version "9.2.2"',
+)
+
+# 26.x is unobfuscated: use Architectury Loom's no-remap path and remove the
+# upstream remapJar task, which is not part of the no-remap build model.
+replace_once(
+    "fabric/build.gradle",
+    '''remapJar {\n    input.set shadowJar.archiveFile\n    dependsOn shadowJar\n    archiveClassifier.set null\n    duplicatesStrategy DuplicatesStrategy.EXCLUDE\n}\n\n''',
+    "",
 )
 
 print("P1_BUILD_BASELINE_APPLIED")
