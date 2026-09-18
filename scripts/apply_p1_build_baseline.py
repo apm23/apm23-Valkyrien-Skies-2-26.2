@@ -138,4 +138,25 @@ replace_once(
     "",
 )
 
+# The pinned Moonlight dependency is present only to support Supplementaries/Moonlight
+# compatibility. On the 26.2 no-remap path its older jar carries an intermediary AW,
+# which Loom cannot process in an official-only Minecraft namespace. The exact pinned
+# VS2 tree contains only MixinFakeServerLevel under mod_compat/moonlight, so disable only
+# this optional compat surface during standalone P1 instead of rewriting a third-party jar.
+replace_once(
+    "common/build.gradle",
+    '    implementation("maven.modrinth:moonlight:$moonlight_version")\n',
+    "",
+)
+replace_once(
+    "common/build.gradle",
+    '            exclude "org/valkyrienskies/mod/mixin/mod_compat/cc_tweaked/**"\n',
+    '            exclude "org/valkyrienskies/mod/mixin/mod_compat/cc_tweaked/**"\n            exclude "org/valkyrienskies/mod/mixin/mod_compat/moonlight/**"\n',
+)
+replace_once(
+    "common/src/main/resources/valkyrienskies-common.mixins.json",
+    '    "mod_compat.moonlight.MixinFakeServerLevel",\n',
+    "",
+)
+
 print("P1_BUILD_BASELINE_APPLIED")
