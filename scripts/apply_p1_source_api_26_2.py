@@ -102,4 +102,33 @@ replace_count(
     1,
 )
 
+# Run 35327172496 proved EntityData is now clean. Minecraft 26.2 changed CompoundTag#getDouble
+# from primitive Double to Optional<Double>. NbtUtil already checks contains(...) for each key
+# before every read, so explicitly falling back to 0.0 preserves the old primitive/default
+# behavior without changing VS2 vector/quaternion serialization semantics.
+replace_count(
+    "common/src/main/kotlin/org/valkyrienskies/mod/util/NbtUtil.kt",
+    "getDouble(prefix + \"x\")",
+    "getDouble(prefix + \"x\").orElse(0.0)",
+    2,
+)
+replace_count(
+    "common/src/main/kotlin/org/valkyrienskies/mod/util/NbtUtil.kt",
+    "getDouble(prefix + \"y\")",
+    "getDouble(prefix + \"y\").orElse(0.0)",
+    2,
+)
+replace_count(
+    "common/src/main/kotlin/org/valkyrienskies/mod/util/NbtUtil.kt",
+    "getDouble(prefix + \"z\")",
+    "getDouble(prefix + \"z\").orElse(0.0)",
+    2,
+)
+replace_count(
+    "common/src/main/kotlin/org/valkyrienskies/mod/util/NbtUtil.kt",
+    "getDouble(prefix + \"w\")",
+    "getDouble(prefix + \"w\").orElse(0.0)",
+    1,
+)
+
 print("P1_SOURCE_API_26_2_OVERLAY_APPLIED")
