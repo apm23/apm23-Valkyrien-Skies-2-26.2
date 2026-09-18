@@ -248,4 +248,23 @@ replace_count(
     2,
 )
 
+# Run 35340545586 proved MinecraftPlayer.kt clean and reports one direct removed legacy
+# CommandSourceStack.hasPermission(Int) call in BackendCommand.kt. Pinned baseline and current
+# 1.21.1/main are byte-identical at blob 46778377f9235c4f3492ea3c7b1bb2ef4c4fb8cf.
+# The configured threshold is explicitly constrained to 0..4. Minecraft 26.2 represents the
+# same command-level predicate as Permission.HasCommandLevel(PermissionLevel.byId(level)).
+# Adapt only this predicate; backend/lod execution, config mutation, and messages stay unchanged.
+replace_count(
+    "common/src/main/kotlin/org/valkyrienskies/mod/common/command/commands/BackendCommand.kt",
+    "import net.minecraft.network.chat.Component\n",
+    "import net.minecraft.network.chat.Component\nimport net.minecraft.server.permissions.Permission\nimport net.minecraft.server.permissions.PermissionLevel\n",
+    1,
+)
+replace_count(
+    "common/src/main/kotlin/org/valkyrienskies/mod/common/command/commands/BackendCommand.kt",
+    ".requires{ it.hasPermission(VSGameConfig.SERVER.Commands.changeBackendCommandPerms)}",
+    ".requires{ it.permissions().hasPermission(Permission.HasCommandLevel(PermissionLevel.byId(VSGameConfig.SERVER.Commands.changeBackendCommandPerms)))}",
+    1,
+)
+
 print("P1_SOURCE_API_26_2_OVERLAY_APPLIED")
