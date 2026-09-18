@@ -120,6 +120,15 @@ replace_active_dependency_config("common/build.gradle", "modCompileOnly", "compi
 replace_active_dependency_config("fabric/build.gradle", "modImplementation", "implementation", 6)
 replace_active_dependency_config("fabric/build.gradle", "modCompileOnly", "compileOnly", 11)
 
+# loom-no-remap does not publish Loom's legacy namedElements variant. On unobfuscated
+# 26.x the common project is already in the runtime namespace, so let Gradle select the
+# normal common project variant instead of requesting a remapped namedElements variant.
+replace_once(
+    "fabric/build.gradle",
+    '    common(project(path: ":common", configuration: "namedElements")) {\n',
+    '    common(project(":common")) {\n',
+)
+
 # Forge Config API Port is required by the real Fabric initializer to register VS2's
 # NeoForge-style ModConfig specs. Keep that upstream integration, but move its Maven
 # coordinate from the pinned 1.21.1 line to the official Minecraft 26.2 release. The
