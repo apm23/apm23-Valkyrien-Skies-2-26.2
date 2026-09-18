@@ -24,12 +24,13 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 
 ## Current reconciliation — 2026-09-18
 
-- Actual repository HEAD before this ledger-only update: `04aee32421c97fee34364eb753f3087c201b9b1e` (`watchdog: sync NbtUtil active proof state`). This is ledger-only; latest implementation/source-port HEAD remains `07fa32bc16f00c8a474c087e6d6f6e8908323876` (`P1: port NbtUtil Optional doubles`).
-- P0 at exact implementation HEAD `07fa32bc16f00c8a474c087e6d6f6e8908323876`: run `35327644515` completed `success`. Ledger-only HEAD `04aee32421c97fee34364eb753f3087c201b9b1e` also passed P0 in run `35327819629`.
-- P1 at exact implementation HEAD `07fa32bc16f00c8a474c087e6d6f6e8908323876`: run `35327644535`, job `105544358050`, completed `failure` at `:common:compileKotlin` after checkout, Java 25, both overlays, diff validation, and Gradle startup succeeded.
-- Run `35327644535` proves the `NbtUtil.kt` seven-read `CompoundTag.getDouble() -> Optional<Double>.orElse(0.0)` adaptation worked: `NbtUtil.kt` no longer appears anywhere in compiler errors.
-- Diagnostic artifact: `p1-compile-log-07fa32bc16f00c8a474c087e6d6f6e8908323876`, artifact ID `10540162137`, ZIP SHA-256 `f09ce2237094c5502b6080cf3a585bb7ee95a7b2d2885494a88063bf83671cd9`.
-- The next smallest direct compiler-proven standalone cluster is `common/src/main/kotlin/org/valkyrienskies/mod/util/VectorConversionsMC.kt`: exactly one error at the single `Direction.normal` access. Minecraft 26.x keeps the same unit-vector semantics but makes the backing `normal: Vec3i` field private and exposes public `Direction#getUnitVec3i()`. Pinned upstream and current `1.21.1/main` are identical at this callsite, so the proposed adaptation is one exact replacement from `dir.normal` to `dir.getUnitVec3i()` with transform semantics unchanged.
+- Actual implementation/source-port HEAD before this ledger-only update: `d761c5039176213c4a57530866463ad09368fbb3` (`P1: port Direction unit vector accessor`).
+- Parent ledger-only commit: `ef5fe45621685ef9cff399da4f6fc451dcb1cc9f` (`watchdog: record NbtUtil proof result`).
+- Prior implementation HEAD `07fa32bc16f00c8a474c087e6d6f6e8908323876` remains proven clean for its targeted `NbtUtil.kt` cluster by P1 run `35327644535`, job `105544358050`.
+- Diagnostic artifact for run `35327644535`: `p1-compile-log-07fa32bc16f00c8a474c087e6d6f6e8908323876`, artifact ID `10540162137`, ZIP SHA-256 `f09ce2237094c5502b6080cf3a585bb7ee95a7b2d2885494a88063bf83671cd9`.
+- HEAD `d761c5039176213c4a57530866463ad09368fbb3` adds only one fail-closed source adaptation in `VectorConversionsMC.kt`: `transformDirection(dir.normal, dest)` -> `transformDirection(dir.getUnitVec3i(), dest)`, plus the P1 workflow diff-display path. Upstream transform overload structure and JOML math are unchanged.
+- Active P1 proof at exact implementation HEAD `d761c5039176213c4a57530866463ad09368fbb3`: run `35329592695`, currently `in_progress` when this ledger entry was written.
+- P0 at the same implementation HEAD: run `35329592607`, currently `in_progress` when this ledger entry was written.
 - No code from `apm23/VS2-Create_Interactive` has been imported. The retired workaround project remains forbidden as implementation source.
 
 ## Target runtime baseline
@@ -47,9 +48,9 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
-- active_proof_head: `07fa32bc16f00c8a474c087e6d6f6e8908323876`
-- active_proof_run: `35327644535` (`completed/failure`; NbtUtil cluster proven clean)
-- active_hypothesis: `Replace only VectorConversionsMC.kt's private Direction.normal field access with the public 26.x getUnitVec3i() accessor; preserve the exact transformDirection behavior.`
+- active_proof_head: `d761c5039176213c4a57530866463ad09368fbb3`
+- active_proof_run: `35329592695` (`in_progress` when ledger was written)
+- active_hypothesis: `The single public Direction.getUnitVec3i() accessor adaptation is sufficient to clear VectorConversionsMC.kt while preserving exact unit-vector transform semantics.`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 
@@ -71,7 +72,7 @@ Source API clusters proven clean in successive runs:
 - `EntityData.kt` non-null generic bounds;
 - `NbtUtil.kt` guarded `Optional<Double>` reads.
 
-Next candidate:
+Current candidate under proof:
 - `VectorConversionsMC.kt` single `Direction.normal -> Direction.getUnitVec3i()` public-accessor adaptation.
 
 Representative remaining compiler areas include renderer/render-state APIs, other Direction/position/build-height changes, SavedData/NBT `ValueInput`/`ValueOutput`, command permissions, resource reload listener generics, entity save/hurt/network APIs, tickets/ticks/structure processors, Create-compat classpath/API drift, and Sable compatibility.
@@ -99,7 +100,7 @@ Forbidden final substitutes include custom VS2-style reference frames, synthetic
 ## Milestones
 
 ### P0 — Upstream import + provenance
-Frozen green. Original proof run `35304871880`; later confirmations include `35324164899`, `35324792335`, `35325575601`, `35327172660`, `35327644515`, and ledger confirmation `35327819629`.
+Frozen green. Original proof run `35304871880`; later confirmations include `35324164899`, `35324792335`, `35325575601`, `35327172660`, `35327644515`, and ledger confirmation `35327819629`. Current implementation HEAD `d761c5039176213c4a57530866463ad09368fbb3` has P0 run `35329592607` active at ledger-write time.
 
 ### P1 — Standalone VS2 26.2 compile/boot
 Port actual VS2 until common/Fabric compile, standalone client/server boot, and core/native initialization are proven without Create/SNR/Copycats hiding failures.
@@ -135,13 +136,13 @@ Do not reintroduce without new direct evidence:
 
 ## next_safe_action
 
-1. Preserve implementation HEAD `07fa32bc16f00c8a474c087e6d6f6e8908323876`; run `35327644535` proves its `NbtUtil.kt` cluster clean.
-2. Apply only the single compiler-proven `VectorConversionsMC.kt` adaptation: `dir.normal -> dir.getUnitVec3i()` in the existing fail-closed 26.2 source overlay.
-3. Include `VectorConversionsMC.kt` in P1 workflow delta display, commit the overlay/workflow change atomically, and let the resulting P1 run prove whether that file disappears from compiler errors.
-4. Do not stack another source patch while that new P1 workflow is active.
+1. Treat implementation HEAD `d761c5039176213c4a57530866463ad09368fbb3` and P1 run `35329592695` as the active proof pair.
+2. **Do not patch while run `35329592695` is active.**
+3. When it completes, inspect the exact compile log. If `VectorConversionsMC.kt` is absent from compiler errors, preserve the patch and select only the next smallest direct compiler-proven API cluster. If it regressed, repair only that regression.
+4. Confirm P0 run `35329592607` remains green; do not disturb frozen provenance.
 5. Do not alter renderer, Sable/entity-dragging, physics, collision, networking, player/camera, or Create semantics merely to remove unrelated compiler errors; each needs its own evidence-backed adaptation.
 6. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet.
-7. Update this ledger with the new implementation HEAD/run after the patch lands.
+7. Update this ledger after the active run lands before any subsequent source patch.
 
 ## Video validation
 
