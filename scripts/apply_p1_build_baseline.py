@@ -19,6 +19,26 @@ def replace_once(rel, old, new):
         raise SystemExit(f"expected exactly one match in {rel}: {old!r}; found {count}")
     path.write_text(text.replace(old, new, 1), encoding="utf-8")
 
+
+def replace_active_dependency_config(rel, old, new, expected):
+    """Replace a Gradle dependency configuration only on non-comment source lines."""
+    path = root / rel
+    lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
+    count = 0
+    out = []
+    for line in lines:
+        if not line.lstrip().startswith("//"):
+            hits = line.count(old)
+            if hits:
+                count += hits
+                line = line.replace(old, new)
+        out.append(line)
+    if count != expected:
+        raise SystemExit(
+            f"expected {expected} active {old!r} references in {rel}; found {count}"
+        )
+    path.write_text("".join(out), encoding="utf-8")
+
 # Exact target/runtime lock.
 replace_once("gradle.properties", "minecraft_version=1.21.1", "minecraft_version=26.2")
 replace_once("gradle.properties", "enabled_platforms=fabric,neoforge", "enabled_platforms=fabric")
@@ -70,5 +90,14 @@ replace_once(
     '''remapJar {\n    input.set shadowJar.archiveFile\n    dependsOn shadowJar\n    archiveClassifier.set null\n    duplicatesStrategy DuplicatesStrategy.EXCLUDE // Ignore duplicate valkyrienskies-common.accesswidener files\n}\n\n''',
     "",
 )
+
+# loom-no-remap intentionally omits Loom's remapping dependency configurations.
+# Keep the exact upstream dependency coordinates, scopes, and include() structure; only
+# translate the active configuration names to their plain Gradle equivalents.
+replace_active_dependency_config("common/build.gradle", "modImplementation", "implementation", 3)
+replace_active_dependency_config("common/build.gradle", "modApi", "api", 1)
+replace_active_dependency_config("common/build.gradle", "modCompileOnly", "compileOnly", 18)
+replace_active_dependency_config("fabric/build.gradle", "modImplementation", "implementation", 6)
+replace_active_dependency_config("fabric/build.gradle", "modCompileOnly", "compileOnly", 11)
 
 print("P1_BUILD_BASELINE_APPLIED")
