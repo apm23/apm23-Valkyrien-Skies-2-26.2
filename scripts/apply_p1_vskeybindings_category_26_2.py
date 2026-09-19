@@ -55,7 +55,8 @@ new_key = "key.category.valkyrienskies.driving"
 updated_locales = []
 
 for path in sorted(lang_dir.glob("*.json")):
-    lang_text = path.read_text(encoding="utf-8")
+    original_bytes = path.read_bytes()
+    lang_text = original_bytes.decode("utf-8")
     data = json.loads(lang_text)
     if old_key not in data:
         continue
@@ -84,7 +85,7 @@ for path in sorted(lang_dir.glob("*.json")):
     parsed = json.loads(updated)
     if parsed.get(old_key) != data[old_key] or parsed.get(new_key) != data[old_key]:
         raise SystemExit(f"category translation value was not preserved in {path}")
-    path.write_text(updated, encoding="utf-8", newline="")
+    path.write_bytes(updated.encode("utf-8"))
     updated_locales.append(path.name)
 
 if "en_us.json" not in updated_locales:
