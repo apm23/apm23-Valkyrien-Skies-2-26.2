@@ -54,6 +54,7 @@ on:
       - 'scripts/apply_p1_shipassembler_chunkpos_containing_26_2.py'
       - 'scripts/apply_p1_shipassembler_fastpath_chunk_setblock_flags_26_2.py'
       - 'scripts/apply_p1_shipassembler_structure_processor_26_2.py'
+      - 'scripts/apply_p1_shipassembler_clearable_26_2.py'
       - 'scripts/apply_p1_assemblyutil_chunk_setblock_flags_26_2.py'
       - 'scripts/apply_p1_assemblyutil_scheduledtick_nonnull_26_2.py'
       - 'scripts/apply_p1_assemblyutil_blockentity_value_io_26_2.py'
@@ -238,6 +239,9 @@ jobs:
 
       - name: Apply traceable P1 ShipAssembler StructureProcessor overlay
         run: python3 scripts/apply_p1_shipassembler_structure_processor_26_2.py upstream-vs2
+
+      - name: Apply traceable P1 ShipAssembler Clearable overlay
+        run: python3 scripts/apply_p1_shipassembler_clearable_26_2.py upstream-vs2
 
       - name: Apply traceable P1 AssemblyUtil chunk setBlock flags overlay
         run: python3 scripts/apply_p1_assemblyutil_chunk_setblock_flags_26_2.py upstream-vs2
