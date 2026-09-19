@@ -1,0 +1,110 @@
+name: P1 entity renderer submit probe
+
+on:
+  push:
+    paths:
+      - 'scripts/apply_p1_entity_renderer_submit_26_2.py'
+      - '.github/workflows/p1-entity-renderer-submit-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  entity-renderer-submit-probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact upstream baseline
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Replay canonical frozen P1 overlays in canonical order
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import shlex
+          import subprocess
+
+          workflow = Path('.github/workflows/p1-compile.yml').read_text(encoding='utf-8')
+          commands = re.findall(
+              r'^\s*run:\s+(python3 scripts/apply_p1_[^\n]+ upstream-vs2)\s*$',
+              workflow,
+              flags=re.MULTILINE,
+          )
+          if len(commands) < 50:
+              raise SystemExit(f'fail-closed: expected canonical overlay chain, found only {len(commands)} commands')
+          if any('entity_renderer_submit_26_2.py' in command for command in commands):
+              raise SystemExit('fail-closed: renderer submit overlay is already canonical; retire this probe instead')
+          print(f'Replaying {len(commands)} canonical overlay commands')
+          for command in commands:
+              print('+', command)
+              subprocess.run(shlex.split(command), check=True)
+          PY
+
+      - name: Reapply frozen renderer-handler proof overlay
+        run: python3 scripts/apply_p1_entityhandler_renderstate_26_2.py upstream-vs2
+
+      - name: Reapply frozen Sable compile-boundary proof overlay
+        run: python3 scripts/apply_p1_sable_companion_compileonly_26_2.py upstream-vs2
+
+      - name: Reapply frozen optional Create helper exclusion
+        run: python3 scripts/apply_p1_deployer_scroll_option_exclusion_26_2.py upstream-vs2
+
+      - name: Reapply frozen entity authority interpolation bridge
+        run: python3 scripts/apply_p1_entity_authority_interpolation_26_2.py upstream-vs2
+
+      - name: Apply isolated renderer dispatcher submit bridge
+        run: python3 scripts/apply_p1_entity_renderer_submit_26_2.py upstream-vs2
+
+      - name: Validate isolated renderer semantic unit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git -C upstream-vs2 diff --check
+          git -C upstream-vs2 diff -- \
+            common/src/main/java/org/valkyrienskies/mod/mixin/feature/shipyard_entities/MixinEntityRenderDispatcher.java \
+            common/src/main/java/org/valkyrienskies/mod/mixin/feature/shipyard_entities/MixinEntityRenderer.java \
+            common/src/main/java/org/valkyrienskies/mod/mixin/feature/shipyard_entities/MixinEntityRenderState.java \
+            common/src/main/java/org/valkyrienskies/mod/mixin/feature/shipyard_entities/VSEntityRenderStateContext.java \
+            common/src/main/java/org/valkyrienskies/mod/mixin/accessors/client/render/EntityRendererCullingInvoker.java \
+            common/src/main/resources/valkyrienskies-common.mixins.json
+          test "$(grep -Fc 'method = \"submit\"' upstream-vs2/common/src/main/java/org/valkyrienskies/mod/mixin/feature/shipyard_entities/MixinEntityRenderDispatcher.java)" -eq 1
+          test "$(grep -Fc 'method = \"extractEntity\"' upstream-vs2/common/src/main/java/org/valkyrienskies/mod/mixin/feature/shipyard_entities/MixinEntityRenderDispatcher.java)" -eq 1
+          test "$(grep -Fc 'VSEntityManager.INSTANCE.getHandler' upstream-vs2/common/src/main/java/org/valkyrienskies/mod/mixin/feature/shipyard_entities/MixinEntityRenderDispatcher.java)" -eq 2
+          test "$(grep -Fc 'getShipMountedToData' upstream-vs2/common/src/main/java/org/valkyrienskies/mod/mixin/feature/shipyard_entities/MixinEntityRenderDispatcher.java)" -eq 1
+          test "$(grep -Fc 'getRenderTransform' upstream-vs2/common/src/main/java/org/valkyrienskies/mod/mixin/feature/shipyard_entities/MixinEntityRenderDispatcher.java)" -ge 2
+          ! grep -Fq 'MultiBufferSource' upstream-vs2/common/src/main/java/org/valkyrienskies/mod/mixin/feature/shipyard_entities/MixinEntityRenderDispatcher.java
+          ! grep -Fq 'distanceToSqr(DDD)D' upstream-vs2/common/src/main/java/org/valkyrienskies/mod/mixin/feature/shipyard_entities/MixinEntityRenderDispatcher.java
+          ! grep -Fq 'renderNameTag(' upstream-vs2/common/src/main/java/org/valkyrienskies/mod/mixin/feature/shipyard_entities/MixinEntityRenderer.java
+          grep -Fq 'EntityRendererCullingInvoker' upstream-vs2/common/src/main/resources/valkyrienskies-common.mixins.json
+          grep -Fq 'MixinEntityRenderState' upstream-vs2/common/src/main/resources/valkyrienskies-common.mixins.json
+
+      - name: Show Gradle runtime
+        working-directory: upstream-vs2
+        run: ./gradlew --version
+
+      - name: Compile standalone common + Fabric sources
+        shell: bash
+        working-directory: upstream-vs2
+        run: |
+          set -o pipefail
+          ./gradlew :common:compileJava :common:compileKotlin :fabric:compileJava :fabric:compileKotlin --stacktrace --no-daemon 2>&1 | tee ../p1-entity-renderer-submit-probe.log
+
+      - name: Upload renderer submit probe diagnostic log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-entity-renderer-submit-probe-${{ github.sha }}
+          path: p1-entity-renderer-submit-probe.log
+          if-no-files-found: warn
