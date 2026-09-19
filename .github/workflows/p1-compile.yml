@@ -50,6 +50,7 @@ on:
       - 'scripts/apply_p1_entityhandler_projectile_packages_26_2.py'
       - 'scripts/apply_p1_shipmountingentity_value_io_26_2.py'
       - 'scripts/apply_p1_shipmountingentity_hurtserver_26_2.py'
+      - 'scripts/apply_p1_shipmountingentity_kill_level_26_2.py'
       - '.github/workflows/p1-compile.yml'
       - 'upstream-vs2'
       - 'BASELINE_LOCK.json'
@@ -214,6 +215,9 @@ jobs:
 
       - name: Apply traceable P1 ShipMountingEntity hurtServer overlay
         run: python3 scripts/apply_p1_shipmountingentity_hurtserver_26_2.py upstream-vs2
+
+      - name: Apply traceable P1 ShipMountingEntity kill ServerLevel overlay
+        run: python3 scripts/apply_p1_shipmountingentity_kill_level_26_2.py upstream-vs2
 
       - name: Show and validate port delta
         shell: bash
