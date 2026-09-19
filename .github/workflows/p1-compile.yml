@@ -74,6 +74,7 @@ on:
       - 'scripts/apply_p1_distance_manager_ticket_storage_26_2.py'
       - 'scripts/apply_p1_shipyard_teleport_api_26_2.py'
       - 'scripts/apply_p1_shipyard_teleport_player_api_26_2.py'
+      - 'scripts/apply_p1_naturalspawner_chunkpos_accessors_26_2.py'
       - '.github/workflows/p1-compile.yml'
       - 'upstream-vs2'
       - 'BASELINE_LOCK.json'
@@ -310,6 +311,9 @@ jobs:
 
       - name: Apply traceable P1 shipyard teleport ServerPlayer API overlay
         run: python3 scripts/apply_p1_shipyard_teleport_player_api_26_2.py upstream-vs2
+
+      - name: Apply frozen P1 NaturalSpawner ChunkPos accessor overlay
+        run: python3 scripts/apply_p1_naturalspawner_chunkpos_accessors_26_2.py upstream-vs2
 
       - name: Show and validate port delta
         shell: bash
