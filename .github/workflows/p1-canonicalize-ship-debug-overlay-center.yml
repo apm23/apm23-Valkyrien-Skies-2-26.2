@@ -1,4 +1,4 @@
-name: P1 canonicalize ship debug overlay center overlay
+name: P1 stage validated ship debug overlay canonical blob
 
 on:
   push:
@@ -7,10 +7,11 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+  actions: read
 
 jobs:
-  build-canonical-file:
+  stage-canonical-blob:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout exact repository state
@@ -19,47 +20,39 @@ jobs:
           fetch-depth: 0
           submodules: false
 
-      - name: Produce validated canonical p1-compile file
+      - name: Fetch and verify exact validated canonical artifact
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          curl -L --fail --silent --show-error \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/10594054310/zip" \
+            -o canonical.zip
+          test "$(sha256sum canonical.zip | awk '{print $1}')" = "db80c20d36f5cf2e3cdcae6cd0769204a6b3b623355971e1dd2ee524bed74848"
+          rm -rf canonical-artifact
+          mkdir canonical-artifact
+          unzip -q canonical.zip -d canonical-artifact
+          test -f canonical-artifact/canonical-p1-compile.yml
+          test "$(sha256sum canonical-artifact/canonical-p1-compile.yml | awk '{print $1}')" = "1aeb0bebea8c4182259dbca6691325ba265f1b6a9e29948248648d1b248c83a9"
+          test "$(grep -Fc "'scripts/apply_p1_ship_debug_overlay_blockpos_center_26_2.py'" canonical-artifact/canonical-p1-compile.yml)" -eq 1
+          test "$(grep -Fc 'python3 scripts/apply_p1_ship_debug_overlay_blockpos_center_26_2.py upstream-vs2' canonical-artifact/canonical-p1-compile.yml)" -eq 1
+
+      - name: Push non-workflow staging blob only
         shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-
-          path = Path('.github/workflows/p1-compile.yml')
-          text = path.read_text(encoding='utf-8')
-          candidate_path = "      - 'scripts/apply_p1_ship_debug_overlay_blockpos_center_26_2.py'\n"
-          candidate_step = "      - name: Apply frozen P1 ship debug overlay BlockPos center overlay\n        run: python3 scripts/apply_p1_ship_debug_overlay_blockpos_center_26_2.py upstream-vs2\n\n"
-          if candidate_path in text or candidate_step in text:
-              raise SystemExit('fail-closed: ship-debug-overlay center overlay is already canonical')
-
-          path_anchor = "      - 'scripts/apply_p1_tick_ship_chunks_chunkpos_accessors_26_2.py'\n"
-          if text.count(path_anchor) != 1:
-              raise SystemExit(f'fail-closed: expected one path anchor, found {text.count(path_anchor)}')
-          text = text.replace(path_anchor, path_anchor + candidate_path, 1)
-
-          step_anchor = "      - name: Apply frozen P1 tick ship chunks ChunkPos accessor overlay\n        run: python3 scripts/apply_p1_tick_ship_chunks_chunkpos_accessors_26_2.py upstream-vs2\n\n"
-          if text.count(step_anchor) != 1:
-              raise SystemExit(f'fail-closed: expected one step anchor, found {text.count(step_anchor)}')
-          text = text.replace(step_anchor, step_anchor + candidate_step, 1)
-
-          if text.count("'scripts/apply_p1_ship_debug_overlay_blockpos_center_26_2.py'") != 1:
-              raise SystemExit('fail-closed: candidate trigger path count is not one')
-          if text.count('python3 scripts/apply_p1_ship_debug_overlay_blockpos_center_26_2.py upstream-vs2') != 1:
-              raise SystemExit('fail-closed: candidate apply command count is not one')
-          Path('canonical-p1-compile.yml').write_text(text, encoding='utf-8')
-          PY
-          cp canonical-p1-compile.yml .github/workflows/p1-compile.yml
-          git diff --check
-          test "$(git diff --name-only | wc -l)" -eq 1
-          test "$(git diff --name-only)" = '.github/workflows/p1-compile.yml'
-          test "$(grep -Fc "'scripts/apply_p1_ship_debug_overlay_blockpos_center_26_2.py'" canonical-p1-compile.yml)" -eq 1
-          test "$(grep -Fc 'python3 scripts/apply_p1_ship_debug_overlay_blockpos_center_26_2.py upstream-vs2' canonical-p1-compile.yml)" -eq 1
-          sha256sum canonical-p1-compile.yml
-
-      - name: Upload canonical p1-compile file
-        uses: actions/upload-artifact@v4
-        with:
-          name: p1-ship-debug-overlay-center-canonical-file-${{ github.sha }}
-          path: canonical-p1-compile.yml
-          if-no-files-found: error
+          mkdir -p .ci-transport
+          cp canonical-artifact/canonical-p1-compile.yml .ci-transport/p1-compile.yml
+          test "$(sha256sum .ci-transport/p1-compile.yml | awk '{print $1}')" = "1aeb0bebea8c4182259dbca6691325ba265f1b6a9e29948248648d1b248c83a9"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .ci-transport/p1-compile.yml
+          test "$(git diff --cached --name-only | wc -l)" -eq 1
+          test "$(git diff --cached --name-only)" = '.ci-transport/p1-compile.yml'
+          git diff --cached --check
+          git commit -m 'ci: stage validated ship debug overlay canonical blob'
+          git push origin HEAD:main
