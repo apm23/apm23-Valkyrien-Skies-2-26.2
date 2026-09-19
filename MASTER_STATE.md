@@ -22,17 +22,40 @@ GitHub code is the implementation source of truth. This file is the durable cont
 
 The upstream baseline remains pinned. Minecraft 26.2 changes are applied by explicit fail-closed overlays so every adaptation remains traceable to upstream VS2 source.
 
-## Current reconciliation — canonical P1 chain through AirAndWaterRandomPos max-build boundary
+## Current reconciliation — canonical P1 chain through tick-ship-chunks ChunkPos accessor boundary
 
 Current proven canonical source boundary before this ledger-only reconciliation commit:
-- canonical implementation HEAD: `960582c42b407e9c4dbc1943f1d2cc3d8c3dbfe6`
-- canonical P1 chain contains **80 ordered fail-closed overlays**.
-- exact-head P0 provenance run `35472794096`: `success`.
-- exact-head AirAndWaterRandomPos proof run `35472793999`: `success`.
-- exact-head canonical standalone compile run `35472794011`: compiler-frontier failure only; every overlay/apply/delta-validation step before compilation was green.
-- compile artifact: `p1-compile-log-960582c42b407e9c4dbc1943f1d2cc3d8c3dbfe6`, ID `10593271100`, size `21778` bytes, SHA-256 `568f6f3df75b7032cd829c5d4e7d811c176c2c021a1c3eb87d6d175e592e56fb`.
-- compiler log contains **300 `error:` diagnostics across 37 normalized source files**; no javac cap marker was observed.
-- `MixinAirAndWaterRandomPos.java` is absent from that frontier. Compared with the previous POI artifact, it disappeared and `feature/tick_ship_chunks/MixinChunkMap.java` became newly visible.
+- canonical implementation HEAD: `20789867ea96d411cfc9e20402e074b235ea5877`.
+- canonical P1 chain contains **81 ordered fail-closed overlays**.
+- exact-head P0 provenance run `35474675327`: `success`.
+- exact-head tick-ship-chunks proof run `35474675349`: `success`.
+- exact-head canonical standalone compile run `35474675403`: compiler-frontier failure only; all 81 overlay/apply steps, port-delta validation, and Gradle-runtime validation were green before compilation.
+- compile artifact: `p1-compile-log-20789867ea96d411cfc9e20402e074b235ea5877`, ID `10593542676`, size `21878` bytes, artifact SHA-256 `a17840d4f2f22600cfc7ac80b7051d4049780176cacd2789c9ee53e3c7d7c759`; contained `p1-compile.log` SHA-256 `910082d6e9d87fade3a7a8f57766376fc4dbbeec48169e8a9178cc42f09004b4`.
+- compiler log contains **300 `error:` diagnostics across 37 normalized source files** with no javac cap marker observed.
+- `feature/tick_ship_chunks/MixinChunkMap.java` is absent from that frontier. Compared with AirAndWaterRandomPos artifact `10593271100`, it disappeared and `feature/fix_render_chunk_sorting/MixinRenderChunk.java` became newly visible.
+
+### Tick-ship-chunks ChunkPos accessor boundary — frozen
+
+Pinned upstream target:
+`common/src/main/java/org/valkyrienskies/mod/mixin/feature/tick_ship_chunks/MixinChunkMap.java`.
+
+Minimal 26.2 bridge:
+- exactly three `chunkPos.x` reads -> `chunkPos.x()` and exactly three `chunkPos.z` reads -> `chunkPos.z()`.
+- This reuses the already-frozen NaturalSpawner ChunkPos accessor mapping and changes coordinate-access vocabulary only.
+- Existing real VS2/vanilla authorities remain unchanged: `VSGameUtilsKt.squaredDistanceBetweenInclShips(...)`, `VSGameUtilsKt.isChunkInShipyard(...)`, loaded-ship lookup, dimension lookup, return values, random-tick distance behavior, and spawning-distance semantics.
+- No ship transform, ticking policy, spawn policy, movement/collision/camera authority, or custom reference frame was introduced.
+
+Evidence:
+- overlay script commit `27e405a55f2f3b7ec0becc0f3d0919f5b77e3f6d`.
+- first proof workflow HEAD `3530573f8f96eb542a922bd785cfcb19e3d8d6a3`; P0 `35473460731`: success; proof `35473460730` failed before candidate application because its replay harness incorrectly required 80 regex-captured single-line commands while the canonical workflow exposed 77 to that parser. This is harness negative evidence, not a source regression.
+- harness-only repair HEAD `83384332896f2aa7ff9cfdbbc6fbf3480feb4439`; P0 `35473504415`: success; isolated proof `35473504527`: success.
+- canonicalizer staging HEAD `2d2cc427764d2614bf6b4cc1dbcc656f69fa9f04`; helper run `35473732414`: success; P0 `35473732408`: success; validated canonical artifact `10593972064` with artifact SHA-256 `383548bd9bfb74f6c2ea1170051d460d9c60354d649997452b6e398735fa943d` and canonical-file SHA-256 `6ec72f0a9ca2568bcc490e0fefc7cb3571131c3d79844e4fa33a340fa7af65d3`.
+- checksum-locked non-workflow staging transport HEAD `869fa587cd6c2600978be22a147826b4e58c9869`; transport run `35474644754`: success; P0 `35474644738`: success. The Actions push changed only `.ci-transport/p1-compile.yml`, not a workflow file.
+- staging blob commit `1a4f71d1eb00d2a0b94ed47e4b85fd6790ef8b3c`; exact staged blob SHA `6bce2e816846d31a99b3e762bb49bb7e5370dbd5`.
+- canonical commit `20789867ea96d411cfc9e20402e074b235ea5877` was fast-forwarded through the GitHub connector, installed the exact validated blob as `.github/workflows/p1-compile.yml`, and removed both temporary canonicalizer and `.ci-transport` staging file in the same tree.
+- exact canonical P0 `35474675327`: success.
+- exact canonical tick-ship-chunks proof `35474675349`: success.
+- exact canonical compile `35474675403`: frontier-only failure; artifact `10593542676`; 300 diagnostics / 37 normalized source files; target absent.
 
 ### AirAndWaterRandomPos max-build boundary — frozen
 
@@ -229,40 +252,41 @@ Locked negative evidence:
 
 ## Remaining Java compile frontier
 
-Canonical artifact `10593271100` at `960582c42b407e9c4dbc1943f1d2cc3d8c3dbfe6` contains **300 `error:` diagnostics across 37 normalized source files** with no javac cap marker observed. This is evidence only and never permission to batch-fix categories.
+Canonical artifact `10593542676` at `20789867ea96d411cfc9e20402e074b235ea5877` contains **300 `error:` diagnostics across 37 normalized source files** with no javac cap marker observed. This is evidence only and never permission to batch-fix categories.
 
-Compared with prior POI artifact `10592549176`:
-- removed from frontier: `feature/ai/path_retargeting/MixinAirAndWaterRandomPos.java`;
-- newly visible: `feature/tick_ship_chunks/MixinChunkMap.java`.
+Compared with prior AirAndWaterRandomPos artifact `10593271100`:
+- removed from frontier: `feature/tick_ship_chunks/MixinChunkMap.java`;
+- newly visible: `feature/fix_render_chunk_sorting/MixinRenderChunk.java`, currently exposing removed `GameRenderer.getMainCamera()` with no frozen 26.2 camera-acquisition precedent in this repo.
 
-Current broad categories include:
+Current broad categories remain:
 1. AI/entity nested-goal and mapping/API drift.
 2. client/render/HUD/debug-render lifecycle drift.
 3. entity/player/teleport-reconnect and collision API drift outside already-frozen authority-sensitive units.
 4. chunk/worldgen/server storage/API drift.
 5. optional compatibility/dependency residue, including old mapped Create/Copycat and Sable surfaces that are not standalone-P1 runtime authority.
 
-Current smallest observed units include:
-- `feature/tick_ship_chunks/MixinChunkMap.java`: direct `ChunkPos.x/z` field access is private in 26.2.
+Current smallest observed mechanical units include:
+- `feature/ship_debug_overlay/MixinDebugScreenOverlay.java`: one removed `BlockPos.getCenter()` call.
+- `feature/world_weather/MixinLevelRenderer.java`: one removed `BlockPos.getCenter()` call.
 - `MixinBlockGetter.java`: `Direction.getNearest(double,double,double)` descriptor drift.
 - `LavaFluidMixin.java`: `randomTick` now expects `ServerLevel`.
-- `MixinLivingEntity.java`: removed local-authority method; authority-sensitive, not preferred for a blind mechanical patch.
-- `MixinDebugScreenOverlay.java`: removed `BlockPos.getCenter()`.
+- `feature/fix_render_chunk_sorting/MixinRenderChunk.java`: removed `GameRenderer.getMainCamera()`; newly visible, but no frozen camera-acquisition precedent exists yet.
+- `MixinLivingEntity.java`: removed local-authority method; authority-sensitive and not preferred for a blind mechanical patch.
 - `StructureTemplateMixin.java`: block-entity save ValueOutput API drift.
-- `feature/world_weather/MixinLevelRenderer.java`: removed `BlockPos.getCenter()`.
 - `world/chunk/MixinLevelChunk.java`: `ChunkSerializer` mapping/API drift.
 - `compat/create/AirFlowClipContext.java`: old mapped Create/Copycat dependency residue; not preferred for standalone P1.
 
-### Next candidate — tick-ship-chunks ChunkPos accessors, proof first
+### Next candidate — ship debug overlay BlockPos center, proof first
 
 Pinned target:
-`common/src/main/java/org/valkyrienskies/mod/mixin/feature/tick_ship_chunks/MixinChunkMap.java`.
+`common/src/main/java/org/valkyrienskies/mod/mixin/feature/ship_debug_overlay/MixinDebugScreenOverlay.java`.
 
-The pinned file contains six coordinate reads through public-style `chunkPos.x/z` fields across two existing VS2 hooks: the ship-aware Euclidean-distance calculation used for random ticking, and the shipyard spawning-distance override. Minecraft 26.2 makes those fields private and exposes record-style `x()/z()` accessors.
+Fresh canonical compile shows exactly one source error in this semantic unit: `blockPos.getCenter()` no longer exists. The file already imports `Vec3`, and the frozen `scripts/apply_p1_compatutil_center_26_2.py` precedent maps old BlockPos center vocabulary to `Vec3.atCenterOf(...)` while preserving the same geometric center.
 
-There is already a frozen direct local precedent in `scripts/apply_p1_naturalspawner_chunkpos_accessors_26_2.py`, which maps real VS2 `ChunkPos` coordinate reads from `.x/.z` to `.x()/.z()` without changing spawn policy. Therefore this is the smallest evidence-backed next candidate.
+Inspect/prove only:
+- `VSGameUtilsKt.toWorldCoordinates(ship, blockPos.getCenter())` -> `VSGameUtilsKt.toWorldCoordinates(ship, Vec3.atCenterOf(blockPos))`.
 
-No patch has been applied to this target yet. Inspect/prove only the coordinate-access vocabulary change. Preserve `VSGameUtilsKt.squaredDistanceBetweenInclShips(...)`, `VSGameUtilsKt.isChunkInShipyard(...)`, loaded-ship lookup, dimension lookup, return values, random-tick behavior, and spawning semantics exactly.
+Preserve all existing debug-overlay behavior and real VS2 authorities exactly: ship lookup, loaded-server-ship lookup, ship slug/static/mass/scale/velocity/omega reporting, and `VSGameUtilsKt.toWorldCoordinates(ship, ...)`. This is a debug-display coordinate vocabulary bridge only; it must not become camera, movement, collision, entity-dragging, or ship-transform authority.
 
 ## Target runtime baseline
 
@@ -279,9 +303,9 @@ No patch has been applied to this target yet. Inspect/prove only the coordinate-
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_JAVA_API_MIXIN_DRIFT`
-- active_proof_head: `960582c42b407e9c4dbc1943f1d2cc3d8c3dbfe6; canonical P1 chain through AirAndWaterRandomPos max-build boundary`
-- active_proof_run: `P0 35472794096 success; AirAndWaterRandomPos exact proof 35472793999 success; canonical compile 35472794011 frontier-only failure; artifact 10593271100; 300 diagnostics / 37 normalized source files; target absent`
-- active_hypothesis: `next smallest evidence-backed unit is feature/tick_ship_chunks/MixinChunkMap ChunkPos x/z access; reuse frozen NaturalSpawner .x/.z -> .x()/.z() mapping only after this ledger HEAD passes P0`
+- active_proof_head: `20789867ea96d411cfc9e20402e074b235ea5877; canonical P1 chain through tick-ship-chunks ChunkPos accessor boundary`
+- active_proof_run: `P0 35474675327 success; tick-ship-chunks exact proof 35474675349 success; canonical compile 35474675403 frontier-only failure; artifact 10593542676; 300 diagnostics / 37 normalized source files; target absent`
+- active_hypothesis: `next smallest direct-precedent unit is feature/ship_debug_overlay/MixinDebugScreenOverlay BlockPos.getCenter(); prove only Vec3.atCenterOf(blockPos) using frozen CompatUtil center mapping precedent after this ledger HEAD passes P0`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 - video_status: `NOT_APPLICABLE_YET`
@@ -306,11 +330,11 @@ No patch has been applied to this target yet. Inspect/prove only the coordinate-
 
 1. This ledger reconciliation commit is documentation-only, not source proof. Require exact-head P0 provenance success before another source/workflow mutation.
 2. Preserve every frozen boundary above and all frozen/negative evidence in Git history.
-3. Use artifact `10593271100` as the current canonical 300-diagnostic / 37-normalized-file frontier unless HEAD/compiler state changes.
-4. Inspect/prove only pinned `feature/tick_ship_chunks/MixinChunkMap.java` `ChunkPos` coordinate accessors.
-5. If still bounded and unambiguous, create one fail-closed overlay changing only the six pinned `.x/.z` coordinate reads to `.x()/.z()` and an exact-file exhaustive compiler proof.
-6. Preserve the existing ship-aware squared-distance calculation, shipyard check, loaded-ship lookup, dimension lookup, return-value behavior, random ticking, and spawning semantics exactly.
-7. Do not combine this with `MixinBlockGetter`, LavaFluid, collision authority, render/HUD, StructureTemplate, world/chunk serializer drift, Create/Copycat, Sable, or any other cluster.
+3. Use artifact `10593542676` as the current canonical 300-diagnostic / 37-normalized-file frontier unless HEAD/compiler state changes.
+4. Inspect/prove only pinned `feature/ship_debug_overlay/MixinDebugScreenOverlay.java` BlockPos center vocabulary.
+5. If still bounded and unambiguous, create one fail-closed overlay changing only `VSGameUtilsKt.toWorldCoordinates(ship, blockPos.getCenter())` to `VSGameUtilsKt.toWorldCoordinates(ship, Vec3.atCenterOf(blockPos))`, plus an exact-file exhaustive compiler proof.
+6. Preserve ship lookup, loaded-ship lookup, debug information, and `VSGameUtilsKt.toWorldCoordinates` authority exactly. Do not alter camera, movement, collision, dragging, or ship transforms.
+7. Do not combine this with newly visible `MixinRenderChunk.getMainCamera`, world-weather center, `MixinBlockGetter`, LavaFluid, collision authority, StructureTemplate, world/chunk serializer drift, Create/Copycat, Sable, or any other cluster.
 8. Remain standalone P1. Do not use Create/SNR/Copycats to hide real VS2 failures. Do not record ordinary compile/debug video.
 
 ## Video and milestone gate
