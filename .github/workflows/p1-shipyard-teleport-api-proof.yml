@@ -91,7 +91,7 @@ jobs:
 
           test "$(grep -Fc 'Set<Relative> set, float g, float h, boolean resetCamera' "$entity")" -eq 2
           test "$(grep -Fc 'FFZ)Z' "$entity")" -eq 1
-          test "$(grep -Fc 'resetCamera);' "$entity")" -eq 1
+          test "$(grep -Fc 'resetCamera);' "$entity")" -eq 2
           test "$(grep -Fc 'Set<Relative> set, float g, float h, boolean resetCamera' "$player")" -eq 1
           test "$(grep -Fc 'this.getXRot(), false);' "$player")" -eq 1
 
