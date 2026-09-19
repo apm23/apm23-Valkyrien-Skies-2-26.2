@@ -1,0 +1,79 @@
+name: P1 canonicalize WaterFluid Level client accessor
+
+on:
+  push:
+    paths:
+      - '.github/workflows/p1-canonicalize-waterfluid-client-accessor.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  canonicalize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Canonicalize proven WaterFluid overlay
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('.github/workflows/p1-compile.yml')
+          text = path.read_text(encoding='utf-8')
+
+          path_anchor = "      - 'scripts/apply_p1_entitysectionstorage_client_accessor_26_2.py'\n"
+          path_line = "      - 'scripts/apply_p1_waterfluid_client_accessor_26_2.py'\n"
+          if text.count(path_line) != 0:
+              raise SystemExit('fail-closed: WaterFluid trigger path already canonical')
+          if text.count(path_anchor) != 1:
+              raise SystemExit(f'fail-closed: expected exactly one EntitySectionStorage trigger anchor, found {text.count(path_anchor)}')
+          text = text.replace(path_anchor, path_anchor + path_line, 1)
+
+          step_anchor = (
+              "      - name: Apply frozen P1 EntitySectionStorage Level client accessor overlay\n"
+              "        run: python3 scripts/apply_p1_entitysectionstorage_client_accessor_26_2.py upstream-vs2\n"
+          )
+          step_block = (
+              "\n      - name: Apply frozen P1 WaterFluid Level client accessor overlay\n"
+              "        run: python3 scripts/apply_p1_waterfluid_client_accessor_26_2.py upstream-vs2\n"
+          )
+          command = 'python3 scripts/apply_p1_waterfluid_client_accessor_26_2.py upstream-vs2'
+          if text.count(command) != 0:
+              raise SystemExit('fail-closed: WaterFluid apply command already canonical')
+          if text.count(step_anchor) != 1:
+              raise SystemExit(f'fail-closed: expected exactly one EntitySectionStorage step anchor, found {text.count(step_anchor)}')
+          text = text.replace(step_anchor, step_anchor + step_block, 1)
+
+          if text.count(path_line) != 1 or text.count(command) != 1:
+              raise SystemExit('fail-closed: canonical WaterFluid insertion count mismatch')
+          path.write_text(text, encoding='utf-8')
+          PY
+          git diff --check
+          git diff -- .github/workflows/p1-compile.yml
+
+      - name: Remove one-shot canonicalizer and create validated commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/p1-canonicalize-waterfluid-client-accessor.yml
+          git diff --check
+          git config user.name 'apm23'
+          git config user.email '80390905+apm23@users.noreply.github.com'
+          git add .github/workflows/p1-compile.yml
+          git commit -m 'ci: canonicalize WaterFluid Level client accessor overlay'
+          echo "VALIDATED_COMMIT=$(git rev-parse HEAD)"
+          git show --stat --oneline HEAD
+          git diff HEAD^ HEAD --check
+
+      - name: Attempt transport
+        shell: bash
+        run: |
+          set -euo pipefail
+          git push origin HEAD:main
