@@ -1,0 +1,176 @@
+name: P1 distance manager ticket storage probe
+
+on:
+  push:
+    paths:
+      - 'scripts/apply_p1_distance_manager_ticket_storage_26_2.py'
+      - '.github/workflows/p1-distance-manager-ticket-storage-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  distance-manager-ticket-storage-probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact upstream baseline
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Replay canonical frozen P1 overlays in canonical order
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import shlex
+          import subprocess
+
+          workflow = Path('.github/workflows/p1-compile.yml').read_text(encoding='utf-8')
+          commands = re.findall(
+              r'^\s*run:\s+(python3 scripts/apply_p1_[^\n]+ upstream-vs2)\s*$',
+              workflow,
+              flags=re.MULTILINE,
+          )
+          if len(commands) < 50:
+              raise SystemExit(f'fail-closed: expected canonical overlay chain, found only {len(commands)} commands')
+          if any('distance_manager_ticket_storage_26_2.py' in command for command in commands):
+              raise SystemExit('fail-closed: ticket-storage overlay is already canonical; retire isolated probe instead')
+          print(f'Replaying {len(commands)} canonical overlay commands')
+          for command in commands:
+              print('+', command)
+              subprocess.run(shlex.split(command), check=True)
+          PY
+
+      - name: Reapply frozen renderer-handler proof overlay
+        run: python3 scripts/apply_p1_entityhandler_renderstate_26_2.py upstream-vs2
+
+      - name: Reapply frozen Sable compile-boundary proof overlay
+        run: python3 scripts/apply_p1_sable_companion_compileonly_26_2.py upstream-vs2
+
+      - name: Reapply frozen optional Create helper exclusion
+        run: python3 scripts/apply_p1_deployer_scroll_option_exclusion_26_2.py upstream-vs2
+
+      - name: Reapply frozen entity authority interpolation bridge
+        run: python3 scripts/apply_p1_entity_authority_interpolation_26_2.py upstream-vs2
+
+      - name: Reapply frozen renderer submit bridge
+        run: python3 scripts/apply_p1_entity_renderer_submit_26_2.py upstream-vs2
+
+      - name: Apply isolated distance manager ticket storage bridge
+        run: python3 scripts/apply_p1_distance_manager_ticket_storage_26_2.py upstream-vs2
+
+      - name: Validate isolated ticket-storage semantic unit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git -C upstream-vs2 diff --check
+          git -C upstream-vs2 diff -- \
+            common/src/main/java/org/valkyrienskies/mod/mixin/accessors/server/level/DistanceManagerAccessor.java \
+            common/src/main/java/org/valkyrienskies/mod/mixin/server/world/MixinServerLevel.java
+          test "$(grep -Fc '@Accessor("ticketStorage")' upstream-vs2/common/src/main/java/org/valkyrienskies/mod/mixin/accessors/server/level/DistanceManagerAccessor.java)" -eq 1
+          test "$(grep -Fc 'TicketStorage getTicketStorage();' upstream-vs2/common/src/main/java/org/valkyrienskies/mod/mixin/accessors/server/level/DistanceManagerAccessor.java)" -eq 1
+          test "$(grep -Fc '!distanceManagerAccessor.getTicketStorage().getTickets(chunkHolder.getPos().toLong()).isEmpty()' upstream-vs2/common/src/main/java/org/valkyrienskies/mod/mixin/server/world/MixinServerLevel.java)" -eq 1
+          test "$(grep -Fc 'distanceManagerAccessor.getTicketStorage().getTickets(chunkPos).isEmpty()' upstream-vs2/common/src/main/java/org/valkyrienskies/mod/mixin/server/world/MixinServerLevel.java)" -eq 1
+          ! grep -Fq '@Accessor("tickets")' upstream-vs2/common/src/main/java/org/valkyrienskies/mod/mixin/accessors/server/level/DistanceManagerAccessor.java
+          ! grep -Fq 'distanceManagerAccessor.getTickets().containsKey' upstream-vs2/common/src/main/java/org/valkyrienskies/mod/mixin/server/world/MixinServerLevel.java
+
+      - name: Show Gradle runtime
+        working-directory: upstream-vs2
+        run: ./gradlew --version
+
+      - name: Configure exhaustive javac diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > p1-distance-manager-ticket-storage-proof.init.gradle <<'GRADLE'
+          allprojects {
+              tasks.withType(org.gradle.api.tasks.compile.JavaCompile).configureEach {
+                  options.compilerArgs += ['-Xmaxerrs', '10000']
+              }
+          }
+          GRADLE
+
+      - name: Compile standalone sources and preserve unrelated failure
+        shell: bash
+        working-directory: upstream-vs2
+        run: |
+          set -uo pipefail
+          set +e
+          ./gradlew -I ../p1-distance-manager-ticket-storage-proof.init.gradle \
+            :common:compileJava :common:compileKotlin :fabric:compileJava :fabric:compileKotlin \
+            --stacktrace --no-daemon 2>&1 | tee ../p1-distance-manager-ticket-storage-probe.log
+          status=${PIPESTATUS[0]}
+          set -e
+          printf '%s\n' "$status" > ../p1-distance-manager-ticket-storage-gradle-status.txt
+          echo "GRADLE_EXIT_STATUS=$status"
+          exit 0
+
+      - name: Prove ticket-storage cluster is compiler-clean
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          log_path = Path('p1-distance-manager-ticket-storage-probe.log')
+          status_path = Path('p1-distance-manager-ticket-storage-gradle-status.txt')
+          log = log_path.read_text(encoding='utf-8', errors='replace')
+          status = int(status_path.read_text(encoding='utf-8').strip())
+
+          if ':common:compileJava' not in log:
+              raise SystemExit('fail-closed: common Java compile task was never reached')
+          if status == 0:
+              print('FULL_STANDALONE_COMPILE_GREEN')
+          elif 'error:' not in log or 'Compilation failed' not in log:
+              raise SystemExit('fail-closed: Gradle failed without a normal javac compilation frontier')
+
+          if re.search(r'only showing the first\s+\d+\s+errors', log, flags=re.IGNORECASE):
+              raise SystemExit('fail-closed: javac diagnostics were still capped')
+
+          targets = (
+              'DistanceManagerAccessor.java',
+              'MixinServerLevel.java',
+          )
+          target_errors = []
+          lines = log.splitlines()
+          for index, line in enumerate(lines):
+              if 'error:' not in line:
+                  continue
+              window = '\n'.join(lines[max(0, index - 1):index + 2])
+              if any(target in window for target in targets):
+                  target_errors.append(window)
+
+          if target_errors:
+              raise SystemExit(
+                  'fail-closed: ticket-storage semantic unit still has compiler diagnostics:\n'
+                  + '\n---\n'.join(target_errors)
+              )
+
+          unrelated = [line for line in lines if 'error:' in line]
+          print(
+              f'DISTANCE_MANAGER_TICKET_STORAGE_CLUSTER_COMPILER_CLEAN '
+              f'unrelated_error_diagnostics={len(unrelated)} gradle_status={status}'
+          )
+          PY
+
+      - name: Upload ticket-storage probe diagnostic log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-distance-manager-ticket-storage-probe-${{ github.sha }}
+          path: |
+            p1-distance-manager-ticket-storage-probe.log
+            p1-distance-manager-ticket-storage-gradle-status.txt
+          if-no-files-found: warn
