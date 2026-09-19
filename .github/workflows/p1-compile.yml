@@ -52,6 +52,7 @@ on:
       - 'scripts/apply_p1_shipmountingentity_hurtserver_26_2.py'
       - 'scripts/apply_p1_shipmountingentity_kill_level_26_2.py'
       - 'scripts/apply_p1_shipassembler_chunkpos_containing_26_2.py'
+      - 'scripts/apply_p1_assemblyutil_chunk_setblock_flags_26_2.py'
       - '.github/workflows/p1-compile.yml'
       - 'upstream-vs2'
       - 'BASELINE_LOCK.json'
@@ -223,6 +224,9 @@ jobs:
       - name: Apply traceable P1 ShipAssembler ChunkPos containing overlay
         run: python3 scripts/apply_p1_shipassembler_chunkpos_containing_26_2.py upstream-vs2
 
+      - name: Apply traceable P1 AssemblyUtil chunk setBlock flags overlay
+        run: python3 scripts/apply_p1_assemblyutil_chunk_setblock_flags_26_2.py upstream-vs2
+
       - name: Show and validate port delta
         shell: bash
         run: |
@@ -234,6 +238,7 @@ jobs:
           git -C upstream-vs2 diff -- common/src/main/kotlin/org/valkyrienskies/mod/common/entity/handling/AbstractShipyardEntityHandler.kt common/src/main/kotlin/org/valkyrienskies/mod/common/entity/handling/WorldEntityHandler.kt
           git -C upstream-vs2 diff -- common/src/main/kotlin/org/valkyrienskies/mod/common/entity/ShipMountingEntity.kt
           git -C upstream-vs2 diff -- common/src/main/kotlin/org/valkyrienskies/mod/common/assembly/ShipAssembler.kt
+          git -C upstream-vs2 diff -- common/src/main/kotlin/org/valkyrienskies/mod/common/assembly/AssemblyUtil.kt
           git -C upstream-vs2 diff -- common/src/main/kotlin/org/valkyrienskies/mod/common/item/ShipAssemblerItem.kt common/src/main/kotlin/org/valkyrienskies/mod/common/item/ShipCreatorItem.kt common/src/main/kotlin/org/valkyrienskies/mod/common/item/ShipRemoverItem.kt
           git -C upstream-vs2 diff -- common/src/main/java/org/valkyrienskies/mod/mixin/accessors/resource/ResourceKeyAccessor.java common/src/main/java/org/valkyrienskies/mod/mixin/world/level/MixinLevel.java
           git -C upstream-vs2 status --short -- common/src/main/java/org/valkyrienskies/mod/common/util/NullableTranslatableCompat.java
