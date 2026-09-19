@@ -22,17 +22,41 @@ GitHub code is the implementation source of truth. This file is the durable cont
 
 The upstream baseline remains pinned. Minecraft 26.2 changes are applied by explicit fail-closed overlays so every adaptation remains traceable to upstream VS2 source.
 
-## Current reconciliation — canonical P1 chain through POIManager ChunkPos construction
+## Current reconciliation — canonical P1 chain through AirAndWaterRandomPos max-build boundary
 
 Current proven canonical source boundary before this ledger-only reconciliation commit:
-- canonical implementation HEAD: `73197278b8ee26ced0dc267d84ea9eb825d02e98`
-- canonical P1 chain contains **79 ordered fail-closed overlays**.
-- exact-head P0 provenance run `35471264991`: `success`.
-- exact-head POIManager proof run `35471264941`: `success`.
-- exact-head canonical standalone compile run `35471264985`: compiler-frontier failure only; every overlay/apply/delta-validation step before compilation was green.
-- compile artifact: `p1-compile-log-73197278b8ee26ced0dc267d84ea9eb825d02e98`, ID `10592549176`, size `22090` bytes, SHA-256 `1d9ab6e6c707cccace39a6a01ff9c5f527001170be222f03a84ff3cc67fdc9b1`.
-- exhaustive uncapped compiler frontier: **300 `error:` diagnostics across 37 source files**; no javac cap marker.
-- `MixinPOIManager.java` is absent from that frontier.
+- canonical implementation HEAD: `960582c42b407e9c4dbc1943f1d2cc3d8c3dbfe6`
+- canonical P1 chain contains **80 ordered fail-closed overlays**.
+- exact-head P0 provenance run `35472794096`: `success`.
+- exact-head AirAndWaterRandomPos proof run `35472793999`: `success`.
+- exact-head canonical standalone compile run `35472794011`: compiler-frontier failure only; every overlay/apply/delta-validation step before compilation was green.
+- compile artifact: `p1-compile-log-960582c42b407e9c4dbc1943f1d2cc3d8c3dbfe6`, ID `10593271100`, size `21778` bytes, SHA-256 `568f6f3df75b7032cd829c5d4e7d811c176c2c021a1c3eb87d6d175e592e56fb`.
+- compiler log contains **300 `error:` diagnostics across 37 normalized source files**; no javac cap marker was observed.
+- `MixinAirAndWaterRandomPos.java` is absent from that frontier. Compared with the previous POI artifact, it disappeared and `feature/tick_ship_chunks/MixinChunkMap.java` became newly visible.
+
+### AirAndWaterRandomPos max-build boundary — frozen
+
+Pinned upstream target:
+`common/src/main/java/org/valkyrienskies/mod/mixin/feature/ai/path_retargeting/MixinAirAndWaterRandomPos.java`.
+
+Minimal 26.2 bridge:
+- `pathfinderMob.level().getMaxBuildHeight()` -> `pathfinderMob.level().getMinY() + pathfinderMob.level().getHeight()` only as the existing exclusive upper-build-height argument to `RandomPos.moveUpOutOfSolid(...)`.
+- This reuses the already-frozen CompatUtil build-height mapping in `scripts/apply_p1_compatutil_buildheight_26_2.py`.
+- Existing real VS2/vanilla authorities remain unchanged: loaded-ship intersection, `ship.getWorldToShip().transformPosition(...)`, `BlockPos.containing(...)`, `GoalUtils.isRestricted(...)`, `GoalUtils.hasMalus(...)`, the existing `moveUpOutOfSolid` callback, and `cir.setReturnValue(blockPosInShip)` / break behavior.
+- No AI policy, pathfinding implementation, ship transform, movement/collision/camera authority, or custom reference frame was introduced.
+
+Evidence:
+- fail-closed overlay commit `ce05d19f2a270146dd17c36d0cd691d315d51ce5`.
+- isolated proof workflow HEAD `149d1cfee44748749a8f2f07531aa04b5faf9a63`.
+- isolated P0 `35471647834`: success.
+- isolated AirAndWaterRandomPos proof `35471647847`: success.
+- staging helper HEAD `593db47ed2305a95e4932f8bbcf3d432e3b69bc8`.
+- staging helper run `35472674502`: success; it only produced and validated the canonical `p1-compile.yml` as an artifact and did not attempt Actions self-push.
+- helper artifact `10593280871`, artifact SHA-256 `649ac5344c09786e1df3b3ed3b430da9eb053f014820bd19fb875f6087896a16`; validated `canonical-p1-compile.yml` SHA-256 `f36e88a9f9e28603f1d7c2b1a6407324a4e7345cebdf0d8bd4cb620b1b51701e`.
+- canonical commit `960582c42b407e9c4dbc1943f1d2cc3d8c3dbfe6` was fast-forwarded through the GitHub connector and removed the temporary helper in the same atomic tree.
+- exact canonical P0 `35472794096`: success.
+- exact canonical AirAndWaterRandomPos proof `35472793999`: success.
+- exact canonical compile `35472794011`: frontier-only failure; artifact `10593271100`; 300 diagnostics / 37 normalized source files; target absent.
 
 ### POIManager ChunkPos construction boundary — frozen
 
@@ -205,7 +229,11 @@ Locked negative evidence:
 
 ## Remaining Java compile frontier
 
-Canonical artifact `10592549176` at `73197278b8ee26ced0dc267d84ea9eb825d02e98` contains **300 uncapped diagnostics across 37 source files**. This is evidence only and never permission to batch-fix categories.
+Canonical artifact `10593271100` at `960582c42b407e9c4dbc1943f1d2cc3d8c3dbfe6` contains **300 `error:` diagnostics across 37 normalized source files** with no javac cap marker observed. This is evidence only and never permission to batch-fix categories.
+
+Compared with prior POI artifact `10592549176`:
+- removed from frontier: `feature/ai/path_retargeting/MixinAirAndWaterRandomPos.java`;
+- newly visible: `feature/tick_ship_chunks/MixinChunkMap.java`.
 
 Current broad categories include:
 1. AI/entity nested-goal and mapping/API drift.
@@ -214,8 +242,8 @@ Current broad categories include:
 4. chunk/worldgen/server storage/API drift.
 5. optional compatibility/dependency residue, including old mapped Create/Copycat and Sable surfaces that are not standalone-P1 runtime authority.
 
-Current three-diagnostic units include:
-- `MixinAirAndWaterRandomPos.java`: removed `Level.getMaxBuildHeight()`.
+Current smallest observed units include:
+- `feature/tick_ship_chunks/MixinChunkMap.java`: direct `ChunkPos.x/z` field access is private in 26.2.
 - `MixinBlockGetter.java`: `Direction.getNearest(double,double,double)` descriptor drift.
 - `LavaFluidMixin.java`: `randomTick` now expects `ServerLevel`.
 - `MixinLivingEntity.java`: removed local-authority method; authority-sensitive, not preferred for a blind mechanical patch.
@@ -225,24 +253,16 @@ Current three-diagnostic units include:
 - `world/chunk/MixinLevelChunk.java`: `ChunkSerializer` mapping/API drift.
 - `compat/create/AirFlowClipContext.java`: old mapped Create/Copycat dependency residue; not preferred for standalone P1.
 
-### Next candidate — AirAndWaterRandomPos max-build boundary, proof first
+### Next candidate — tick-ship-chunks ChunkPos accessors, proof first
 
 Pinned target:
-`common/src/main/java/org/valkyrienskies/mod/mixin/feature/ai/path_retargeting/MixinAirAndWaterRandomPos.java`.
+`common/src/main/java/org/valkyrienskies/mod/mixin/feature/tick_ship_chunks/MixinChunkMap.java`.
 
-Current compiler diagnostic is one source site repeated by the three compile tasks/log passes:
-`pathfinderMob.level().getMaxBuildHeight()` no longer exists in Minecraft 26.2 inside the existing `RandomPos.moveUpOutOfSolid(...)` call.
+The pinned file contains six coordinate reads through public-style `chunkPos.x/z` fields across two existing VS2 hooks: the ship-aware Euclidean-distance calculation used for random ticking, and the shipyard spawning-distance override. Minecraft 26.2 makes those fields private and exposes record-style `x()/z()` accessors.
 
-Existing frozen precedent `scripts/apply_p1_compatutil_buildheight_26_2.py` already maps the old exclusive max-build boundary to `level.getMinY() + level.getHeight()` in real VS2 CompatUtil. The pinned AirAndWaterRandomPos source uses the value only as the same upper build-height argument; the surrounding VS2 logic is separate and must remain unchanged:
-- null return guard and `blockPos2` guard;
-- loaded-ship intersection;
-- `ship.getWorldToShip().transformPosition(...)`;
-- `BlockPos.containing(...)`;
-- `GoalUtils.isRestricted(...)` and `GoalUtils.hasMalus(...)`;
-- `RandomPos.moveUpOutOfSolid(...)` callback;
-- `cir.setReturnValue(blockPosInShip)` and break behavior.
+There is already a frozen direct local precedent in `scripts/apply_p1_naturalspawner_chunkpos_accessors_26_2.py`, which maps real VS2 `ChunkPos` coordinate reads from `.x/.z` to `.x()/.z()` without changing spawn policy. Therefore this is the smallest evidence-backed next candidate.
 
-No patch has been applied to this target yet. Inspect/prove exactly one accessor-vocabulary replacement before canonicalization. Do not alter AI policy, pathfinding, ship transforms, movement/collision/camera authority, or any other file.
+No patch has been applied to this target yet. Inspect/prove only the coordinate-access vocabulary change. Preserve `VSGameUtilsKt.squaredDistanceBetweenInclShips(...)`, `VSGameUtilsKt.isChunkInShipyard(...)`, loaded-ship lookup, dimension lookup, return values, random-tick behavior, and spawning semantics exactly.
 
 ## Target runtime baseline
 
@@ -259,9 +279,9 @@ No patch has been applied to this target yet. Inspect/prove exactly one accessor
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_JAVA_API_MIXIN_DRIFT`
-- active_proof_head: `73197278b8ee26ced0dc267d84ea9eb825d02e98; canonical P1 chain through POIManager ChunkPos containing`
-- active_proof_run: `P0 35471264991 success; POI exact proof 35471264941 success; canonical compile 35471264985 frontier-only failure; artifact 10592549176; 300 diagnostics / 37 files; no javac cap marker`
-- active_hypothesis: `next smallest evidence-backed unit is MixinAirAndWaterRandomPos max-build accessor; reuse frozen exclusive-max boundary level.getMinY()+level.getHeight() only after this ledger HEAD passes P0`
+- active_proof_head: `960582c42b407e9c4dbc1943f1d2cc3d8c3dbfe6; canonical P1 chain through AirAndWaterRandomPos max-build boundary`
+- active_proof_run: `P0 35472794096 success; AirAndWaterRandomPos exact proof 35472793999 success; canonical compile 35472794011 frontier-only failure; artifact 10593271100; 300 diagnostics / 37 normalized source files; target absent`
+- active_hypothesis: `next smallest evidence-backed unit is feature/tick_ship_chunks/MixinChunkMap ChunkPos x/z access; reuse frozen NaturalSpawner .x/.z -> .x()/.z() mapping only after this ledger HEAD passes P0`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 - video_status: `NOT_APPLICABLE_YET`
@@ -284,13 +304,13 @@ No patch has been applied to this target yet. Inspect/prove exactly one accessor
 
 ## next_safe_action
 
-1. This ledger commit is documentation-only, not source proof. Require exact-head P0 provenance success before another source/workflow mutation.
+1. This ledger reconciliation commit is documentation-only, not source proof. Require exact-head P0 provenance success before another source/workflow mutation.
 2. Preserve every frozen boundary above and all frozen/negative evidence in Git history.
-3. Use artifact `10592549176` as the current canonical 300-diagnostic / 37-file frontier unless HEAD/compiler state changes.
-4. Inspect/prove only the pinned `MixinAirAndWaterRandomPos.java` max-build accessor site.
-5. If still bounded and unambiguous, create one fail-closed overlay changing only `pathfinderMob.level().getMaxBuildHeight()` to the already-frozen 26.2 exclusive-max expression `pathfinderMob.level().getMinY() + pathfinderMob.level().getHeight()` and an exact-file exhaustive compiler proof.
-6. Preserve loaded-ship intersection, world-to-ship transform, restriction/malus checks, `moveUpOutOfSolid` callback, return/break behavior, and all AI/pathfinding semantics.
-7. Do not combine this with `MixinBlockGetter`, LavaFluid, collision authority, render/HUD, StructureTemplate, Create/Copycat, Sable, or any other cluster.
+3. Use artifact `10593271100` as the current canonical 300-diagnostic / 37-normalized-file frontier unless HEAD/compiler state changes.
+4. Inspect/prove only pinned `feature/tick_ship_chunks/MixinChunkMap.java` `ChunkPos` coordinate accessors.
+5. If still bounded and unambiguous, create one fail-closed overlay changing only the six pinned `.x/.z` coordinate reads to `.x()/.z()` and an exact-file exhaustive compiler proof.
+6. Preserve the existing ship-aware squared-distance calculation, shipyard check, loaded-ship lookup, dimension lookup, return-value behavior, random ticking, and spawning semantics exactly.
+7. Do not combine this with `MixinBlockGetter`, LavaFluid, collision authority, render/HUD, StructureTemplate, world/chunk serializer drift, Create/Copycat, Sable, or any other cluster.
 8. Remain standalone P1. Do not use Create/SNR/Copycats to hide real VS2 failures. Do not record ordinary compile/debug video.
 
 ## Video and milestone gate
