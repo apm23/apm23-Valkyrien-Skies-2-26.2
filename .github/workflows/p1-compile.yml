@@ -76,6 +76,7 @@ on:
       - 'scripts/apply_p1_shipyard_teleport_player_api_26_2.py'
       - 'scripts/apply_p1_naturalspawner_chunkpos_accessors_26_2.py'
       - 'scripts/apply_p1_particle_collision_client_accessor_26_2.py'
+      - 'scripts/apply_p1_entitysectionstorage_client_accessor_26_2.py'
       - '.github/workflows/p1-compile.yml'
       - 'upstream-vs2'
       - 'BASELINE_LOCK.json'
@@ -318,6 +319,9 @@ jobs:
 
       - name: Apply frozen P1 particle collision Level client accessor overlay
         run: python3 scripts/apply_p1_particle_collision_client_accessor_26_2.py upstream-vs2
+
+      - name: Apply frozen P1 EntitySectionStorage Level client accessor overlay
+        run: python3 scripts/apply_p1_entitysectionstorage_client_accessor_26_2.py upstream-vs2
 
       - name: Show and validate port delta
         shell: bash
