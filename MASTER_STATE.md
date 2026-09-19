@@ -22,26 +22,27 @@ GitHub code is the implementation source of truth. This file is the durable cont
 
 The upstream baseline remains pinned. Minecraft 26.2 changes are applied by explicit fail-closed overlays so every adaptation remains traceable to upstream VS2 source.
 
-## Current reconciliation — entity-handler projectile package boundary proven and frozen
+## Current reconciliation — ShipMountingEntity empty Value I/O persistence boundary proven and frozen
 
-- Current proven implementation HEAD: `d258e69e46ce2f85c1ccb953dc97db7abd669841` (`p1: run entity-handler projectile package proof`).
-- Exact-head P0 provenance run `35430098076`, job `105863012876`, completed `success`; the exact upstream gitlink remained `f39132148e717d325933b4ce6e9e9fb13d929390`.
-- Exact-head P1 standalone compile run `35430098141`, job `105863013026`, completed `failure` only because independent Minecraft 26.2 source/API clusters remain.
+- Current proven implementation HEAD: `0a23528d781baf280bb553a8f9fa94c21f447af2` (`p1: run ShipMountingEntity Value I/O proof`).
+- Exact-head P0 provenance run `35431393828`, job `105866541183`, completed `success`; the exact upstream gitlink remained `f39132148e717d325933b4ce6e9e9fb13d929390`.
+- Exact-head P1 standalone compile run `35431393814`, job `105866541088`, completed `failure` only because independent Minecraft 26.2 source/API clusters remain.
 - Every overlay step through this proof, `Show and validate port delta`, and Gradle runtime setup completed successfully; compilation reached the real `:common:compileKotlin` boundary.
-- Root cause proven for this isolated cluster: pinned upstream VS2 imports `AbstractArrow` and `AbstractHurtingProjectile` directly from `net.minecraft.world.entity.projectile`, while Minecraft 26.2 retains those projectile classes under the current subpackages `net.minecraft.world.entity.projectile.arrow.AbstractArrow` and `net.minecraft.world.entity.projectile.hurtingprojectile.AbstractHurtingProjectile`.
-- `scripts/apply_p1_entityhandler_projectile_packages_26_2.py` is fail-closed and targets exactly two pinned-upstream files:
-  - `common/src/main/kotlin/org/valkyrienskies/mod/common/entity/handling/AbstractShipyardEntityHandler.kt`
-  - `common/src/main/kotlin/org/valkyrienskies/mod/common/entity/handling/WorldEntityHandler.kt`
-- The overlay requires exactly one legacy import for each projectile class in each target file, replaces only those four imports, and leaves the existing `is AbstractArrow` / `is AbstractHurtingProjectile` branches and all handler logic unchanged.
-- No projectile movement, rotation, velocity transfer, entity dragging, ship transforms/reference-space semantics, rendering behavior, networking, authority, chunk-ticket policy, or gameplay behavior is changed by this proof.
-- Exact run `35430098141` contains **no compiler diagnostic for `AbstractArrow` or `AbstractHurtingProjectile` at all** and no replacement diagnostic for the current Minecraft 26.2 projectile subpackages. Remaining diagnostics in these entity-handler files are independent renderer API boundaries only: removed/reworked `MultiBufferSource`, current `EntityRenderer` generic/API changes, and `getRenderOffset`.
-- Diagnostic artifact: `p1-compile-log-d258e69e46ce2f85c1ccb953dc97db7abd669841`, artifact ID `10580801201`, size `5860` bytes, ZIP SHA-256 `fe1f4f2b5042f4c71d079648a8636b6292036293c199ade14b8f844341ac0086`.
+- Root cause proven for this isolated cluster: pinned upstream `ShipMountingEntity` implements the vanilla entity persistence hooks with intentionally empty bodies using `CompoundTag`; Minecraft 26.2 retains the same entity persistence lifecycle hooks but their transport parameters are now `ValueInput` for read and `ValueOutput` for write.
+- `scripts/apply_p1_shipmountingentity_value_io_26_2.py` is fail-closed and targets exactly one pinned-upstream file:
+  - `common/src/main/kotlin/org/valkyrienskies/mod/common/entity/ShipMountingEntity.kt`
+- The overlay requires exactly one legacy `CompoundTag` import and exactly the two original empty persistence hooks, replaces only the import/signatures with `ValueInput` / `ValueOutput`, and verifies that both hook bodies remain empty.
+- No mounting/controller state, ship/reference-space behavior, entity movement, hurt semantics, constructor/level semantics, networking, authority, rendering, chunk-ticket policy, or gameplay behavior is changed by this proof.
+- Exact run `35431393814` contains **no compiler diagnostic for `readAdditionalSaveData`, `addAdditionalSaveData`, `ValueInput`, `ValueOutput`, or the former `CompoundTag` persistence signatures**. The only remaining diagnostics in `ShipMountingEntity.kt` are independent boundaries: the current server hurt contract (`hurtServer`) and the entity constructor/level requirement.
+- Diagnostic artifact: `p1-compile-log-0a23528d781baf280bb553a8f9fa94c21f447af2`, artifact ID `10580972918`, size `6106` bytes, ZIP SHA-256 `d5945476e91ed5e11d3be78eb674926c02a3257b2c94aff4ad8855852f92a3df`.
+- During root-hypothesis selection, `ShipSavedData` was inspected against the exact Minecraft 26.2 persistence API and deliberately **not mutated**: Minecraft 26.2 moves `SavedData` persistence from an overrideable `save(...)` method to `SavedDataType<T>` + `Codec<T>`, while the pinned upstream `MixinMinecraftServer` registration still owns acquisition of `ShipSavedData` and then uses its real VS2 `pipeline`. That boundary must be migrated together while preserving the four existing Jackson byte-array payloads and single persistence authority.
 - No code from retired `apm23/VS2-Create_Interactive` has been imported or reused as implementation source.
 
 ## Frozen proof ancestry / negative evidence
 
-The immediately prior ledger checkpoint is `c75eb2a6b3c8fd3389e5974769207d580328138e` (`ledger: freeze VSGameEvents RenderType proof`). Its historical proof records and failed probes remain frozen evidence and must not be replayed merely because a later compiler error resembles them.
+The immediately prior ledger checkpoint is `3e3ce02807eafcc096653dd2a697f1e1290019ed` (`ledger: freeze entity-handler projectile package proof`). Its historical proof records and failed probes remain frozen evidence and must not be replayed merely because a later compiler error resembles them.
 
+- `d258e69e46ce2f85c1ccb953dc97db7abd669841`: entity-handler projectile package proof; P0 `35430098076` / job `105863012876`; P1 `35430098141` / job `105863013026`; artifact `10580801201`; SHA-256 `fe1f4f2b5042f4c71d079648a8636b6292036293c199ade14b8f844341ac0086`.
 - `3d8d7255d36f26da902e0d43e1c830fa5015594e`: VSGameEvents RenderType package proof; P0 `35428910241` / job `105859745816`; P1 `35428910211` / job `105859745706`; artifact `10579819254`; SHA-256 `06a36ed3226f0a1f22e1e0a332eb3f6b44c44c537376cb1731ea1a9831d70fea`.
 - `24802fb75610a3ceb1614fda1a78cab1fab7cfe5`: VSGameUtils build-height / chunk-key proof; P0 `35427744252` / job `105856539289`; P1 `35427743996` / job `105856538642`; artifact `10579727750`; SHA-256 `35defb49532853a55d5e0b52e6d49efff3e1e5392d4766a455e068c42eea2bcb`.
 - `a5e219c7036937ce0ef4b5dfe5032bd82c764ee9`: VSGameUtils ResourceKey / Identifier boundary proof; P0 `35427279261` / job `105855291717`; P1 `35427279257` / job `105855291754`; artifact `10578904709`; SHA-256 `6bbcd694cdeb5c5fe6bbb00bcaaf0b322092df30ca3e1a5b241007e836b137ad`.
@@ -78,8 +79,8 @@ All other earlier frozen-green proofs recorded by prior ledgers remain frozen ev
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
-- active_proof_head: `d258e69e46ce2f85c1ccb953dc97db7abd669841; entity-handler projectile package boundary complete and frozen`
-- active_proof_run: `P0 35430098076 / job 105863012876 success; P1 35430098141 / job 105863013026 failure with all AbstractArrow/AbstractHurtingProjectile package diagnostics cleared; remaining handler diagnostics are renderer API boundaries only`
+- active_proof_head: `0a23528d781baf280bb553a8f9fa94c21f447af2; ShipMountingEntity empty Value I/O persistence boundary complete and frozen`
+- active_proof_run: `P0 35431393828 / job 105866541183 success; P1 35431393814 / job 105866541088 failure with both ShipMountingEntity persistence-hook diagnostics cleared; only independent hurtServer and constructor/level diagnostics remain in that class`
 - active_hypothesis: `none selected; choose the next isolated cluster only after exact Minecraft 26.2 API inspection`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
@@ -116,23 +117,24 @@ Source/API clusters already proven clean include:
 - `VSGameUtils` / `ResourceKeyAccessor` / `MixinLevel` ResourceKey identity bridge migrated to Minecraft 26.2 `Identifier` vocabulary while preserving the existing VS2 DimensionId encoding, cache, accessor/invoker path, and dimension semantics;
 - `VSGameUtils` build-height range and packed ticking-chunk key migrated to `getMinY()` / `getHeight()` / `ChunkPos.pack(...)` with the original inclusive range and packed-coordinate semantics preserved;
 - `VSGameEvents` RenderType package migrated to Minecraft 26.2 `net.minecraft.client.renderer.rendertype.RenderType` while preserving the two upstream event payloads and existing renderer emitter architecture;
-- `AbstractShipyardEntityHandler` and `WorldEntityHandler` projectile imports migrated to the Minecraft 26.2 `projectile.arrow` / `projectile.hurtingprojectile` subpackages while preserving the original VS2 projectile branch behavior unchanged.
+- `AbstractShipyardEntityHandler` and `WorldEntityHandler` projectile imports migrated to the Minecraft 26.2 `projectile.arrow` / `projectile.hurtingprojectile` subpackages while preserving the original VS2 projectile branch behavior unchanged;
+- `ShipMountingEntity` empty entity-persistence hooks migrated from `CompoundTag` to Minecraft 26.2 `ValueInput` / `ValueOutput`, preserving the intentionally empty upstream behavior and the vanilla entity persistence lifecycle.
 
-## Remaining compiler areas from exact run `35430098141`
+## Remaining compiler areas from exact run `35431393814`
 
-These remain unresolved and independent from the frozen entity-handler projectile-package proof:
+These remain unresolved and independent from the frozen ShipMountingEntity persistence-hook proof:
 
 - Create compatibility intermediary/classpath/API drift in `DeployerScrollOptionSlot.kt`; this must not be used to pull P3/Create architecture into P1.
-- `ShipSavedData` broader SavedData `save` lifecycle/factory boundary.
+- `ShipSavedData` broader persistence lifecycle/factory boundary. Exact Minecraft 26.2 API inspection shows this now requires `SavedDataType<T>` + `Codec<T>` and the corresponding `MixinMinecraftServer` storage registration to migrate together while preserving the existing VS2 byte-array payloads and pipeline ownership.
 - `AssemblyUtil` and `ShipAssembler`: block update flags, scheduled ticks, ValueInput/ValueOutput component persistence, shipyard allocation, structure processor API, chunk tickets, and related semantics.
-- `ShipMountingEntity`: current entity persistence (`ValueInput`/`ValueOutput`), server hurt contract, and constructor/level boundary.
+- `ShipMountingEntity`: server `hurtServer` contract and constructor/level boundary only. Its empty ValueInput/ValueOutput persistence hooks are **not** remaining compiler areas.
 - rendering/entity-handler drift: `MultiBufferSource` renderer-buffer API rework, current `EntityRenderer` generic/API boundary, and `getRenderOffset`. Projectile class relocation is **not** a remaining compiler area.
 - `VSGamePackets` / `EntityDragger`: removed/changed local-control and interpolation APIs (`isControlledByLocalInstance`, `lerpTo`) are authority-sensitive and remain locked pending exact semantics.
 - chunk-ticket APIs in `ChunkManagement` / `VSTicketType` and ShipAssembler.
 - Sable dependency boundary.
 - `RelocationUtil`: ValueInput/ValueOutput/component loading, loot-key nullability, update flags, and related relocation semantics.
 
-`VSGameUtils.kt`, `VSGameEvents.kt`, and the `AbstractArrow` / `AbstractHurtingProjectile` package sites are **not** remaining compiler areas after their frozen proofs.
+`VSGameUtils.kt`, `VSGameEvents.kt`, the `AbstractArrow` / `AbstractHurtingProjectile` package sites, and the two empty `ShipMountingEntity` persistence-hook signatures are **not** remaining compiler areas after their frozen proofs.
 
 ## Locked / deferred lessons
 
@@ -143,8 +145,9 @@ These remain unresolved and independent from the frozen entity-handler projectil
 - Frozen VSGameUtils packed chunk-key semantics: use Minecraft's current `ChunkPos.pack(x, z)` equivalent for the original packed `(x,z)` key; do not invent a custom key or alter chunk ticking policy.
 - Frozen VSGameEvents RenderType proof authorizes only the event payload package migration. It does **not** authorize renderer/entity-handler rewrites, render-state/generic changes, pass reordering, alternate buffer ownership, or any replacement rendering pipeline.
 - Frozen entity-handler projectile proof authorizes only the `AbstractArrow` / `AbstractHurtingProjectile` package relocation. It does **not** authorize movement, velocity, rotation, dragging, renderer, interpolation, or authority changes.
+- Frozen ShipMountingEntity persistence proof authorizes only the two intentionally empty entity-persistence hook signatures (`CompoundTag` to `ValueInput` / `ValueOutput`). It does **not** authorize mounting/controller changes, `hurtServer` adaptation, constructor/level changes, movement/reference-space behavior, or any new persisted payload.
 - Exact Minecraft 26.2 API evidence shows `MultiBufferSource` is not a simple package rename. Do not mechanically import-rewrite or fabricate an equivalent; inspect the current renderer-buffer semantics before any adaptation.
-- `ShipSavedData` broader SavedData save/factory lifecycle is a semantic boundary; prior byte-array Optional proof does not authorize a broad persistence rewrite.
+- `ShipSavedData` broader persistence lifecycle is a semantic boundary: Minecraft 26.2 uses `SavedDataType<T>` + `Codec<T>` rather than the old overrideable `save(...)` path. Migrate `ShipSavedData` together with its `MixinMinecraftServer` storage registration, preserve the exact four existing Jackson byte-array payloads and real VS2 pipeline ownership, and do not introduce a second persistence authority.
 - TestChair proof authorizes only its existing chair create/place flow; it does not authorize ShipMountingEntity internals or moving-space changes.
 - `VSGamePackets` / `EntityDragger` local-control and interpolation APIs are authority-sensitive; never replace them with guessed per-tick movement, manual carry, teleports, or camera forcing.
 - Assembly/Relocation ValueInput/ValueOutput migrations must preserve block-entity/component semantics rather than merely compile.
@@ -183,9 +186,9 @@ Forbidden as final architecture: custom VS2-style replacement frames, synthetic 
 
 ## next_safe_action
 
-1. Preserve the frozen `d258e69e46ce2f85c1ccb953dc97db7abd669841` entity-handler projectile package proof, the prior `3d8d7255d36f26da902e0d43e1c830fa5015594e` VSGameEvents RenderType proof, the `24802fb75610a3ceb1614fda1a78cab1fab7cfe5` VSGameUtils build-height/chunk-key proof, the `a5e219c7036937ce0ef4b5dfe5032bd82c764ee9` ResourceKey/Identifier proof, the `ee7e9c56be55fd95114d0f7e194be69185db4385` nullable-translation proof, and all earlier frozen-green proofs. Do not edit those sites unless direct regression evidence appears.
+1. Preserve the frozen `0a23528d781baf280bb553a8f9fa94c21f447af2` ShipMountingEntity empty Value I/O persistence proof, the prior `d258e69e46ce2f85c1ccb953dc97db7abd669841` entity-handler projectile package proof, `3d8d7255d36f26da902e0d43e1c830fa5015594e` VSGameEvents RenderType proof, `24802fb75610a3ceb1614fda1a78cab1fab7cfe5` VSGameUtils build-height/chunk-key proof, `a5e219c7036937ce0ef4b5dfe5032bd82c764ee9` ResourceKey/Identifier proof, `ee7e9c56be55fd95114d0f7e194be69185db4385` nullable-translation proof, and all earlier frozen-green proofs. Do not edit those sites unless direct regression evidence appears.
 2. After this ledger-only commit, require exact-head P0 provenance success before any further source mutation.
-3. Then inspect only the newest compiler evidence plus the exact Minecraft 26.2 API for **one** remaining isolated cluster. Do not mechanically patch the renderer-buffer / `EntityRenderer` / `getRenderOffset`, ShipSavedData, ShipMountingEntity, assembly/relocation, authority-sensitive entity/networking, ticketing, Sable, or Create-compat boundaries without semantic proof.
+3. Then inspect only the newest compiler evidence plus the exact Minecraft 26.2 API for **one** remaining isolated cluster. Do not mechanically patch ShipSavedData, ShipMountingEntity `hurtServer`/constructor, renderer-buffer / `EntityRenderer` / `getRenderOffset`, assembly/relocation, authority-sensitive entity/networking, ticketing, Sable, or Create-compat boundaries without semantic proof.
 4. Choose exactly one root hypothesis only after API inspection, then use the smallest fail-closed traceable overlay and prove that cluster separately.
 5. Remain in standalone P1. Do not use Create/SNR/Copycats to hide standalone VS2 failures. Do not record ordinary compile/debug/hypothesis-test video.
 
