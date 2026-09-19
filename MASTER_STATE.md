@@ -22,30 +22,34 @@ GitHub code is the implementation source of truth. This file is the durable cont
 
 The upstream baseline remains pinned. Minecraft 26.2 changes are applied by explicit fail-closed overlays so every adaptation remains traceable to upstream VS2 source.
 
-## Current reconciliation — ShipAssembler Clearable bridge proven and frozen
+## Current reconciliation — ShipAssembler block-entity ValueInput bridge proven and frozen
 
-- Current proven implementation HEAD: `45de97f06a3ab25c1e19b0dc09790ebde2d8e851` (`P1: wire ShipAssembler Clearable proof`).
-- The implementation consists of fail-closed overlay commit `6f91e0822f64544ef90453ac9ed3521bc6a4372e` plus canonical P1 workflow wiring at `45de97f06a3ab25c1e19b0dc09790ebde2d8e851`; no upstream submodule commit or gameplay implementation was replaced.
-- Exact-head P0 provenance run `35447608712`, job `105909150192`, completed `success`; the exact upstream gitlink remained `f39132148e717d325933b4ce6e9e9fb13d929390`.
-- Exact-head P1 standalone compile run `35447608701`, job `105909150252`, completed `failure` only because independent Minecraft 26.2 source/API clusters remain. The new ShipAssembler Clearable overlay step, port-delta validation, Gradle runtime setup, and compile-log artifact upload completed successfully.
-- Diagnostic artifact: `p1-compile-log-45de97f06a3ab25c1e19b0dc09790ebde2d8e851`, artifact ID `10586550933`, size `4989` bytes, ZIP SHA-256 `c373b0dd58a6f9a3bb4249b7dde1d9157023c1a173db5a1185445c3489ddaf87`.
-- Root cause proven for this isolated cluster: pinned upstream `ShipAssembler` has exactly three source block-entity cleanup sites that guard `if (it is Clearable)` and invoke the legacy static helper `Clearable.tryClear(it)`. Exact Minecraft 26.2 API/source inspection shows `net.minecraft.world.Clearable` now exposes the instance method `clearContent()` and no legacy static `tryClear` helper. The minimal compatibility adaptation is therefore the direct instance call `it.clearContent()` at those same three already-guarded source cleanup sites.
-- `scripts/apply_p1_shipassembler_clearable_26_2.py` requires exactly three legacy `Clearable.tryClear(it)` sites, exactly three still-unmigrated empty-tag `loadWithComponents(CompoundTag(), level.registryAccess())` fallback sites, and the pinned Clearable import. It changes only the three static helper calls to `it.clearContent()`, rejects any legacy helper afterward, and verifies the independent ValueInput/component fallback sites remain untouched.
-- Exact P1 run `35447608701` contains no compiler diagnostic for `tryClear`, `clearContent`, or the three adapted Clearable sites. The remaining ShipAssembler diagnostics are independently the block-entity/component `loadWithComponents(ValueInput)` migration sites and the current chunk-ticket boundary around former `addRegionTicket`.
-- The prior ShipAssembler containing-ChunkPos, fast-path direct-write flags, and StructureProcessor proofs remain frozen and unchanged. All RelocationUtil and AssemblyUtil frozen proofs also remain unchanged.
-- This proof does **not** authorize changes to the independent non-Clearable block-entity/component fallback, saved tag/component contents, destination block-entity restoration, chunk tickets, assembly lifecycle, ship creation/allocation, transforms, physics, collision, entity dragging, rendering, networking authority, gameplay authority, camera behavior, SavedData, Sable, or Create compatibility.
-- Scope reconciliation from prior ledger checkpoint `9703ca40a7a2d491c95429039d30ea23b4ea083f` to the proven implementation HEAD changed only the new fail-closed ShipAssembler Clearable overlay and its canonical P1 workflow wiring; the pinned `upstream-vs2` gitlink was untouched.
+- Current proven implementation HEAD: `30b9f70d3c6c71dfd30ca76339e19cfcb56461e4` (`P1: wire ShipAssembler ValueInput proof`).
+- The implementation consists of fail-closed overlay commit `c765aaf27bc6de13de31fdfd0325eb2bdb9d42f2` plus canonical P1 workflow wiring at `30b9f70d3c6c71dfd30ca76339e19cfcb56461e4`; no upstream submodule commit or gameplay implementation was replaced.
+- The immediately preceding ledger-only HEAD `59dac80019be29590c0520d9b8da13c47a205a27` received exact-head P0 provenance success in run `35447917430`, job `105909960661`, before this source mutation.
+- Exact-head P0 provenance for the new implementation HEAD: run `35449327885`, job `105913627681`, completed `success`; the exact upstream gitlink remained `f39132148e717d325933b4ce6e9e9fb13d929390`.
+- Exact-head P1 standalone compile run `35449327899`, job `105913627933`, completed `failure` only because independent Minecraft 26.2 source/API clusters remain. The new ShipAssembler block-entity ValueInput overlay step, port-delta validation, Gradle runtime setup, and compile-log artifact upload completed successfully.
+- Diagnostic artifact: `p1-compile-log-30b9f70d3c6c71dfd30ca76339e19cfcb56461e4`, artifact ID `10586298547`, size `4813` bytes, ZIP SHA-256 `96a45d028aa15f9f40fae05e3af7319ee25e04ebbb43014095fbf54f057358da`.
+- Root cause proven for this isolated cluster: pinned upstream `ShipAssembler` has three empty-`CompoundTag` block-entity clear fallbacks and one fast-path destination restore using the old `loadWithComponents(CompoundTag, registryAccess)` signature. Exact Minecraft 26.2 API inspection shows `BlockEntity.loadWithComponents` now consumes `ValueInput`, while `saveWithFullMetadata(registryAccess)` still returns a `CompoundTag`; vanilla `TagValueInput.create(problemReporter, registryAccess, tag)` is the compatibility boundary.
+- `scripts/apply_p1_shipassembler_blockentity_value_input_26_2.py` is fail-closed: it requires exactly those three empty-load sites and one fast-path restore site, guards the unchanged `saveWithFullMetadata(level.registryAccess())` call and x/y/z destination rewrites, installs only the two required current vanilla imports, wraps the four existing `CompoundTag` inputs in `TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), ...)`, and verifies the legacy load signatures are gone.
+- The overlay preserves upstream save payloads, x/y/z rewrite, copy/remove/place ordering, StructureTemplate path, chunk-ticket behavior, ship lifecycle, transforms, physics, collision, entity dragging, rendering, networking authority, gameplay authority, and camera behavior. It is a Minecraft 26.2 serialization-input bridge only.
+- Exact P1 run `35449327899` contains no remaining ShipAssembler compiler diagnostic for the four prior `CompoundTag -> ValueInput` / extra-registry-argument sites. The only remaining `ShipAssembler.kt` diagnostic is the independently excluded current chunk-ticket boundary around former `addRegionTicket`.
+- No ValueOutput migration was introduced at this ShipAssembler path because the exact inspected save path still returns `CompoundTag`; changing output serialization without an API requirement is forbidden scope expansion.
+- The prior ShipAssembler Clearable, containing-ChunkPos, fast-path direct-write flags, and StructureProcessor proofs remain frozen and unchanged. All RelocationUtil and AssemblyUtil frozen proofs also remain unchanged.
+- This proof does **not** authorize changes to chunk tickets, assembly lifecycle, ship creation/allocation, transforms, physics, collision, entity dragging, rendering, networking/gameplay authority, camera behavior, SavedData, Sable, or Create compatibility.
 - No code from retired `apm23/VS2-Create_Interactive` has been imported or reused as implementation source.
+- No video was recorded: this was an isolated compile/API proof, not a closure-ready user-visible runtime blocker.
 
 ### Evidence metadata reconciliation
 
-- The prior RelocationUtil ValueInput proof itself remains valid, but its artifact metadata in the previous ledger was stale. For exact run `35446235562` / job `105905519515`, the canonical run artifact endpoint returns exactly one artifact named `p1-compile-log-e923ba7658197ff04af605e85507618c09dd390b`: artifact ID `10585438767`, size `5016` bytes, ZIP SHA-256 `5d86810672cbbfe03fc7c455542dba838cbf07847bd81256ece32d344d037e13`. The previously recorded `10585325678` / `4999` / `5eed195d...` values are superseded as metadata only; no source/proof conclusion changes.
+- The prior RelocationUtil ValueInput proof itself remains valid, but its artifact metadata in an earlier ledger was stale. For exact run `35446235562` / job `105905519515`, the canonical run artifact endpoint returns exactly one artifact named `p1-compile-log-e923ba7658197ff04af605e85507618c09dd390b`: artifact ID `10585438767`, size `5016` bytes, ZIP SHA-256 `5d86810672cbbfe03fc7c455542dba838cbf07847bd81256ece32d344d037e13`. The previously recorded `10585325678` / `4999` / `5eed195d...` values are superseded as metadata only; no source/proof conclusion changes.
 
 ## Frozen proof ancestry / negative evidence
 
-The immediately prior implementation proof is `e923ba7658197ff04af605e85507618c09dd390b` (RelocationUtil block-entity ValueInput bridge). Its proof and all earlier historical proof records/failed probes remain frozen evidence and must not be replayed merely because a later compiler error resembles them.
+The immediately prior implementation proof is `45de97f06a3ab25c1e19b0dc09790ebde2d8e851` (ShipAssembler Clearable bridge). Its proof and all earlier historical proof records/failed probes remain frozen evidence and must not be replayed merely because a later compiler error resembles them.
 
 Recent frozen implementation proofs include:
+- `30b9f70d3c6c71dfd30ca76339e19cfcb56461e4`: ShipAssembler block-entity ValueInput bridge proof; P0 `35449327885` / job `105913627681`; P1 `35449327899` / job `105913627933`; artifact `10586298547`; SHA-256 `96a45d028aa15f9f40fae05e3af7319ee25e04ebbb43014095fbf54f057358da`.
 - `45de97f06a3ab25c1e19b0dc09790ebde2d8e851`: ShipAssembler Clearable bridge proof; P0 `35447608712` / job `105909150192`; P1 `35447608701` / job `105909150252`; artifact `10586550933`; SHA-256 `c373b0dd58a6f9a3bb4249b7dde1d9157023c1a173db5a1185445c3489ddaf87`.
 - `e923ba7658197ff04af605e85507618c09dd390b`: RelocationUtil block-entity ValueInput bridge proof; P0 `35446235563` / job `105905519369`; P1 `35446235562` / job `105905519515`; corrected canonical artifact `10585438767`; SHA-256 `5d86810672cbbfe03fc7c455542dba838cbf07847bd81256ece32d344d037e13`.
 - `52a05bdae75fd2a469287234c680bf191fd5b105`: RelocationUtil pending loot-table clear proof; P0 `35444914843` / job `105902069944`; P1 `35444914831` / job `105902069897`; artifact `10584832788`; SHA-256 `51c13dabc67ec11ff92c55e3c767b5d5aa3df9f52b81b8c12b9585caf916de34`.
@@ -98,9 +102,9 @@ All other earlier frozen-green proofs recorded by prior ledger commits remain fr
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
-- active_proof_head: `45de97f06a3ab25c1e19b0dc09790ebde2d8e851; ShipAssembler Clearable bridge complete and frozen`
-- active_proof_run: `P0 35447608712 / job 105909150192 success; P1 35447608701 / job 105909150252 failure with all three ShipAssembler tryClear diagnostics cleared and no clearContent diagnostic; independent compiler clusters remain`
-- active_hypothesis: `none selected; choose the next isolated standalone-P1 cluster only after exact Minecraft 26.2 API/source inspection`
+- active_proof_head: `30b9f70d3c6c71dfd30ca76339e19cfcb56461e4; ShipAssembler block-entity ValueInput bridge complete and frozen`
+- active_proof_run: `P0 35449327885 / job 105913627681 success; P1 35449327899 / job 105913627933 failure with all four targeted ShipAssembler ValueInput load diagnostics cleared; independent compiler clusters remain`
+- active_hypothesis: `none selected; choose the next isolated standalone-P1 semantic cluster only after exact Minecraft 26.2 API/source inspection`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 - video_status: `NOT_APPLICABLE_YET`
@@ -123,43 +127,45 @@ Source/API clusters already proven clean include the earlier frozen items record
 - ShipAssembler containing-ChunkPos conversion;
 - ShipAssembler small-set direct LevelChunk zero-flag conversion;
 - ShipAssembler `ICopyableProcessor` current Minecraft 26.2 StructureProcessor interface/signature/codec adapter, preserving upstream processed destination block position/state/NBT and `onPaste` behavior;
-- ShipAssembler three legacy static `Clearable.tryClear(it)` source cleanup calls migrated to the current `it.clearContent()` instance boundary while preserving the existing `it is Clearable` guards and leaving the independent non-Clearable ValueInput fallbacks untouched;
+- ShipAssembler three legacy static `Clearable.tryClear(it)` source cleanup calls migrated to the current `it.clearContent()` instance boundary while preserving the existing `it is Clearable` guards;
+- ShipAssembler three empty-`CompoundTag` cleanup fallbacks plus one fast-path destination restore migrated through vanilla `TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), tag)` into current `loadWithComponents(ValueInput)`, while preserving the existing CompoundTag save payload, destination x/y/z rewrite, clear/remove/place ordering, and all ticket/lifecycle behavior;
 - AssemblyUtil direct chunk-write flags, ScheduledTick non-null bound, block-entity Value I/O, and neighbor-dispatch bridges;
 - `RelocationUtil.relocateBlock()` two direct `LevelChunk.setBlockState(..., false)` third arguments migrated to Minecraft 26.2 zero integer flags while preserving the rotated state, source/destination writes, ordering, and the original conditional explicit `doUpdate -> updateBlock(...)` flow;
 - `RelocationUtil.updateBlock()` two removed legacy `blockUpdated` neighbor-dispatch sites migrated to current `updateNeighborsAt(...)` with explicit server/non-debug guards preserving the legacy dispatch boundary;
 - `RelocationUtil.relocateBlock()` pending `RandomizableContainerBlockEntity` loot-table clear migrated from legacy `setLootTable(null, 0)` to the current nullable one-argument `setLootTable(null)` clear-key boundary, preserving the upstream no-source-loot-generation/drop intent without altering non-null loot seed semantics;
-- `RelocationUtil.relocateBlock()` both block-entity `CompoundTag` reads migrated through vanilla `TagValueInput.create(ProblemReporter.DISCARDING, existingRegistryAccess, tag)` into current `loadWithComponents(ValueInput)`, preserving the source empty-clear and destination full restore. Exact run `35446235562` has no remaining `RelocationUtil.kt` compiler diagnostic.
+- `RelocationUtil.relocateBlock()` both block-entity `CompoundTag` reads migrated through vanilla `TagValueInput.create(ProblemReporter.DISCARDING, existingRegistryAccess, tag)` into current `loadWithComponents(ValueInput)`, preserving the source empty-clear and destination full restore.
 
-## Remaining compiler areas from exact run `35447608701`
+## Remaining compiler areas from exact run `35449327899`
 
-These remain unresolved and independent from the frozen ShipAssembler Clearable proof:
+These remain unresolved and independent from the frozen ShipAssembler block-entity ValueInput proof:
 
 - Create compatibility intermediary/classpath/API drift in `DeployerScrollOptionSlot.kt`; this must not be used to pull P3/Create architecture into P1 or let Create mask standalone failures.
 - `ShipSavedData`: broader SavedData persistence lifecycle/factory boundary (`save` no longer overrides). Exact Minecraft 26.2 semantics and the corresponding `MixinMinecraftServer` storage acquisition/registration must be migrated together while preserving the four existing Jackson byte-array payloads and one persistence authority.
-- `ShipAssembler`: block-entity/component ValueInput/ValueOutput boundaries, including the normal, fast-path, and structure-template `loadWithComponents` sites; current chunk-ticket API drift around the former `addRegionTicket` site. The three `Clearable.tryClear` calls, containing-ChunkPos conversion, two fast-path direct chunk-write flag arguments, and `ICopyableProcessor` StructureProcessor boundary are **not** remaining compiler areas.
+- `ShipAssembler`: only the current chunk-ticket API drift around the former `addRegionTicket` site remains from the exact run. Its block-entity ValueInput load sites, three `Clearable.tryClear` calls, containing-ChunkPos conversion, two fast-path direct chunk-write flag arguments, and `ICopyableProcessor` StructureProcessor boundary are **not** remaining compiler areas.
 - rendering/entity-handler drift: current renderer-buffer API (`MultiBufferSource` is not a simple package rename), current `EntityRenderer` generic/API boundary, and removed/changed `getRenderOffset` behavior.
 - `VSGamePackets` / `EntityDragger`: removed/changed local-control and interpolation APIs (`isControlledByLocalInstance`, `lerpTo`) are authority-sensitive and remain locked pending exact semantics.
-- chunk-ticket APIs in `ChunkManagement` / `VSTicketType` and the independent ShipAssembler ticket site.
+- chunk-ticket APIs in `ChunkManagement` / `VSTicketType` plus the independently related ShipAssembler ticket site. If selected, treat the real ticket lifecycle as one semantic cluster rather than patching a single symbol in isolation.
 - Sable dependency boundary.
 
-`RelocationUtil.kt` has no remaining compiler diagnostic in exact run `35447608701`. `AssemblyUtil.kt` also has no remaining compiler diagnostic in that exact run. The frozen ShipAssembler Clearable, StructureProcessor, containing-ChunkPos, and direct-write-flag boundaries are no longer remaining compiler areas.
+`RelocationUtil.kt` and `AssemblyUtil.kt` have no remaining compiler diagnostic in exact run `35449327899`. The frozen ShipAssembler ValueInput, Clearable, StructureProcessor, containing-ChunkPos, and direct-write-flag boundaries are no longer remaining compiler areas.
 
 ## Locked / deferred lessons
 
 - Never mechanically invent a 26.2 API name from an old symbol. Inspect exact API semantics first.
 - Frozen proofs authorize only their exact isolated adaptation; superficially similar sites require independent inspection.
-- Frozen ShipAssembler Clearable proof authorizes only replacing the three pinned `Clearable.tryClear(it)` calls inside their existing `it is Clearable` guards with `it.clearContent()`. It does **not** authorize changing the independent non-Clearable ValueInput fallback, saved tags/components, destination restoration, source-removal ordering, tickets, assembly lifecycle, transforms, physics, collision, rendering, networking/gameplay authority, or camera behavior.
-- Frozen RelocationUtil ValueInput proof authorizes only wrapping the two pinned `CompoundTag` reads through `TagValueInput.create(ProblemReporter.DISCARDING, existingRegistryAccess, tag)` before current `loadWithComponents(ValueInput)`. It preserves source empty-clear and destination full restore and does **not** authorize changing serialization output, saved tags, component contents, pending loot, relocation order, block-entity lifecycle, direct writes, neighbor dispatch, lighting, tickets, ship lifecycle, transforms, physics, collision, entity dragging, rendering, networking/gameplay authority, or camera.
-- Frozen RelocationUtil loot-clear proof authorizes only replacing the one pinned legacy `setLootTable(null, 0)` call with `setLootTable(null)` at the existing pre-removal pending-loot clear site. It preserves clearing the pending loot key and does **not** authorize changing container contents, non-null loot-table or seed behavior, relocation ordering, source/destination block-entity lifecycle, direct writes, neighbor dispatch, lighting, ships, physics, networking, gameplay authority, or camera behavior.
+- Frozen ShipAssembler ValueInput proof authorizes only wrapping the three pinned empty `CompoundTag` fallbacks and one pinned fast-path restore through `TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), tag)` before current `loadWithComponents(ValueInput)`. It preserves the original save payload and x/y/z rewrite and does **not** authorize changing component/tag contents, output serialization, clear/remove/place ordering, tickets, assembly lifecycle, transforms, physics, collision, entity dragging, rendering, networking/gameplay authority, or camera behavior.
+- Frozen ShipAssembler Clearable proof authorizes only replacing the three pinned `Clearable.tryClear(it)` calls inside their existing `it is Clearable` guards with `it.clearContent()`.
+- Frozen RelocationUtil ValueInput proof authorizes only wrapping the two pinned `CompoundTag` reads through `TagValueInput.create(ProblemReporter.DISCARDING, existingRegistryAccess, tag)` before current `loadWithComponents(ValueInput)`.
+- Frozen RelocationUtil loot-clear proof authorizes only replacing the one pinned legacy `setLootTable(null, 0)` call with `setLootTable(null)` at the existing pre-removal pending-loot clear site.
 - Frozen RelocationUtil neighbor-update proof authorizes only replacing the two pinned legacy `level.blockUpdated(...)` sites with guarded `level.updateNeighborsAt(...)`, preserving server/non-debug dispatch and all surrounding update phases.
 - Frozen RelocationUtil direct chunk-write-flags proof authorizes only replacing the two pinned `LevelChunk.setBlockState(..., false)` third arguments with `0`, preserving the upstream rotated state, source/destination direct writes, ordering, no moved/additional direct-write bits, and conditional explicit `doUpdate` flow.
-- Frozen ShipAssembler StructureProcessor proof authorizes only the current interface/signature/codec migration for `ICopyableProcessor` while continuing to use `processedBlockInfo.pos/state/nbt` for the upstream `onPaste` flow. It does not authorize structure-placement redesign, serialization of this runtime-only processor, assembly lifecycle changes, tickets, component transfer, transforms, physics, networking, or gameplay authority.
+- Frozen ShipAssembler StructureProcessor proof authorizes only the current interface/signature/codec migration for `ICopyableProcessor` while continuing to use `processedBlockInfo.pos/state/nbt` for the upstream `onPaste` flow.
 - Frozen ShipAssembler fast-path chunk-write proof authorizes only replacing the two pinned direct `LevelChunk.setBlockState(..., false)` third arguments with `0`, preserving no moved/additional flag bits and the upstream direct-chunk bypass.
 - Frozen AssemblyUtil direct-write, ScheduledTick, block-entity Value I/O, and neighbor-dispatch proofs remain limited to those exact sites and semantics; they do not authorize mechanical copying into other relocation/assembly sites.
 - `ShipSavedData` broader persistence lifecycle is a semantic boundary: migrate it together with the existing server storage registration/acquisition path, preserve exact payloads, and do not introduce a second persistence authority.
 - Exact Minecraft 26.2 API evidence shows `MultiBufferSource` is not a simple package rename. Do not fabricate an equivalent renderer path.
 - `VSGamePackets` / `EntityDragger` local-control and interpolation changes are authority-sensitive; never replace them with guessed per-tick movement, manual carry, teleport/setPos chase, synthetic velocity, or camera forcing.
-- Chunk tickets must retain real loading/lifetime semantics; no permanent-force-load shortcut.
+- Chunk tickets must retain real loading/lifetime semantics; no permanent-force-load shortcut. The ShipAssembler/ChunkManagement/VSTicketType sites must be understood against the exact Minecraft 26.2 ticket lifecycle before adaptation.
 - Create compatibility errors are not permission to integrate Create early or use Create as a P1 crutch.
 - Sable must be satisfied by a real dependency or documented upstream-compatible boundary; do not create a fake companion/package merely to compile.
 - Retired `apm23/VS2-Create_Interactive` is historical warning evidence only and must never become implementation source.
@@ -189,12 +195,13 @@ Forbidden as final architecture: custom VS2-style replacement frames, synthetic 
 
 ## next_safe_action
 
-1. Preserve the frozen `45de97f06a3ab25c1e19b0dc09790ebde2d8e851` ShipAssembler Clearable proof plus `e923ba7658197ff04af605e85507618c09dd390b`, `52a05bdae75fd2a469287234c680bf191fd5b105`, `7a7e2f320605b27bb65e9f0bb6cb88d8aa41a4e7`, `ce6ff8bb8f06eeb8e98544f6bf9ca1e503936fdb`, `2da9ca25e3ce6fd2f601cc2f6b626b0e3998a677`, all recent AssemblyUtil proofs, and all earlier frozen-green/negative evidence. Do not edit those sites unless direct regression evidence appears.
+1. Preserve the frozen `30b9f70d3c6c71dfd30ca76339e19cfcb56461e4` ShipAssembler block-entity ValueInput proof plus `45de97f06a3ab25c1e19b0dc09790ebde2d8e851`, `e923ba7658197ff04af605e85507618c09dd390b`, `52a05bdae75fd2a469287234c680bf191fd5b105`, `7a7e2f320605b27bb65e9f0bb6cb88d8aa41a4e7`, `ce6ff8bb8f06eeb8e98544f6bf9ca1e503936fdb`, `2da9ca25e3ce6fd2f601cc2f6b626b0e3998a677`, all recent AssemblyUtil proofs, and all earlier frozen-green/negative evidence. Do not edit those sites unless direct regression evidence appears.
 2. This ledger-only freeze commit must not be treated as source proof. Require exact-head P0 provenance success for the resulting ledger HEAD before any further source mutation.
-3. Then inspect only exact run `35447608701` plus exact Minecraft 26.2 API/source for **one** remaining standalone-P1 compiler cluster. Do not patch multiple clusters in one step.
+3. After that provenance gate, inspect only exact P1 run `35449327899` plus exact Minecraft 26.2 API/source for **one** remaining standalone-P1 semantic cluster. Do not patch multiple independent clusters in one step.
 4. `ShipSavedData` remains deliberately deferred until its SavedData type/codec/factory plus `MixinMinecraftServer` storage boundary can be proven as one semantic unit. Do not guess it from the isolated `save overrides nothing` diagnostic.
-5. Do not mechanically extend the frozen ShipAssembler Clearable proof into its remaining block-entity/component ValueInput handling or ticket site. Likewise do not mechanically extend frozen RelocationUtil/ShipAssembler/AssemblyUtil adaptations into ticketing, renderer, authority-sensitive entity/networking, Sable, or Create compatibility. Choose exactly one root hypothesis only after semantic inspection, then use the smallest fail-closed traceable overlay and prove it separately.
-6. Remain in standalone P1. Do not use Create/SNR/Copycats to hide standalone VS2 failures. Do not record ordinary compile/debug/hypothesis-test video.
+5. If the chunk-ticket area is selected, inspect `ShipAssembler` + `ChunkManagement` + `VSTicketType` together as one ticket-lifecycle semantic cluster before deciding whether any code change is justified; preserve real loading/lifetime semantics and do not use permanent force-loading. Otherwise select another single standalone cluster only after exact semantics are established.
+6. Do not mechanically extend frozen serialization/Clearable/relocation proofs into ticketing, renderer, authority-sensitive entity/networking, Sable, or Create compatibility.
+7. Remain in standalone P1. Do not use Create/SNR/Copycats to hide standalone VS2 failures. Do not record ordinary compile/debug/hypothesis-test video.
 
 ## Video and final gate
 
