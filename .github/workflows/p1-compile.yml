@@ -61,6 +61,7 @@ on:
       - 'scripts/apply_p1_relocationutil_chunk_setblock_flags_26_2.py'
       - 'scripts/apply_p1_relocationutil_blockupdated_26_2.py'
       - 'scripts/apply_p1_relocationutil_loot_clear_26_2.py'
+      - 'scripts/apply_p1_relocationutil_blockentity_value_input_26_2.py'
       - '.github/workflows/p1-compile.yml'
       - 'upstream-vs2'
       - 'BASELINE_LOCK.json'
@@ -258,6 +259,9 @@ jobs:
 
       - name: Apply traceable P1 RelocationUtil loot-table clear overlay
         run: python3 scripts/apply_p1_relocationutil_loot_clear_26_2.py upstream-vs2
+
+      - name: Apply traceable P1 RelocationUtil block-entity ValueInput overlay
+        run: python3 scripts/apply_p1_relocationutil_blockentity_value_input_26_2.py upstream-vs2
 
       - name: Show and validate port delta
         shell: bash
