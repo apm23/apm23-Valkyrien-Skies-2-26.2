@@ -66,11 +66,9 @@ for path in sorted(lang_dir.glob("*.json")):
         raise SystemExit(f"expected exactly one {old_key!r} entry in {path}, found {len(matches)}")
     match = matches[0]
     indent, separator, value, comma = match.groups()
-    if comma != ",":
-        raise SystemExit(f"expected {old_key!r} entry to retain a following JSON entry in {path}")
     replacement = (
         f'{indent}"{old_key}"{separator}{value},\n'
-        f'{indent}"{new_key}"{separator}{value},'
+        f'{indent}"{new_key}"{separator}{value}{comma}'
     )
     lang_text = lang_text[:match.start()] + replacement + lang_text[match.end():]
     path.write_text(lang_text, encoding="utf-8")
