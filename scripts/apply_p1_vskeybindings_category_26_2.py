@@ -70,15 +70,19 @@ for path in sorted(lang_dir.glob("*.json")):
 
     index = candidates[0]
     original = lines[index]
-    newline = "\r\n" if original.endswith("\r\n") else "\n" if original.endswith("\n") else ""
-    body = original[:-len(newline)] if newline else original
+    source_newline = "\r\n" if original.endswith("\r\n") else "\n" if original.endswith("\n") else ""
+    body = original[:-len(source_newline)] if source_newline else original
     indent = body[: len(body) - len(body.lstrip(" \t"))]
     trimmed = body.rstrip(" \t")
     had_comma = trimmed.endswith(",")
 
     value_json = json.dumps(data[old_key], ensure_ascii=False)
-    old_line = f'{indent}"{old_key}": {value_json},{newline}'
-    new_line = f'{indent}"{new_key}": {value_json}' + ("," if had_comma else "") + newline
+    # Git's default whitespace checker treats CR on newly changed CRLF lines as
+    # trailing whitespace. Keep every untouched byte intact, but emit the two
+    # touched category lines with clean LF endings.
+    touched_newline = "\n" if source_newline else ""
+    old_line = f'{indent}"{old_key}": {value_json},{touched_newline}'
+    new_line = f'{indent}"{new_key}": {value_json}' + ("," if had_comma else "") + touched_newline
     lines[index:index + 1] = [old_line, new_line]
 
     updated = "".join(lines)
