@@ -22,22 +22,20 @@ GitHub code is the implementation source of truth. This file is the durable cont
 
 The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are applied by explicit fail-closed overlay scripts so every adaptation stays traceable to upstream VS2 source.
 
-## Current reconciliation — VSGamePackets Identifier vocabulary proven
+## Current reconciliation — VSEntityHandlerDataLoader typed reload-listener proven
 
-- Current proven implementation HEAD: `9d82234aa769a6a0eece07f52e7d5ace2d334aab` (`P1: wire VSGamePackets Identifier proof`).
-- Exact-head P0 provenance run `35415473227`, job `105823166889`, completed `success` and re-confirmed the pinned upstream VS2 identity.
-- Exact-head P1 standalone compile run `35415473246`, job `105823166851`, completed `failure` only because later independent Minecraft 26.2 source/API errors remain.
-- Every traceable overlay applied successfully, including `apply_p1_vsgamepackets_identifier_26_2.py`; explicit port-delta validation and Gradle runtime steps succeeded.
-- Pinned upstream `VSGamePackets.kt` blob: `97c01c038edf1083bf86e5f46afebccce3531e50`.
-- VSGamePackets Identifier overlay blob: `9ebc344cac65da8e3b9e84cd74571086e73691cd`.
-- Exact delta replaces only the two pinned `ResourceLocation` vocabulary occurrences with `Identifier`: the import and `ResourceLocation.tryParse(handler)` -> `Identifier.tryParse(handler)` in `PacketSyncVSEntityTypes` client handling.
-- Registry lookup/pairing, packet registration, entity dragging/reference-space state, local-control checks, lerp/setPos behavior, client/server authority, and all other upstream VS2 networking/gameplay semantics were not altered by this proof.
-- Run `35415473246` contains no unresolved `ResourceLocation` diagnostic in `VSGamePackets.kt`; both targeted vocabulary diagnostics disappeared.
-- Remaining `VSGamePackets.kt` diagnostics are independent Minecraft 26.2 API drift only: `isControlledByLocalInstance` at lines 78 and 142 and `lerpTo` at line 132.
-- Therefore the isolated `VSGamePackets.kt` `ResourceLocation -> Identifier` vocabulary migration is proven clean and frozen independently from later networking/local-control/lerp work.
-- Diagnostic artifact: `p1-compile-log-9d82234aa769a6a0eece07f52e7d5ace2d334aab`, artifact ID `10575144592`, size `6729` bytes, ZIP SHA-256 `0aae19b487b1088166b7ea1e8e72e4cb30ad3101c8c6e88c5620c797d9dd8ab1`.
+- Current proven implementation HEAD: `2af9d9ba1d48f8a0baf825398d3d441b1219f19d` (`P1: wire VSEntityHandler reload-listener proof`).
+- Exact-head P0 provenance run `35417874772`, job `105829899174`, completed `success` and re-confirmed the pinned upstream VS2 identity.
+- Exact-head P1 standalone compile run `35417874723`, job `105829899066`, completed `failure` only because later independent Minecraft 26.2 source/API errors remain.
+- Every traceable overlay applied successfully, including the prior frozen `apply_p1_vsentityhandlerdataloader_identifier_26_2.py`, the new isolated `apply_p1_vsentityhandlerdataloader_reload_listener_26_2.py`, and the already-frozen later overlays; explicit port-delta validation and Gradle runtime steps succeeded.
+- The isolated Minecraft 26.2 reload-listener adaptation changes only the `VSEntityHandlerDataLoader` typed resource-loader boundary: legacy `SimpleJsonResourceReloadListener(Gson(), "vs_entities")` becomes `SimpleJsonResourceReloadListener<JsonElement>(ExtraCodecs.JSON, FileToIdConverter.json("vs_entities"))`, with the obsolete `Gson` import removed and the current converter/codec imports added.
+- This preserves the upstream raw-`JsonElement` payload, the `vs_entities` data directory, entity-registry lookup, handler JSON extraction, `VSEntityManager` lookup/pairing, exception handling, logging, and all other upstream VS2 entity-handler semantics.
+- No networking, entity dragging/reference-space behavior, local-control authority, interpolation, ship lifecycle, collision, physics, player, or camera semantics were changed by this proof.
+- Run `35417874723` contains no compiler diagnostic for `VSEntityHandlerDataLoader.kt`; its prior `SimpleJsonResourceReloadListener<T>` generic/constructor error is cleared.
+- Independent typed reload-listener diagnostics remain in `DimensionParametersResolver.kt` and `MassDatapackResolver.kt`; they are not implicitly proven by this change and remain separate boundaries.
+- Diagnostic artifact: `p1-compile-log-2af9d9ba1d48f8a0baf825398d3d441b1219f19d`, artifact ID `10575914762`, size `6712` bytes, ZIP SHA-256 `51518277e80d405539aba99f690b27bfe4883be95d929b489b9d97a98cc8e7f3`.
+- Prior `VSGamePackets.kt` Identifier-vocabulary proof remains frozen at HEAD `9d82234aa769a6a0eece07f52e7d5ace2d334aab`, P0 `35415473227` / job `105823166889`, P1 `35415473246` / job `105823166851`, artifact `10575144592`, ZIP SHA-256 `0aae19b487b1088166b7ea1e8e72e4cb30ad3101c8c6e88c5620c797d9dd8ab1`.
 - Prior `VSEntityHandlerDataLoader.kt` Identifier proof remains frozen at HEAD `4a657f4625f69b26b9ccef9f7235cee271325d98`, P0 `35414238420` / job `105819598472`, P1 `35414238535` / job `105819599047`, artifact `10575555973`, ZIP SHA-256 `b980ea48f7b71f3ec9d79e119ff83d567fbaf16973871cb547570ae23bc83159`.
-- Continuity-ledger HEAD `6a0c87a7371b4c7e9eae3550dcc2b0284d45e162` has P0 run `35415428162` success before the VSGamePackets source proof was started.
 - Prior `DimensionParametersResolver.kt` Identifier proof remains frozen at HEAD `19d15fccf7345fc80f91800356a105d3595db87c`, P0 `35413012083` / job `105816180721`, P1 `35413012178` / job `105816181236`, artifact `10574836065`, ZIP SHA-256 `ca585a823377e4752017103a7acbe30be1078035c084dd28a758496659f14b95`.
 - Prior `MassDatapackResolver.kt` Identifier proof remains frozen at HEAD `a40316e93a61594018fd6f8f9d4b913d7fb2eb80`, P0 `35411562202` / job `105812049740`, P1 `35411562107` / job `105812049438`, artifact `10574698116`, ZIP SHA-256 `41dc8482808a7de1a46bf4f680c00560ae085a267118e3a9dddec1f5997d2506`.
 - Prior `MassDatapackResolver` dummy-`BlockGetter` minY proof remains frozen at HEAD `563cbcba7bb1c92ca27820ef785d11bb88872524`, P0 `35410678210` / job `105809557245`, P1 `35410678254` / job `105809557590`, artifact `10573811879`, ZIP SHA-256 `ef0e33b2db1cff60f1e1d14658cbb9d50523309a227806cf3f09776fd23df3f2`.
@@ -59,9 +57,9 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
-- active_proof_head: `9d82234aa769a6a0eece07f52e7d5ace2d334aab; VSGamePackets ResourceLocation-to-Identifier proof complete and frozen`
-- active_proof_run: `P0 35415473227 / job 105823166889 success; P1 35415473246 / job 105823166851 failure with targeted ResourceLocation diagnostics cleared`
-- active_hypothesis: `none selected yet; inspect the exact Minecraft 26.2 API boundary for one isolated remaining compiler cluster before source mutation. In particular, do not mechanically replace VSGamePackets/EntityDragger local-control checks or VSGamePackets lerp behavior: these participate in real upstream VS2 client/server entity-dragging/reference-space authority and must be mapped to the current vanilla API without inventing custom carry/control semantics.`
+- active_proof_head: `2af9d9ba1d48f8a0baf825398d3d441b1219f19d; VSEntityHandlerDataLoader typed reload-listener proof complete and frozen`
+- active_proof_run: `P0 35417874772 / job 105829899174 success; P1 35417874723 / job 105829899066 failure with targeted VSEntityHandlerDataLoader reload-listener diagnostic cleared`
+- active_hypothesis: `none selected yet; inspect the exact Minecraft 26.2 API boundary for one isolated remaining compiler cluster before source mutation. The proven VSEntityHandlerDataLoader typed-listener shape must not be copied mechanically into DimensionParametersResolver or MassDatapackResolver without verifying each resolver's parser/apply/nullability/registry semantics. Do not mechanically replace VSGamePackets/EntityDragger local-control checks or VSGamePackets lerp behavior; those remain authority-sensitive real-VS2 boundaries.`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 
@@ -94,10 +92,11 @@ Source/API clusters proven clean in exact-head runs:
 - `SeamlessChunksManager.kt` packed chunk-key migration;
 - `MassDatapackResolver.kt` dummy `BlockGetter.getMinY()` and eight `ResourceLocation -> Identifier` vocabulary sites;
 - `DimensionParametersResolver.kt` two `ResourceLocation -> Identifier` vocabulary sites;
-- `VSEntityHandlerDataLoader.kt` three `ResourceLocation -> Identifier` vocabulary sites, with typed reload-listener generic intentionally separate;
+- `VSEntityHandlerDataLoader.kt` three `ResourceLocation -> Identifier` vocabulary sites;
+- `VSEntityHandlerDataLoader.kt` Minecraft 26.2 typed `SimpleJsonResourceReloadListener<JsonElement>` constructor/generic migration using `ExtraCodecs.JSON` + `FileToIdConverter.json("vs_entities")`, preserving the upstream raw-JSON/apply/handler-pairing semantics;
 - `VSGamePackets.kt` two `ResourceLocation -> Identifier` vocabulary sites, with local-control/lerp/networking semantics intentionally separate.
 
-Representative remaining compiler areas from exact run `35415473246`: Create compat classpath/API drift; separate `ShipSavedData` SavedData persistence migration; deferred `VSGameUtils` resource-key/Identifier plus build-height/chunk-position APIs; `ValkyrienSkiesMod` creative-tab output API; assembly/tick/ValueInput-ValueOutput/structure processor migrations; TestChair entity-create/`moveTo`; TestHingeBlockEntity persistence; deferred nullable command/item messages; typed reload-listener generic in `DimensionParametersResolver`, `MassDatapackResolver`, and `VSEntityHandlerDataLoader`; `MassDatapackResolver` registry tag lookup; deferred keybinding category; ShipMountingEntity persistence/hurt; entity-handler rendering; VSGamePackets/EntityDragger local-control and VSGamePackets lerp API drift; chunk tickets; Sable; relocation.
+Representative remaining compiler areas from exact run `35417874723`: Create compat classpath/API drift; separate `ShipSavedData` SavedData persistence migration; deferred `VSGameUtils` resource-key/Identifier plus build-height/chunk-position APIs; `ValkyrienSkiesMod` creative-tab output API; assembly/tick/ValueInput-ValueOutput/structure processor migrations; TestChair entity-create/`moveTo`; TestHingeBlockEntity persistence; deferred nullable command/item messages; typed reload-listener generic in `DimensionParametersResolver` and `MassDatapackResolver`; `MassDatapackResolver` registry tag lookup; deferred keybinding category; ShipMountingEntity persistence/hurt; entity-handler rendering; VSGamePackets/EntityDragger local-control and VSGamePackets lerp API drift; chunk tickets; Sable; relocation.
 
 ## Proof chain retained
 
@@ -134,6 +133,7 @@ Representative remaining compiler areas from exact run `35415473246`: Create com
 - `19d15fccf7345fc80f91800356a105d3595db87c`: DimensionParametersResolver ResourceLocation-to-Identifier vocabulary; P0 `35413012083`; job `105816180721`; P1 `35413012178`; job `105816181236`; artifact `10574836065`; SHA-256 `ca585a823377e4752017103a7acbe30be1078035c084dd28a758496659f14b95`.
 - `4a657f4625f69b26b9ccef9f7235cee271325d98`: VSEntityHandlerDataLoader ResourceLocation-to-Identifier vocabulary; P0 `35414238420`; job `105819598472`; P1 `35414238535`; job `105819599047`; artifact `10575555973`; SHA-256 `b980ea48f7b71f3ec9d79e119ff83d567fbaf16973871cb547570ae23bc83159`.
 - `9d82234aa769a6a0eece07f52e7d5ace2d334aab`: VSGamePackets ResourceLocation-to-Identifier vocabulary; P0 `35415473227`; job `105823166889`; P1 `35415473246`; job `105823166851`; artifact `10575144592`; SHA-256 `0aae19b487b1088166b7ea1e8e72e4cb30ad3101c8c6e88c5620c797d9dd8ab1`.
+- `2af9d9ba1d48f8a0baf825398d3d441b1219f19d`: VSEntityHandlerDataLoader typed reload-listener boundary; P0 `35417874772`; job `105829899174`; P1 `35417874723`; job `105829899066`; artifact `10575914762`; SHA-256 `51518277e80d405539aba99f690b27bfe4883be95d929b489b9d97a98cc8e7f3`.
 
 ## Deferred / boundary locks
 
@@ -142,7 +142,7 @@ Do not collapse these broader boundaries into compile-only edits:
 - `VSGameUtils.kt`: resource-key migration crosses `ResourceKeyAccessor` and `MixinLevel`; do not apply a partial one-file ResourceLocation replacement. Build-height and chunk-position API drift is also present.
 - `VSKeyBindings.kt`: `KeyMapping.Category` migration changes category translation-key behavior; do not silently drop `category.valkyrienskies.driving`.
 - Nullable ship slug/name command/item messages: do not invent fallback values merely to satisfy Kotlin vararg nullability.
-- Typed `SimpleJsonResourceReloadListener<T>` migration is separate from already-frozen Identifier vocabulary proofs and must preserve parser/apply semantics.
+- Typed `SimpleJsonResourceReloadListener<T>` migration must be proven per resolver with parser/apply semantics preserved. `VSEntityHandlerDataLoader` is now frozen green for this boundary; `DimensionParametersResolver` and `MassDatapackResolver` remain separate unresolved instances.
 - `VSGamePackets.kt` / `EntityDragger.kt` local-control and lerp API drift is authority-sensitive; do not replace removed vanilla APIs with synthetic carry, custom authority, teleport chase, or invented client-control semantics.
 
 ## Sable contract
@@ -160,7 +160,7 @@ Forbidden final substitutes: custom VS2-style reference frames, synthetic carry 
 ## Milestones
 
 ### P0 — Upstream import + provenance
-Frozen green. Exact upstream identity/pin/license/provenance is established and repeatedly re-confirmed. Latest proven implementation HEAD `9d82234aa769a6a0eece07f52e7d5ace2d334aab` has exact-head P0 run `35415473227` / job `105823166889` success.
+Frozen green. Exact upstream identity/pin/license/provenance is established and repeatedly re-confirmed. Latest proven implementation HEAD `2af9d9ba1d48f8a0baf825398d3d441b1219f19d` has exact-head P0 run `35417874772` / job `105829899174` success.
 
 ### P1 — Standalone VS2 26.2 compile/boot
 Port actual VS2 until common/Fabric compile, standalone client/server boot, and core/native initialization are proven without Create/SNR/Copycats hiding failures.
@@ -202,9 +202,9 @@ Do not reintroduce without new direct evidence:
 
 ## next_safe_action
 
-1. Preserve exact `VSGamePackets.kt` Identifier-vocabulary proof HEAD `9d82234aa769a6a0eece07f52e7d5ace2d334aab`, P0 `35415473227` / job `105823166889`, P1 `35415473246` / job `105823166851`, artifact `10575144592`, ZIP SHA-256 `0aae19b487b1088166b7ea1e8e72e4cb30ad3101c8c6e88c5620c797d9dd8ab1`.
+1. Preserve exact `VSEntityHandlerDataLoader.kt` typed reload-listener proof HEAD `2af9d9ba1d48f8a0baf825398d3d441b1219f19d`, P0 `35417874772` / job `105829899174`, P1 `35417874723` / job `105829899066`, artifact `10575914762`, ZIP SHA-256 `51518277e80d405539aba99f690b27bfe4883be95d929b489b9d97a98cc8e7f3`.
 2. Reconcile actual HEAD after this proof-ledger commit and require its exact-head P0 provenance run to settle successfully before any new source mutation.
-3. After provenance settles, inspect only the newest exact-head compiler evidence plus the exact Minecraft 26.2 API boundary for **one** isolated remaining compiler cluster. Do not assume `isControlledByLocalInstance`, `lerpTo`, typed reload-listener, persistence, rendering, tickets, or creative-tab drift is a mechanical rename/signature edit.
+3. After provenance settles, inspect only the newest exact-head compiler evidence plus the exact Minecraft 26.2 API boundary for **one** isolated remaining compiler cluster. The VSEntityHandlerDataLoader listener shape is evidence, not authorization to mechanically patch the other resolvers; verify their exact semantics first. Do not assume local-control, lerp, persistence, rendering, tickets, creative-tab, or other drift is a mechanical rename/signature edit.
 4. Select and document exactly one next root hypothesis only after that API-boundary inspection. Preserve all frozen proofs, deferred boundaries, and failed-hypothesis locks.
 5. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet. No video is authorized during compile/API-port work.
 
