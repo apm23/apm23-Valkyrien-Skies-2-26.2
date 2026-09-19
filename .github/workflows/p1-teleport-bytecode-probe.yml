@@ -1,0 +1,130 @@
+name: P1 teleport bytecode inspection
+
+on:
+  push:
+    paths:
+      - '.github/workflows/p1-teleport-bytecode-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-teleport-bytecode:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact upstream baseline
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Verify pinned upstream
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C upstream-vs2 rev-parse HEAD)" = "f39132148e717d325933b4ce6e9e9fb13d929390"
+
+      - name: Replay canonical frozen P1 overlays
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, shlex, subprocess
+          workflow = Path('.github/workflows/p1-compile.yml').read_text(encoding='utf-8')
+          commands = re.findall(r'^\s*run:\s+(python3 scripts/apply_p1_[^\n]+ upstream-vs2)\s*$', workflow, flags=re.MULTILINE)
+          if len(commands) < 50:
+              raise SystemExit(f'fail-closed: expected canonical overlay chain, found only {len(commands)} commands')
+          for command in commands:
+              print('+', command)
+              subprocess.run(shlex.split(command), check=True)
+          PY
+          python3 scripts/apply_p1_entityhandler_renderstate_26_2.py upstream-vs2
+          python3 scripts/apply_p1_sable_companion_compileonly_26_2.py upstream-vs2
+          python3 scripts/apply_p1_deployer_scroll_option_exclusion_26_2.py upstream-vs2
+          python3 scripts/apply_p1_entity_authority_interpolation_26_2.py upstream-vs2
+          python3 scripts/apply_p1_entity_renderer_submit_26_2.py upstream-vs2
+          python3 scripts/apply_p1_distance_manager_ticket_storage_26_2.py upstream-vs2
+
+      - name: Resolve exact common compile classpath
+        shell: bash
+        working-directory: upstream-vs2
+        run: |
+          set -euo pipefail
+          cat > ../p1-teleport-bytecode-classpath.init.gradle <<'GRADLE'
+          gradle.projectsEvaluated {
+              def commonProject = gradle.rootProject.findProject(':common')
+              if (commonProject == null) throw new GradleException('fail-closed: :common project not found')
+              commonProject.tasks.register('vsPrintMainCompileClasspath') {
+                  doLast {
+                      def sourceSets = commonProject.extensions.findByName('sourceSets')
+                      if (sourceSets == null) throw new GradleException('fail-closed: sourceSets extension not found')
+                      sourceSets.getByName('main').compileClasspath.files.each { file -> println('VS_CP_FILE=' + file.absolutePath) }
+                  }
+              }
+          }
+          GRADLE
+          ./gradlew -I ../p1-teleport-bytecode-classpath.init.gradle :common:vsPrintMainCompileClasspath --no-daemon | tee ../p1-teleport-bytecode-classpath.log
+          grep -q '^VS_CP_FILE=' ../p1-teleport-bytecode-classpath.log
+
+      - name: Inspect exact teleport bytecode
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' | tee p1-teleport-bytecode-probe.log
+          from pathlib import Path
+          import subprocess, zipfile
+
+          classes = [
+              'net.minecraft.world.entity.Entity',
+              'net.minecraft.server.level.ServerPlayer',
+              'net.minecraft.server.network.ServerGamePacketListenerImpl',
+              'net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket',
+              'net.minecraft.world.entity.PositionMoveRotation',
+              'net.minecraft.world.entity.Relative',
+          ]
+          entries = [c.replace('.', '/') + '.class' for c in classes]
+          cp = []
+          for line in Path('p1-teleport-bytecode-classpath.log').read_text(encoding='utf-8', errors='replace').splitlines():
+              if line.startswith('VS_CP_FILE='):
+                  p = Path(line.split('=', 1)[1])
+                  if p.exists() and p.suffix == '.jar':
+                      cp.append(p)
+          owner = None
+          for jar in cp:
+              try:
+                  with zipfile.ZipFile(jar) as zf:
+                      names = set(zf.namelist())
+                      if all(entry in names for entry in entries):
+                          if owner is not None:
+                              raise SystemExit(f'fail-closed: teleport classes found in multiple jars: {owner} and {jar}')
+                          owner = jar
+              except zipfile.BadZipFile:
+                  pass
+          if owner is None:
+              raise SystemExit('fail-closed: exact Minecraft teleport bytecode owner jar not found')
+          print('OWNER_JAR', owner)
+          for cls in classes:
+              print(f'\n=== JAVAP BYTECODE {cls} ===')
+              proc = subprocess.run(['javap', '-classpath', str(owner), '-p', '-s', '-c', cls], text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+              print(proc.stdout)
+              if proc.returncode != 0:
+                  raise SystemExit(f'fail-closed: javap bytecode failed for {cls}')
+          PY
+
+      - name: Upload exact teleport bytecode inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-teleport-bytecode-probe-${{ github.sha }}
+          path: |
+            p1-teleport-bytecode-classpath.log
+            p1-teleport-bytecode-probe.log
+          if-no-files-found: warn
