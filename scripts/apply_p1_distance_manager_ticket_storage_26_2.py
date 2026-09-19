@@ -91,7 +91,7 @@ def apply(root: Path) -> None:
 
     server_level = server_level.replace(
         old_load_membership,
-        "!distanceManagerAccessor.getTicketStorage().getTickets(chunkHolder.getPos().toLong()).isEmpty()",
+        "!distanceManagerAccessor.getTicketStorage().getTickets(chunkHolder.getPos().pack()).isEmpty()",
         1,
     )
     server_level = server_level.replace(
@@ -116,7 +116,7 @@ def apply(root: Path) -> None:
 
     require_count(
         server_level,
-        "!distanceManagerAccessor.getTicketStorage().getTickets(chunkHolder.getPos().toLong()).isEmpty()",
+        "!distanceManagerAccessor.getTicketStorage().getTickets(chunkHolder.getPos().pack()).isEmpty()",
         1,
         "new load active-ticket membership",
     )

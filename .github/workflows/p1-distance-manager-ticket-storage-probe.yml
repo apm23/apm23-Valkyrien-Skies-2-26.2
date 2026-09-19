@@ -80,7 +80,7 @@ jobs:
             common/src/main/java/org/valkyrienskies/mod/mixin/server/world/MixinServerLevel.java
           test "$(grep -Fc '@Accessor("ticketStorage")' upstream-vs2/common/src/main/java/org/valkyrienskies/mod/mixin/accessors/server/level/DistanceManagerAccessor.java)" -eq 1
           test "$(grep -Fc 'TicketStorage getTicketStorage();' upstream-vs2/common/src/main/java/org/valkyrienskies/mod/mixin/accessors/server/level/DistanceManagerAccessor.java)" -eq 1
-          test "$(grep -Fc '!distanceManagerAccessor.getTicketStorage().getTickets(chunkHolder.getPos().toLong()).isEmpty()' upstream-vs2/common/src/main/java/org/valkyrienskies/mod/mixin/server/world/MixinServerLevel.java)" -eq 1
+          test "$(grep -Fc '!distanceManagerAccessor.getTicketStorage().getTickets(chunkHolder.getPos().pack()).isEmpty()' upstream-vs2/common/src/main/java/org/valkyrienskies/mod/mixin/server/world/MixinServerLevel.java)" -eq 1
           test "$(grep -Fc 'distanceManagerAccessor.getTicketStorage().getTickets(chunkPos).isEmpty()' upstream-vs2/common/src/main/java/org/valkyrienskies/mod/mixin/server/world/MixinServerLevel.java)" -eq 1
           ! grep -Fq '@Accessor("tickets")' upstream-vs2/common/src/main/java/org/valkyrienskies/mod/mixin/accessors/server/level/DistanceManagerAccessor.java
           ! grep -Fq 'distanceManagerAccessor.getTickets().containsKey' upstream-vs2/common/src/main/java/org/valkyrienskies/mod/mixin/server/world/MixinServerLevel.java
