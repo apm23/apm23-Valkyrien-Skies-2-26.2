@@ -22,45 +22,45 @@ GitHub code is the implementation source of truth. This file is the durable cont
 
 The upstream baseline remains pinned. Minecraft 26.2 changes are applied by explicit fail-closed overlays so every adaptation remains traceable to upstream VS2 source.
 
-## Current reconciliation — ShipAssembler fast-path direct chunk-write flags proven and frozen
+## Current reconciliation — ShipAssembler StructureProcessor 26.2 adapter proven and frozen
 
-- Current proven implementation HEAD: `aa26d707fac479c63a6a5e097ca65818dd145262` (`P1: wire ShipAssembler fast-path chunk flags proof`).
-- Exact-head P0 provenance run `35440115550`, job `105889347260`, completed `success`; the exact upstream gitlink remained `f39132148e717d325933b4ce6e9e9fb13d929390`.
-- Exact-head P1 standalone compile run `35440115578`, job `105889347231`, completed `failure` only because independent Minecraft 26.2 source/API clusters remain.
-- Every overlay step through this proof, including `Apply traceable P1 ShipAssembler fast-path chunk setBlock flags overlay`, `Show and validate port delta`, Gradle runtime setup, and diagnostic artifact upload completed successfully; compilation reached the real `:common:compileKotlin` boundary.
-- Root cause proven for this isolated cluster: pinned upstream 1.21.1 `ShipAssembler` has a small-set fast path that deliberately writes source AIR and destination state directly through `LevelChunk.setBlockState(BlockPos, BlockState, false)`. Its own comments explicitly state that this path bypasses Minecraft neighbor-update machinery while source/destination chunks are stalled. Minecraft 26.2 exposes the same direct `LevelChunk.setBlockState` boundary with an integer flag word instead of the legacy moved-state Boolean. The already-proven direct-chunk-write API boundary establishes that legacy `false` maps to integer `0`, preserving no moved-by-piston bit and no additional update bits rather than introducing Level update machinery.
-- `scripts/apply_p1_shipassembler_fastpath_chunk_setblock_flags_26_2.py` is fail-closed and targets exactly the two pinned-upstream fast-path direct chunk-write contexts in:
-  - `common/src/main/kotlin/org/valkyrienskies/mod/common/assembly/ShipAssembler.kt`
-- The overlay converts only `srcChunk.setBlockState(srcPos, Blocks.AIR.defaultBlockState(), false)` and `destChunk.setBlockState(destPos, state, false)` to the same calls with third argument `0`. It requires exactly one pinned context for each site, exactly one resulting zero-flag call per site, rejects those legacy Boolean calls, and verifies the surrounding fast-path/bypass comments and independent `removeFlags` path remain intact.
-- This proof preserves the original direct `LevelChunk` fast path, source/destination positions and states, operation ordering, stalled-chunk/bypass intent, and absence of extra Level neighbor-update machinery. It does **not** change `tryClear`, block-entity/component persistence, ship allocation, structure processors, chunk tickets, relocation, transforms, physics, collision, networking, gameplay authority, or camera behavior.
-- Exact run `35440115578` contains **no compiler diagnostic for the former ShipAssembler fast-path Boolean-to-Int sites** and no new diagnostic at either zero-flag call. Remaining `ShipAssembler` diagnostics are independent: `tryClear`/ValueInput-ValueOutput component boundaries, chunk-ticket API drift, and structure-processor API drift. This proof clears only the two direct fast-path chunk-write flag arguments and does not make overall P1 green.
-- Diagnostic artifact: `p1-compile-log-aa26d707fac479c63a6a5e097ca65818dd145262`, artifact ID `10583975623`, size `5397` bytes, ZIP SHA-256 `cd37e1eda33070c0a21737ad574387681236b89e5e7389e75b6c29527107b73a`.
-- Scope reconciliation from prior ledger checkpoint `3216c497f14c185fec082a9d4142935e1d142319` to the proven implementation HEAD changed only the new fail-closed ShipAssembler fast-path chunk-write-flags overlay and its canonical P1 workflow wiring; the pinned `upstream-vs2` gitlink was untouched.
-- `ShipSavedData` remains deliberately deferred: Minecraft 26.2 moves `SavedData` persistence from an overrideable `save(...)` path to a `SavedDataType<T>` + codec/factory boundary while pinned upstream `MixinMinecraftServer` owns acquisition and the real VS2 pipeline. That boundary must migrate together while preserving the four existing Jackson byte-array payloads and single persistence authority.
+- Current proven implementation HEAD: `2da9ca25e3ce6fd2f601cc2f6b626b0e3998a677` (`P1: wire ShipAssembler StructureProcessor overlay`).
+- The implementation consists of fail-closed overlay commit `71f9d1e96c6ce80fb635838b74730dd3fb3dbb66` plus canonical P1 workflow wiring at `2da9ca25e3ce6fd2f601cc2f6b626b0e3998a677`; no upstream submodule commit or gameplay implementation was replaced.
+- Exact-head P0 provenance run `35441650029`, job `105893372295`, completed `success`; the exact upstream gitlink remained `f39132148e717d325933b4ce6e9e9fb13d929390`.
+- Exact-head P1 standalone compile run `35441650018`, job `105893372137`, completed `failure` only because independent Minecraft 26.2 source/API clusters remain. The StructureProcessor overlay step, port-delta validation, and compile-log artifact upload all completed successfully before the real `:common:compileKotlin` failure boundary.
+- Diagnostic artifact: `p1-compile-log-2da9ca25e3ce6fd2f601cc2f6b626b0e3998a677`, artifact ID `10583543403`, ZIP SHA-256 `189afa0cf3d415972c0453bb1125b7ad4148a8437a728867168bc271238d60c5`.
+- Root cause proven for this isolated cluster: pinned upstream `ShipAssembler.ICopyableProcessor` extends the legacy `StructureProcessor` class, consumes the already-processed/new block info, passes its destination position/state/NBT to `ICopyableBlock.onPaste`, and returns that processed block info; its `getType()` is intentionally unusable because this processor is runtime-only and not datapack-referenced.
+- Exact Minecraft 26.2 changes `StructureProcessor` to an interface with the six-argument `processBlock(LevelReader, targetPosition, referencePos, templateRelativePos, processedBlockInfo, settings)` boundary and a required `MapCodec<? extends StructureProcessor> codec()` method. Vanilla 26.2 stateless/runtime-shaped processors use `MapCodec.unit(...)`.
+- Exact Minecraft 26.2 `StructureTemplate` creates `processedBlockInfo` with the transformed world destination `blockPos` before invoking each processor, so the upstream `newBPos` semantic maps to `processedBlockInfo.pos`; it is not guessed from `targetPosition`, `referencePos`, or `templateRelativePos`.
+- `scripts/apply_p1_shipassembler_structure_processor_26_2.py` therefore changes only this API boundary: `StructureProcessor()` -> `StructureProcessor`, adapts the override signature, reads/returns `processedBlockInfo`, passes `processedBlockInfo.pos/state/nbt` to the unchanged upstream `onPaste` call, removes the obsolete `StructureProcessorType` import/getType override, and supplies `codec(): MapCodec<out StructureProcessor> = MapCodec.unit(this)`.
+- Exact P1 run `35441650018` contains no compiler diagnostic for the former `ICopyableProcessor` inheritance/signature/getType boundary. Remaining compiler failures moved to independent areas; therefore this isolated StructureProcessor API adaptation is frozen green even though overall P1 is not green.
+- This proof does **not** authorize changes to ship creation/allocation, block movement, block-entity/component persistence, chunk tickets, relocation, transforms, physics, collision, entity dragging, rendering, networking authority, gameplay authority, or camera behavior.
 - No code from retired `apm23/VS2-Create_Interactive` has been imported or reused as implementation source.
 
 ## Frozen proof ancestry / negative evidence
 
-The immediately prior implementation proof is `12f182325f9f3e10c502afae7da567e4b1b95c28` (AssemblyUtil blockUpdated neighbor-dispatch boundary). Its proof and all earlier historical proof records/failed probes remain frozen evidence and must not be replayed merely because a later compiler error resembles them.
+The immediately prior implementation proof is `aa26d707fac479c63a6a5e097ca65818dd145262` (ShipAssembler fast-path direct chunk-write flags). Its proof and all earlier historical proof records/failed probes remain frozen evidence and must not be replayed merely because a later compiler error resembles them.
 
-- `12f182325f9f3e10c502afae7da567e4b1b95c28`: AssemblyUtil blockUpdated neighbor-dispatch proof; P0 `35438749400` / job `105885804198`; P1 `35438749392` / job `105885804160`; artifact `10583103574`; SHA-256 `5d61e12c76f80d30260873150485a5dedf10375ee5bcafa8fcd0580d7fc05ffd`.
-- `644d108b111bed17d0f3259dc840803f7c9a3192`: AssemblyUtil block-entity Value I/O proof; P0 `35437312270` / job `105882063557`; P1 `35437312255` / job `105882063508`; artifact `10582397242`; SHA-256 `fd4272fe431b27cb5b027f3de0b8074d60d8955feb54bc7b349825f0d29e2544`.
-- `820ef37e8ca012fe484d9960242cbfc0eefbacc8`: AssemblyUtil ScheduledTick non-null generic proof; P0 `35436715908` / job `105880520574`; P1 `35436715912` / job `105880520583`; artifact `10582521058`; SHA-256 `cf6aeb758b898fb145f0d3202a94637f74adb4b1378f38cde5c19e97e6f00c9b`.
-- `a803150d066fdc7e0a0bfdd5bd1661b85c627417`: AssemblyUtil direct LevelChunk setBlockState zero-flags proof; P0 `35435474114` / job `105877267158`; P1 `35435474130` / job `105877267372`; artifact `10581468437`; SHA-256 `f93516bbf73daa3394f9bec8bd02e3739096426266e0da2284a64d622b364dbd`.
-- `02e356638690d0413a105d409aaae4bcfd6e160c`: ShipAssembler BlockPos -> containing ChunkPos proof; P0 `35434876304` / job `105875729916`; P1 `35434876347` / job `105875729982`; artifact `10581693841`; SHA-256 `16c9d994cfca10b1566d24358aca2bff50b4a32b6500b92c9c8d1fd10d5aebf7`.
-- `39e2abc40af3d785d4d6ca5f14ac7b28ef03334f`: ShipMountingEntity server-side `kill(ServerLevel)` proof; P0 `35434315954` / job `105874293333`; P1 `35434315959` / job `105874293420`; artifact `10581682906`; SHA-256 `8af4a4710cfe7d2ab1b9bcf5ffd0be3f97055609a612c8690f0c4ccde63c5b66`.
-- `36549552477a1dd9b24cc12c6e21c6849b2e8b54`: ShipMountingEntity inherited damage / hurtServer proof; P0 `35432663975` / job `105869895197`; P1 `35432664106` / job `105869895568`; artifact `10581685492`; SHA-256 `ac252f8e89dcc39c07e7d63ea509261d463425cdd68e36a865defff43aa36748`.
-- `0a23528d781baf280bb553a8f9fa94c21f447af2`: ShipMountingEntity empty ValueInput/ValueOutput persistence proof; P0 `35431393828` / job `105866541183`; P1 `35431393814` / job `105866541088`; artifact `10580972918`; SHA-256 `d5945476e91ed5e11d3be78eb674926c02a3257b2c94aff4ad8855852f92a3df`.
-- `d258e69e46ce2f85c1ccb953dc97db7abd669841`: entity-handler projectile package proof; P0 `35430098076` / job `105863012876`; P1 `35430098141` / job `105863013026`; artifact `10580801201`; SHA-256 `fe1f4f2b5042f4c71d079648a8636b6292036293c199ade14b8f844341ac0086`.
-- `3d8d7255d36f26da902e0d43e1c830fa5015594e`: VSGameEvents RenderType package proof; P0 `35428910241` / job `105859745816`; P1 `35428910211` / job `105859745706`; artifact `10579819254`; SHA-256 `06a36ed3226f0a1f22e1e0a332eb3f6b44c44c537376cb1731ea1a9831d70fea`.
-- `24802fb75610a3ceb1614fda1a78cab1fab7cfe5`: VSGameUtils build-height / chunk-key proof; P0 `35427744252` / job `105856539289`; P1 `35427743996` / job `105856538642`; artifact `10579727750`; SHA-256 `35defb49532853a55d5e0b52e6d49efff3e1e5392d4766a455e068c42eea2bcb`.
-- `a5e219c7036937ce0ef4b5dfe5032bd82c764ee9`: VSGameUtils ResourceKey / Identifier boundary proof; P0 `35427279261` / job `105855291717`; P1 `35427279257` / job `105855291754`; artifact `10578904709`; SHA-256 `6bbcd694cdeb5c5fe6bbb00bcaaf0b322092df30ca3e1a5b241007e836b137ad`.
-- `ee7e9c56be55fd95114d0f7e194be69185db4385`: nullable translation-argument proof; P0 `35426650197` / job `105853673536`; P1 `35426650191` / job `105853673479`; artifact `10579029076`; SHA-256 `4d66cffe1cc65e689f321233c2b65aaf524699874214c41fc7b97ff1c198afba`.
-- `169e0007dcbeb2263701e6b41e40757de6d62ff2`: TestChair entity creation / positioning proof; P0 `35424938143` / job `105849132808`; P1 `35424938174` / job `105849132961`; artifact `10578643862`; SHA-256 `d9e90d3e6ec99f1203285e429f69be9ba6a5c82aae7e209196f93dcb88e938d1`.
-- `2c763500338955135d0700b273594a87dab9d982`: VSKeyBindings current `KeyMapping.Category` migration plus localized translation bridge; P0 `35424232816` / job `105847304720`; P1 `35424232856` / job `105847304996`; artifact `10578617703`; SHA-256 `c9e0d1f2f1e18390794ee14f41493e133d2d174c4e0fa58463c2381983013bb1`. Failed partial probes `e108526cbd728454c175c76bffc610d4e074da49`, `fcc65187d79c4b546883875da3597345db1e01cd`, `e9a3efd58acb2af9539628eb2875e6cb829c3cec`, and `fb3c7e65a4c2089f6fa695114734d14836bde1d3` are negative evidence.
-- `5c8a80eca1b996c4b89d5a394d7cfb9115d3f070`: `CreativeModeTab.Output` accessibility proof; P0 `35423048611` / job `105844091418`; P1 `35423048671` / job `105844092374`; artifact `10578021452`; SHA-256 `f5691678a8ebdd7967c193846b9068836f061d83a9bb0cd1b`.
-- `4641ae31765f0d067923cc1ef54b9a26abe99a19`: TestHingeBlockEntity `ValueInput` / `ValueOutput` persistence proof; P0 `35421661792` / job `105840387680`; P1 `35421661791` / job `105840387789`; artifact `10577638892`; SHA-256 `a6b44f7d7248a9364dc31f1ddc9231ffa45212a895f10db752be4b432deae47a`.
-- `ea2084954eb4edd2bd9922aa1f59342b76709809`: MassDatapackResolver registry-tag lookup proof; P0 `35420504812` / job `105837166152`; P1 `35420504781` / job `105837162566`; artifact `10577252400`; SHA-256 `d0dab3e4652c4d00f62f1c9aeccaae98c8a1401e8651e86bd9de7aa12d2f28ac`.
+Recent frozen implementation proofs include:
+- `aa26d707fac479c63a6a5e097ca65818dd145262`: ShipAssembler fast-path direct `LevelChunk.setBlockState` zero-flag proof; P0 `35440115550`; P1 `35440115578`; artifact `10583975623`.
+- `12f182325f9f3e10c502afae7da567e4b1b95c28`: AssemblyUtil `blockUpdated` neighbor-dispatch proof; P0 `35438749400`; P1 `35438749392`; artifact `10583103574`.
+- `644d108b111bed17d0f3259dc840803f7c9a3192`: AssemblyUtil block-entity Value I/O proof; P0 `35437312270`; P1 `35437312255`; artifact `10582397242`.
+- `820ef37e8ca012fe484d9960242cbfc0eefbacc8`: AssemblyUtil ScheduledTick non-null generic proof; P0 `35436715908`; P1 `35436715912`; artifact `10582521058`.
+- `a803150d066fdc7e0a0bfdd5bd1661b85c627417`: AssemblyUtil direct chunk-write zero-flag proof; P0 `35435474114`; P1 `35435474130`; artifact `10581468437`.
+- `02e356638690d0413a105d409aaae4bcfd6e160c`: ShipAssembler BlockPos -> containing ChunkPos proof; P0 `35434876304`; P1 `35434876347`; artifact `10581693841`.
+- `39e2abc40af3d785d4d6ca5f14ac7b28ef03334f`: ShipMountingEntity `kill(ServerLevel)` proof.
+- `36549552477a1dd9b24cc12c6e21c6849b2e8b54`: ShipMountingEntity `hurtServer` proof.
+- `0a23528d781baf280bb553a8f9fa94c21f447af2`: ShipMountingEntity Value I/O proof.
+- `d258e69e46ce2f85c1ccb953dc97db7abd669841`: entity-handler projectile package proof.
+- `3d8d7255d36f26da902e0d43e1c830fa5015594e`: VSGameEvents RenderType package proof.
+- `24802fb75610a3ceb1614fda1a78cab1fab7cfe5`: VSGameUtils build-height / chunk-key proof.
+- `a5e219c7036937ce0ef4b5dfe5032bd82c764ee9`: VSGameUtils ResourceKey / Identifier identity proof.
+- `ee7e9c56be55fd95114d0f7e194be69185db4385`: nullable translation-argument proof.
+- `169e0007dcbeb2263701e6b41e40757de6d62ff2`: TestChair entity creation / positioning proof.
+- `2c763500338955135d0700b273594a87dab9d982`: VSKeyBindings current Category migration. Failed partial probes `e108526cbd728454c175c76bffc610d4e074da49`, `fcc65187d79c4b546883875da3597345db1e01cd`, `e9a3efd58acb2af9539628eb2875e6cb829c3cec`, and `fb3c7e65a4c2089f6fa695114734d14836bde1d3` remain negative evidence.
+- `5c8a80eca1b996c4b89d5a394d7cfb9115d3f070`: CreativeModeTab.Output accessibility proof.
+- `4641ae31765f0d067923cc1ef54b9a26abe99a19`: TestHingeBlockEntity ValueInput / ValueOutput persistence proof.
+- `ea2084954eb4edd2bd9922aa1f59342b76709809`: MassDatapackResolver registry-tag lookup proof.
 - `27e181c70184b2aac38eeb1a646905d93ba45023`: MassDatapackResolver typed reload-listener proof.
 - `ac739bbf0c1598087a6ae9b158117c4764ce3079`: DimensionParametersResolver typed reload-listener proof.
 - `2af9d9ba1d48f8a0baf825398d3d441b1219f19d`: VSEntityHandlerDataLoader typed reload-listener proof.
@@ -71,7 +71,7 @@ The immediately prior implementation proof is `12f182325f9f3e10c502afae7da567e4b
 - `563cbcba7bb1c92ca27820ef785d11bb88872524`: MassDatapackResolver dummy BlockGetter minY proof.
 - `75a434c728f1ca020b550882967085ccc53d5c3b`: SeamlessChunksManager packed ChunkPos-key proof.
 
-All other earlier frozen-green proofs recorded by prior ledgers remain frozen even when not expanded here.
+All other earlier frozen-green proofs recorded by prior ledger commits remain frozen even when not expanded here; Git history is retained as durable evidence.
 
 ## Target runtime baseline
 
@@ -88,9 +88,9 @@ All other earlier frozen-green proofs recorded by prior ledgers remain frozen ev
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
-- active_proof_head: `aa26d707fac479c63a6a5e097ca65818dd145262; ShipAssembler fast-path direct chunk-write flags complete and frozen`
-- active_proof_run: `P0 35440115550 / job 105889347260 success; P1 35440115578 / job 105889347231 failure with the two ShipAssembler fast-path Boolean-to-Int diagnostics cleared; independent compiler clusters remain`
-- active_hypothesis: `none selected; choose the next isolated cluster only after exact Minecraft 26.2 API inspection`
+- active_proof_head: `2da9ca25e3ce6fd2f601cc2f6b626b0e3998a677; ShipAssembler StructureProcessor adapter complete and frozen`
+- active_proof_run: `P0 35441650029 / job 105893372295 success; P1 35441650018 / job 105893372137 failure with ShipAssembler ICopyableProcessor StructureProcessor diagnostics cleared; independent compiler clusters remain`
+- active_hypothesis: `none selected; choose the next isolated standalone-P1 cluster only after exact Minecraft 26.2 API inspection`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 - video_status: `NOT_APPLICABLE_YET`
@@ -105,85 +105,45 @@ Build/toolchain frozen green:
 - dependency resolution reaches the real `:common:compileKotlin` boundary;
 - all explicit source overlays are fail-closed.
 
-Source/API clusters already proven clean include:
-- data-provider and registry-holder `ResourceLocation -> Identifier` migrations;
-- BlockStateInfoProvider, SimpleSoundInstanceOnShip, VSEntityManager, DimensionParametersResolver, MassDatapackResolver, VSEntityHandlerDataLoader, and isolated VSGamePackets resource-vocabulary sites;
-- EntityData non-null generic bounds and guarded Optional numeric/NBT reads;
-- previously frozen Direction accessor migrations;
-- TestThrusterBlock neighborChanged signature and RaycastUtils directional/nullability boundary;
-- Minecraft player and dynamic command permission migrations;
-- TestHingeBlock shape/ticker/onPaste/removal migrations;
-- TestHingeBlockEntity exact ValueInput/ValueOutput persistence adaptation;
-- ShipSavedData load-time byte-array Optional unwraps only;
-- CompatUtil center/build-height/collision-context migrations;
-- SeamlessChunksManager packed chunk-key migration;
-- typed raw-JSON reload listeners and MassDatapackResolver registry-tag lookup;
-- EmptyRenderer Identifier/render-state migration;
-- ValkyrienSkiesMod resource vocabulary + CreativeModeTab.Output accessibility;
-- VSKeyBindings current Category migration with legacy localization semantics preserved;
-- TestChairBlock current entity-create / `snapTo` adaptation while preserving original VS2 mounting/riding flow;
-- six nullable ship-slug translation sites through `NullableTranslatableCompat`, preserving exact nullable values without fallback;
-- `VSGameUtils` / `ResourceKeyAccessor` / `MixinLevel` ResourceKey identity bridge migrated to Minecraft 26.2 `Identifier` vocabulary while preserving the existing VS2 DimensionId encoding, cache, accessor/invoker path, and dimension semantics;
-- `VSGameUtils` build-height range and packed ticking-chunk key migrated to `getMinY()` / `getHeight()` / `ChunkPos.pack(...)` with the original inclusive range and packed-coordinate semantics preserved;
-- `VSGameEvents` RenderType package migrated to Minecraft 26.2 `net.minecraft.client.renderer.rendertype.RenderType` while preserving the two upstream event payloads and existing renderer emitter architecture;
-- `AbstractShipyardEntityHandler` and `WorldEntityHandler` projectile imports migrated to the Minecraft 26.2 `projectile.arrow` / `projectile.hurtingprojectile` subpackages while preserving the original VS2 projectile branch behavior unchanged;
-- `ShipMountingEntity` empty entity-persistence hooks migrated from `CompoundTag` to Minecraft 26.2 `ValueInput` / `ValueOutput`, preserving the intentionally empty upstream behavior and vanilla entity persistence lifecycle;
-- `ShipMountingEntity` inherited generic damage behavior bridged to Minecraft 26.2 `hurtServer(...)` using the current base invulnerability predicate and `markHurt()` while preserving the upstream inherited always-false result and without adding new damage authority;
-- `ShipMountingEntity` server-only empty-passenger self-removal migrated from upstream `kill()` to Minecraft 26.2 `kill(level() as ServerLevel)` while preserving the existing branch, timing, and authority;
-- `ShipAssembler.getDistinctChunksFromBlockPosSet()` migrated from legacy `ChunkPos(BlockPos)` construction to current `ChunkPos.containing(BlockPos)`, preserving only the original containing-chunk set semantics;
-- `ShipAssembler` small-set assembly fast path migrated its two direct `LevelChunk.setBlockState(..., false)` third arguments to Minecraft 26.2 zero integer flags, preserving the upstream direct-chunk bypass of normal Level neighbor-update machinery with no moved/additional flag bits;
-- `AssemblyUtil.removeBlock()` and `AssemblyUtil.copyBlock()` direct `LevelChunk.setBlockState` third arguments migrated from legacy `false` moved-state booleans to Minecraft 26.2 zero integer flags, preserving the original no-moving/no-additional-flags direct chunk-write semantics while leaving the explicit update flow untouched;
-- `AssemblyUtil.copyBlock()` pending block-tick explicit generic migrated from `ScheduledTick<Block?>` to `ScheduledTick<Block>` while preserving the exact upstream `state.block`, destination `to`, `0` trigger tick, `0` sub-tick order, guard, default priority, and `LevelTicks.schedule` flow;
-- `AssemblyUtil.copyBlock()` block-entity transfer migrated from the removed CompoundTag convenience signatures to vanilla Minecraft 26.2 `TagValueOutput` / `TagValueInput` around the same upstream `saveWithId` / `loadWithComponents` flow, preserving the same registry context, serialized payload/tag handoff, null guard, `setBlockEntity` ordering, destination lookup, and component-loading semantics;
-- `AssemblyUtil.updateBlock()` legacy `blockUpdated` dispatch migrated to explicit Minecraft 26.2 non-client/non-debug `updateNeighborsAt(...)` calls at the same two source/destination sites, preserving server/debug/client dispatch and all adjacent block-update phases.
+Source/API clusters already proven clean include the earlier frozen items recorded in Git history plus these recent boundaries:
+- exact ValueInput/ValueOutput migrations already frozen for TestHingeBlockEntity, ShipMountingEntity, and AssemblyUtil block-entity transfer;
+- VSGameUtils ResourceKey/Identifier identity, height and packed chunk-key migrations;
+- VSGameEvents RenderType package and projectile package relocations;
+- ShipMountingEntity damage/removal/persistence signature bridges;
+- ShipAssembler containing-ChunkPos conversion;
+- ShipAssembler small-set direct LevelChunk zero-flag conversion;
+- AssemblyUtil direct chunk-write flags, ScheduledTick non-null bound, block-entity Value I/O, and neighbor-dispatch bridges;
+- ShipAssembler `ICopyableProcessor` current Minecraft 26.2 StructureProcessor interface/signature/codec adapter, preserving upstream processed destination block position/state/NBT and `onPaste` behavior.
 
-## Remaining compiler areas from exact run `35440115578`
+## Remaining compiler areas from exact run `35441650018`
 
-These remain unresolved and independent from the frozen ShipAssembler fast-path chunk-write-flags proof:
+These remain unresolved and independent from the frozen ShipAssembler StructureProcessor proof:
 
-- Create compatibility intermediary/classpath/API drift in `DeployerScrollOptionSlot.kt`; this must not be used to pull P3/Create architecture into P1.
-- `ShipSavedData` broader persistence lifecycle/factory boundary. Exact Minecraft 26.2 API inspection shows this requires a current SavedData type/codec/factory boundary and the corresponding `MixinMinecraftServer` storage registration to migrate together while preserving the existing VS2 byte-array payloads and pipeline ownership.
-- `ShipAssembler` remaining line-248+ semantic areas: `tryClear` and block-entity/component ValueInput/ValueOutput boundaries around the current line-248/250 and fast-path component-transfer sites, current chunk-ticket API drift around the former `addRegionTicket` site, and structure-processor API drift around the current line-710+ processor calls. The line-94 BlockPos-to-ChunkPos conversion and the two small-set fast-path direct `LevelChunk.setBlockState` Boolean-to-Int sites are **not** remaining compiler areas.
-- rendering/entity-handler drift: `MultiBufferSource` renderer-buffer API rework, current `EntityRenderer` generic/API boundary, and `getRenderOffset`. Projectile class relocation is **not** a remaining compiler area.
+- Create compatibility intermediary/classpath/API drift in `DeployerScrollOptionSlot.kt`; this must not be used to pull P3/Create architecture into P1 or let Create mask standalone failures.
+- `ShipSavedData`: broader SavedData persistence lifecycle/factory boundary (`save` no longer overrides). Exact Minecraft 26.2 semantics and the corresponding `MixinMinecraftServer` storage acquisition/registration must be migrated together while preserving the four existing Jackson byte-array payloads and one persistence authority.
+- `ShipAssembler`: `tryClear` plus block-entity/component ValueInput/ValueOutput boundaries, including fast-path `loadWithComponents` sites; current chunk-ticket API drift around the former `addRegionTicket` site. The containing-ChunkPos conversion, two fast-path direct chunk-write flag arguments, and `ICopyableProcessor` StructureProcessor boundary are **not** remaining compiler areas.
+- rendering/entity-handler drift: current renderer-buffer API (`MultiBufferSource` is not a simple package rename), current `EntityRenderer` generic/API boundary, and removed/changed `getRenderOffset` behavior.
 - `VSGamePackets` / `EntityDragger`: removed/changed local-control and interpolation APIs (`isControlledByLocalInstance`, `lerpTo`) are authority-sensitive and remain locked pending exact semantics.
-- chunk-ticket APIs in `ChunkManagement` / `VSTicketType` and ShipAssembler.
+- chunk-ticket APIs in `ChunkManagement` / `VSTicketType` and the independent ShipAssembler ticket site.
 - Sable dependency boundary.
-- `RelocationUtil`: ValueInput/ValueOutput/component loading, loot-key nullability, integer update-flag migrations, its own removed `blockUpdated` sites, and related relocation semantics. Neither the frozen AssemblyUtil neighbor bridge nor the ShipAssembler direct-write proof authorizes copying a patch here without inspecting the full relocation boundary.
+- `RelocationUtil`: ValueInput/ValueOutput/component loading, loot-key nullability, integer update-flag migrations, removed `blockUpdated` sites, and related relocation semantics. Frozen AssemblyUtil or ShipAssembler patches do not automatically authorize equivalent changes here.
 
-`AssemblyUtil.kt` has **no remaining compiler diagnostic in exact run `35440115578`**. `VSGameUtils.kt`, `VSGameEvents.kt`, the `AbstractArrow` / `AbstractHurtingProjectile` package sites, all three proven `ShipMountingEntity` adaptation boundaries, the `ShipAssembler.getDistinctChunksFromBlockPosSet()` containing-chunk conversion, the two ShipAssembler small-set fast-path direct chunk-write flag arguments, the two `AssemblyUtil` direct chunk-write flag arguments, the `AssemblyUtil` ScheduledTick explicit generic bound, the `AssemblyUtil` block-entity Value I/O bridge, and the `AssemblyUtil` blockUpdated neighbor-dispatch bridge are **not** remaining compiler areas after their frozen proofs.
+`AssemblyUtil.kt` has no remaining compiler diagnostic in exact run `35441650018`. The newly frozen `ShipAssembler.ICopyableProcessor` StructureProcessor boundary is also no longer a remaining compiler area.
 
 ## Locked / deferred lessons
 
 - Never mechanically invent a 26.2 API name from an old symbol. Inspect exact API semantics first.
-- Frozen nullable ship-slug semantics: do not add `slug ?: ...`, synthetic names, empty-string fallback, or any alternate naming authority. The bridge forwards the original nullable value directly.
-- Frozen VSGameUtils ResourceKey identity semantics: retain the upstream four-part DimensionId encoding, existing cache, and ResourceKey accessor/invoker architecture; do not replace it with a new dimension identifier or reference-space authority merely because 26.2 renamed resource classes/accessors.
-- Frozen VSGameUtils height semantics: preserve `minY` and the original inclusive maximum as `getMinY() + getHeight() - 1`; do not reinterpret the Y range.
-- Frozen VSGameUtils packed chunk-key semantics: use Minecraft's current `ChunkPos.pack(x, z)` equivalent for the original packed `(x,z)` key; do not invent a custom key or alter chunk ticking policy.
-- Frozen VSGameEvents RenderType proof authorizes only the event payload package migration. It does **not** authorize renderer/entity-handler rewrites, render-state/generic changes, pass reordering, alternate buffer ownership, or any replacement rendering pipeline.
-- Frozen entity-handler projectile proof authorizes only the `AbstractArrow` / `AbstractHurtingProjectile` package relocation. It does **not** authorize movement, velocity, rotation, dragging, renderer, interpolation, or authority changes.
-- Frozen ShipMountingEntity persistence proof authorizes only the two intentionally empty entity-persistence hook signatures (`CompoundTag` to `ValueInput` / `ValueOutput`). It does not authorize constructor/level changes, movement/reference-space behavior, or any new persisted payload.
-- Frozen ShipMountingEntity hurtServer proof authorizes only the exact Minecraft 26.2 bridge for the generic inherited 1.21.1 Entity damage contract: base invulnerability check, `markHurt()` for the same hurt/velocity-sync marking, and `false` return. It does **not** authorize new damage/destruction behavior, mounting/controller changes, movement/reference-space behavior, networking authority, or camera logic.
-- Frozen ShipMountingEntity kill(ServerLevel) proof authorizes only passing the existing server-side entity level to Minecraft 26.2 `Entity.kill(ServerLevel)` inside the already-existing empty-passenger branch. It does **not** authorize new removal timing, passenger handling, constructor/level redesign, mounting/controller behavior, movement/reference-space changes, networking authority, or camera logic.
-- Frozen ShipAssembler containing-chunk proof authorizes only the `getDistinctChunksFromBlockPosSet()` BlockPos-to-containing-ChunkPos conversion. It does **not** authorize `tryClear`, allocation, block movement, component persistence, structure processors, update flags, ticketing, transforms, physics, collision, networking, or any assembly lifecycle redesign.
-- Frozen ShipAssembler fast-path chunk-write-flags proof authorizes only replacing the two pinned small-set direct `LevelChunk.setBlockState(..., false)` third arguments with `0`, preserving the upstream direct-chunk bypass of normal Level neighbor-update machinery and no moved/additional flag bits. It does **not** authorize changing `tryClear`, block-entity/component ValueInput/ValueOutput transfer, ship allocation, structure processors, tickets, relocation, assembly ordering, transforms, physics, collision, networking, gameplay authority, or camera behavior.
-- Frozen AssemblyUtil direct chunk-write-flags proof authorizes only replacing the two pinned `LevelChunk.setBlockState(..., false)` third arguments with `0` to preserve the original non-moving/no-additional-flags semantics. It does **not** authorize changing `updateBlock()` / `updateBlockFast()`, scheduled-tick transfer, block-entity/component persistence, neighbor dispatch, relocation, assembly order, ship allocation, transforms, physics, networking, or gameplay authority.
-- Frozen AssemblyUtil ScheduledTick non-null proof authorizes only changing the pinned explicit generic from `ScheduledTick<Block?>` to `ScheduledTick<Block>`. It does **not** authorize changing the scheduled block type, source/destination, trigger tick, sub-tick order, priority, deduplication/guard semantics, transfer policy, block-entity persistence, neighbor updates, relocation, assembly, transforms, physics, networking, or gameplay authority.
-- Frozen AssemblyUtil block-entity Value I/O proof authorizes only the vanilla Minecraft 26.2 NBT-backed `TagValueOutput` / `TagValueInput` bridge around the upstream `saveWithId` / `loadWithComponents` flow with the same registry context, tag handoff, guard, `setBlockEntity` order, destination lookup, and component-loading semantics. It does **not** authorize changing the component/persistence payload, block-entity lifecycle/order, neighbor dispatch, relocation, assembly logic, ship lifecycle, transforms, physics, networking, or gameplay authority.
-- Frozen AssemblyUtil blockUpdated-neighbor proof authorizes only replacing the two removed legacy `blockUpdated` calls with the explicit prior dynamic dispatch: non-client, non-debug `updateNeighborsAt(...)` at the same sites. It does **not** authorize changing `sendBlockUpdated`, dirty marking, neighbor-shape propagation, light checks, analog-output notification, flags/recursion, relocation, assembly order, transforms, physics, networking, or gameplay authority, and it does **not** automatically authorize the superficially similar `RelocationUtil` sites.
-- Exact Minecraft 26.2 API evidence shows `MultiBufferSource` is not a simple package rename. Do not mechanically import-rewrite or fabricate an equivalent; inspect current renderer-buffer semantics before adaptation.
-- `ShipSavedData` broader persistence lifecycle is a semantic boundary: migrate `ShipSavedData` together with its `MixinMinecraftServer` storage registration, preserve the exact four existing Jackson byte-array payloads and real VS2 pipeline ownership, and do not introduce a second persistence authority.
-- TestChair proof authorizes only its existing chair create/place flow; it does not authorize ShipMountingEntity internals or moving-space changes.
-- `VSGamePackets` / `EntityDragger` local-control and interpolation APIs are authority-sensitive; never replace them with guessed per-tick movement, manual carry, teleports, or camera forcing.
-- Assembly/Relocation ValueInput/ValueOutput migrations must preserve block-entity/component semantics rather than merely compile.
+- Frozen proofs authorize only their exact isolated adaptation; superficially similar sites require independent inspection.
+- Frozen ShipAssembler StructureProcessor proof authorizes only the current interface/signature/codec migration for `ICopyableProcessor` while continuing to use `processedBlockInfo.pos/state/nbt` for the upstream `onPaste` flow. It does not authorize any structure-placement redesign, serialization of this runtime-only processor, assembly lifecycle changes, tickets, component transfer, transforms, physics, networking, or gameplay authority.
+- Frozen ShipAssembler fast-path chunk-write proof authorizes only replacing the two pinned direct `LevelChunk.setBlockState(..., false)` third arguments with `0`, preserving no moved/additional flag bits and the upstream direct-chunk bypass.
+- Frozen AssemblyUtil direct-write, ScheduledTick, block-entity Value I/O, and neighbor-dispatch proofs remain limited to those exact sites and semantics; they do not authorize mechanical copying into `RelocationUtil`.
+- `ShipSavedData` broader persistence lifecycle is a semantic boundary: migrate it together with the existing server storage registration/acquisition path, preserve exact payloads, and do not introduce a second persistence authority.
+- Exact Minecraft 26.2 API evidence shows `MultiBufferSource` is not a simple package rename. Do not fabricate an equivalent renderer path.
+- `VSGamePackets` / `EntityDragger` local-control and interpolation changes are authority-sensitive; never replace them with guessed per-tick movement, manual carry, teleport/setPos chase, synthetic velocity, or camera forcing.
 - Chunk tickets must retain real loading/lifetime semantics; no permanent-force-load shortcut.
 - Create compatibility errors are not permission to integrate Create early or use Create as a P1 crutch.
-- Rendering changes must stay inside real VS2 rendering architecture.
-- Sable must be satisfied by a real dependency or documented upstream-compatible boundary; no local mock pretending to be Sable.
+- Sable must be satisfied by a real dependency or documented upstream-compatible boundary; do not create a fake companion/package merely to compile.
 - Retired `apm23/VS2-Create_Interactive` is historical warning evidence only and must never become implementation source.
-
-## Sable contract
-
-Do not create a fake `SableCompanion`, dummy `ryanhcode` package, or locally reimplemented Sable behavior merely to clear compilation. Resolve the real dependency/API boundary or document a minimal legitimate compatibility adaptation.
 
 ## Mandatory architecture
 
@@ -196,7 +156,7 @@ Forbidden as final architecture: custom VS2-style replacement frames, synthetic 
 1. P0 upstream import/provenance.
 2. P1 standalone real VS2 26.2 boot/compile/initialize. No Create/SNR/Copycats masking.
 3. P2 / M1 standalone real-VS2 ship lifecycle with translation+rotation, ship-space, collisions, standing/walking, jump->airborne->natural landing, floor/walls/ceiling, free stable camera, entity dragging/reference-space, rendering, and client/server sync.
-4. P3 Create Fly bridge: only after P2 is frozen green; Create owns railway trajectory semantics while the carriage is one real VS2 ship/reference space through a legitimate VS2 integration boundary.
+4. P3 Create Fly bridge only after P2 is frozen green; Create owns railway trajectory semantics while the carriage is one real VS2 ship/reference space through a legitimate VS2 integration boundary.
 5. P4 add exact locked SNR + Copycats.
 6. P5 production final stack -> exact final JAR -> final verify -> exact-JAR real-user runtime gate.
 
@@ -204,17 +164,18 @@ Forbidden as final architecture: custom VS2-style replacement frames, synthetic 
 
 ## Failed hypotheses / negative evidence
 
-- Preserve every failed probe recorded in prior ledgers, especially the four VSKeyBindings probes listed above; do not replay them without new evidence.
+- Preserve every failed probe recorded by prior ledger commits; do not replay them without new evidence.
 - A timeout/disconnect never authorizes falling back to retired-project code, a simplified VS2-like architecture, speculative API names, broad stubs, or deleting difficult subsystems.
 - A compile-green result for one isolated boundary proves only that boundary; it does not authorize adjacent semantic changes.
 
 ## next_safe_action
 
-1. Preserve the frozen `aa26d707fac479c63a6a5e097ca65818dd145262` ShipAssembler fast-path direct chunk-write-flags proof, `12f182325f9f3e10c502afae7da567e4b1b95c28` AssemblyUtil blockUpdated neighbor-dispatch proof, `644d108b111bed17d0f3259dc840803f7c9a3192` AssemblyUtil block-entity Value I/O proof, `820ef37e8ca012fe484d9960242cbfc0eefbacc8` AssemblyUtil ScheduledTick non-null proof, `a803150d066fdc7e0a0bfdd5bd1661b85c627417` AssemblyUtil direct chunk-write-flags proof, `02e356638690d0413a105d409aaae4bcfd6e160c` ShipAssembler containing-chunk proof, `39e2abc40af3d785d4d6ca5f14ac7b28ef03334f` ShipMountingEntity kill(ServerLevel) proof, `36549552477a1dd9b24cc12c6e21c6849b2e8b54` ShipMountingEntity hurtServer proof, `0a23528d781baf280bb553a8f9fa94c21f447af2` ShipMountingEntity Value I/O proof, `d258e69e46ce2f85c1ccb953dc97db7abd669841` entity-handler projectile package proof, `3d8d7255d36f26da902e0d43e1c830fa5015594e` VSGameEvents RenderType proof, `24802fb75610a3ceb1614fda1a78cab1fab7cfe5` VSGameUtils build-height/chunk-key proof, `a5e219c7036937ce0ef4b5dfe5032bd82c764ee9` ResourceKey/Identifier proof, `ee7e9c56be55fd95114d0f7e194be69185db4385` nullable-translation proof, and all earlier frozen-green proofs. Do not edit those sites unless direct regression evidence appears.
-2. After this ledger-only commit, require exact-head P0 provenance success before any further source mutation.
-3. Then inspect only the newest compiler evidence from exact run `35440115578` plus the exact Minecraft 26.2 API for **one** remaining isolated cluster. Do not mechanically extend the ShipAssembler zero-flag proof into its `tryClear`, component ValueInput/ValueOutput, ticket, or structure-processor boundaries; do not mechanically copy AssemblyUtil adaptations into `RelocationUtil`. Do not patch `ShipSavedData`, renderer-buffer / `EntityRenderer` / `getRenderOffset`, authority-sensitive entity/networking, ticketing, Sable, or Create-compat boundaries without semantic proof.
-4. Choose exactly one root hypothesis only after API inspection, then use the smallest fail-closed traceable overlay and prove that cluster separately.
-5. Remain in standalone P1. Do not use Create/SNR/Copycats to hide standalone VS2 failures. Do not record ordinary compile/debug/hypothesis-test video.
+1. Preserve the frozen `2da9ca25e3ce6fd2f601cc2f6b626b0e3998a677` ShipAssembler StructureProcessor proof, `aa26d707fac479c63a6a5e097ca65818dd145262` ShipAssembler fast-path direct-write proof, all recent AssemblyUtil proofs, and all earlier frozen-green/negative evidence. Do not edit those sites unless direct regression evidence appears.
+2. This ledger-only freeze commit must not be treated as source proof. Require exact-head P0 provenance success for the resulting ledger HEAD before any further source mutation.
+3. Then inspect only exact run `35441650018` plus exact Minecraft 26.2 API/source for **one** remaining standalone-P1 compiler cluster. Do not patch multiple clusters in one step.
+4. `ShipSavedData` remains deliberately deferred until its SavedData type/codec/factory plus `MixinMinecraftServer` storage boundary can be proven as one semantic unit. Do not guess it from the isolated `save overrides nothing` diagnostic.
+5. Do not mechanically extend the frozen ShipAssembler/AssemblyUtil changes into ticketing, `RelocationUtil`, renderer, authority-sensitive entity/networking, Sable, or Create compatibility. Choose exactly one root hypothesis only after semantic inspection, then use the smallest fail-closed traceable overlay and prove it separately.
+6. Remain in standalone P1. Do not use Create/SNR/Copycats to hide standalone VS2 failures. Do not record ordinary compile/debug/hypothesis-test video.
 
 ## Video and final gate
 
