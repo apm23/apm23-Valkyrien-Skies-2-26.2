@@ -6,14 +6,18 @@ JsonElement values from the `vs_dimension_parameters` JSON directory, then
 performs its own object/array parsing, validation, priority selection, logging,
 and dimensionMap replacement. Minecraft 26.2 changed
 SimpleJsonResourceReloadListener from the legacy (Gson, directory) constructor
-to a typed (Codec<T>, FileToIdConverter) boundary.
+to a typed (Codec<T>, FileToIdConverter) boundary whose apply method exposes a
+non-null Java Map<Identifier, T> to Kotlin as a (Mutable)Map boundary.
 
 This fail-closed overlay preserves the upstream raw-JSON/apply semantics by using
 SimpleJsonResourceReloadListener<JsonElement>, ExtraCodecs.JSON, and
-FileToIdConverter.json("vs_dimension_parameters"). It deliberately preserves
-the existing nullable map guards, parse routine, priority behavior, logging, and
-dimensionMap semantics. It does not touch ship lifecycle, physics, collision,
-entity dragging/reference-space behavior, networking, player, or camera code.
+FileToIdConverter.json("vs_dimension_parameters"). The apply parameter is adapted
+only as far as Minecraft 26.2 requires: MutableMap<Identifier, JsonElement>.
+The body does not mutate that map. The legacy null guard is intentionally retained
+as a no-op compatibility guard; parsing, validation, priority behavior, logging,
+and dimensionMap replacement are otherwise unchanged. It does not touch ship
+lifecycle, physics, collision, entity dragging/reference-space behavior,
+networking, player, or camera code.
 
 Run this only after apply_p1_dimensionparametersresolver_identifier_26_2.py.
 """
@@ -35,7 +39,8 @@ new_decl = 'object DimensionParametersResolver: SimpleJsonResourceReloadListener
 
 # Pin the already-proven Identifier overlay and the upstream apply/parser shape so
 # this listener migration cannot silently absorb unrelated semantic changes.
-expected_apply = """    override fun apply(\n        objects: Map<Identifier?, JsonElement?>,\n        resourceManager: ResourceManager,\n        profiler: ProfilerFiller\n    ) {\n"""
+old_apply = """    override fun apply(\n        objects: Map<Identifier?, JsonElement?>,\n        resourceManager: ResourceManager,\n        profiler: ProfilerFiller\n    ) {\n"""
+new_apply = """    override fun apply(\n        objects: MutableMap<Identifier, JsonElement>,\n        resourceManager: ResourceManager,\n        profiler: ProfilerFiller\n    ) {\n"""
 expected_parse = '    private fun parse(element: JsonElement, map: MutableMap<String, Parameters>) {'
 expected_null_guard = '            if (key == null || value == null) {return@forEach}'
 expected_priority = '            if (it.priority < priority) {'
@@ -48,32 +53,35 @@ if text.count(identifier_import) != 1:
     raise SystemExit(f"expected prior Identifier overlay to be present exactly once in {rel}")
 if text.count(listener_import) != 1:
     raise SystemExit(f"expected exactly one SimpleJsonResourceReloadListener import in {rel}")
-if expected_apply not in text:
-    raise SystemExit(f"expected pinned nullable apply shape in {rel}")
+if old_apply not in text:
+    raise SystemExit(f"expected pinned pre-26.2 nullable apply shape in {rel}")
 if text.count(expected_parse) != 1:
     raise SystemExit(f"expected pinned parse routine in {rel}")
 if text.count(expected_null_guard) != 1:
-    raise SystemExit(f"expected pinned null guard in {rel}")
+    raise SystemExit(f"expected pinned legacy null guard in {rel}")
 if text.count(expected_priority) != 1:
     raise SystemExit(f"expected pinned priority-selection behavior in {rel}")
-if new_converter_import in text or new_codec_import in text or new_decl in text:
+if new_converter_import in text or new_codec_import in text or new_decl in text or new_apply in text:
     raise SystemExit(f"typed reload-listener adaptation already present in {rel}")
 
 text = text.replace(old_gson_import, "", 1)
 text = text.replace(identifier_import, identifier_import + new_converter_import, 1)
 text = text.replace(listener_import, listener_import + new_codec_import, 1)
 text = text.replace(old_decl, new_decl, 1)
+text = text.replace(old_apply, new_apply, 1)
 
-if "Gson()" in text or old_decl in text:
-    raise SystemExit(f"legacy reload-listener constructor remained in {rel}")
+if "Gson()" in text or old_decl in text or old_apply in text:
+    raise SystemExit(f"legacy reload-listener boundary remained in {rel}")
 if text.count(new_decl) != 1:
     raise SystemExit(f"expected exactly one typed reload-listener declaration after overlay in {rel}")
+if text.count(new_apply) != 1:
+    raise SystemExit(f"expected exactly one Minecraft 26.2 apply signature after overlay in {rel}")
 if text.count('FileToIdConverter.json("vs_dimension_parameters")') != 1:
     raise SystemExit(f"expected exactly one vs_dimension_parameters FileToIdConverter after overlay in {rel}")
 if text.count("ExtraCodecs.JSON") != 1:
     raise SystemExit(f"expected exactly one raw JSON codec after overlay in {rel}")
-if expected_apply not in text or text.count(expected_parse) != 1 or text.count(expected_null_guard) != 1 or text.count(expected_priority) != 1:
-    raise SystemExit(f"upstream apply/parser semantics changed unexpectedly in {rel}")
+if text.count(expected_parse) != 1 or text.count(expected_null_guard) != 1 or text.count(expected_priority) != 1:
+    raise SystemExit(f"upstream apply-body/parser semantics changed unexpectedly in {rel}")
 
 path.write_text(text, encoding="utf-8")
 print("P1_DIMENSIONPARAMETERSRESOLVER_RELOAD_LISTENER_26_2_OVERLAY_APPLIED")
