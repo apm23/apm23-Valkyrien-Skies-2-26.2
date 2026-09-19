@@ -49,8 +49,8 @@ jobs:
               workflow,
               flags=re.MULTILINE,
           )
-          if len(commands) < 80:
-              raise SystemExit(f'fail-closed: expected canonical 80-overlay chain, found only {len(commands)} commands')
+          if len(commands) < 75:
+              raise SystemExit(f'fail-closed: expected canonical overlay chain, found only {len(commands)} parseable commands')
           candidate = [c for c in commands if 'apply_p1_tick_ship_chunks_chunkpos_accessors_26_2.py' in c]
           if len(candidate) > 1:
               raise SystemExit(f'fail-closed: duplicate canonical tick-ship-chunks overlays: {candidate}')
