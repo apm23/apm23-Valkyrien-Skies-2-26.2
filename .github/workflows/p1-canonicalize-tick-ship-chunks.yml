@@ -1,4 +1,4 @@
-name: P1 canonicalize tick ship chunks ChunkPos accessor overlay
+name: P1 stage validated tick ship chunks canonical blob
 
 on:
   push:
@@ -7,10 +7,11 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+  actions: read
 
 jobs:
-  build-canonical-file:
+  stage-canonical-blob:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout exact repository state
@@ -19,52 +20,39 @@ jobs:
           fetch-depth: 0
           submodules: false
 
-      - name: Produce validated canonical p1-compile file
+      - name: Fetch and verify exact validated canonical artifact
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          curl -L --fail --silent --show-error \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/10593972064/zip" \
+            -o canonical.zip
+          test "$(sha256sum canonical.zip | awk '{print $1}')" = "383548bd9bfb74f6c2ea1170051d460d9c60354d649997452b6e398735fa943d"
+          rm -rf canonical-artifact
+          mkdir canonical-artifact
+          unzip -q canonical.zip -d canonical-artifact
+          test -f canonical-artifact/canonical-p1-compile.yml
+          test "$(sha256sum canonical-artifact/canonical-p1-compile.yml | awk '{print $1}')" = "6ec72f0a9ca2568bcc490e0fefc7cb3571131c3d79844e4fa33a340fa7af65d3"
+          test "$(grep -Fc "'scripts/apply_p1_tick_ship_chunks_chunkpos_accessors_26_2.py'" canonical-artifact/canonical-p1-compile.yml)" -eq 1
+          test "$(grep -Fc 'python3 scripts/apply_p1_tick_ship_chunks_chunkpos_accessors_26_2.py upstream-vs2' canonical-artifact/canonical-p1-compile.yml)" -eq 1
+
+      - name: Push non-workflow staging blob only
         shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-
-          path = Path('.github/workflows/p1-compile.yml')
-          text = path.read_text(encoding='utf-8')
-
-          path_anchor = "      - 'scripts/apply_p1_airwaterrandompos_buildheight_26_2.py'\n"
-          path_insert = path_anchor + "      - 'scripts/apply_p1_tick_ship_chunks_chunkpos_accessors_26_2.py'\n"
-          if text.count(path_anchor) != 1:
-              raise SystemExit(f'fail-closed: expected one AirAndWaterRandomPos path anchor, found {text.count(path_anchor)}')
-          if 'scripts/apply_p1_tick_ship_chunks_chunkpos_accessors_26_2.py' in text:
-              raise SystemExit('fail-closed: tick-ship-chunks overlay already canonical')
-          text = text.replace(path_anchor, path_insert, 1)
-
-          step_anchor = (
-              "      - name: Apply frozen P1 AirAndWaterRandomPos build-height overlay\n"
-              "        run: python3 scripts/apply_p1_airwaterrandompos_buildheight_26_2.py upstream-vs2\n"
-          )
-          step_insert = step_anchor + (
-              "\n      - name: Apply frozen P1 tick ship chunks ChunkPos accessor overlay\n"
-              "        run: python3 scripts/apply_p1_tick_ship_chunks_chunkpos_accessors_26_2.py upstream-vs2\n"
-          )
-          if text.count(step_anchor) != 1:
-              raise SystemExit(f'fail-closed: expected one AirAndWaterRandomPos step anchor, found {text.count(step_anchor)}')
-          text = text.replace(step_anchor, step_insert, 1)
-
-          if text.count("'scripts/apply_p1_tick_ship_chunks_chunkpos_accessors_26_2.py'") != 1:
-              raise SystemExit('fail-closed: canonical trigger path count mismatch')
-          if text.count('python3 scripts/apply_p1_tick_ship_chunks_chunkpos_accessors_26_2.py upstream-vs2') != 1:
-              raise SystemExit('fail-closed: canonical apply step count mismatch')
-
-          path.write_text(text, encoding='utf-8')
-          PY
-          git diff --check -- .github/workflows/p1-compile.yml
-          git diff -- .github/workflows/p1-compile.yml
-          test "$(git diff --name-only | wc -l)" -eq 1
-          test "$(git diff --name-only)" = '.github/workflows/p1-compile.yml'
-          cp .github/workflows/p1-compile.yml canonical-p1-compile.yml
-
-      - name: Upload canonical p1-compile file
-        uses: actions/upload-artifact@v4
-        with:
-          name: p1-tick-ship-chunks-canonical-file-${{ github.sha }}
-          path: canonical-p1-compile.yml
-          if-no-files-found: error
+          mkdir -p .ci-transport
+          cp canonical-artifact/canonical-p1-compile.yml .ci-transport/p1-compile.yml
+          test "$(sha256sum .ci-transport/p1-compile.yml | awk '{print $1}')" = "6ec72f0a9ca2568bcc490e0fefc7cb3571131c3d79844e4fa33a340fa7af65d3"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .ci-transport/p1-compile.yml
+          test "$(git diff --cached --name-only | wc -l)" -eq 1
+          test "$(git diff --cached --name-only)" = '.ci-transport/p1-compile.yml'
+          git diff --cached --check
+          git commit -m 'ci: stage validated tick ship chunks canonical blob'
+          git push origin HEAD:main
