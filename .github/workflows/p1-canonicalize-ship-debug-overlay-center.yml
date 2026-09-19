@@ -1,0 +1,65 @@
+name: P1 canonicalize ship debug overlay center overlay
+
+on:
+  push:
+    paths:
+      - '.github/workflows/p1-canonicalize-ship-debug-overlay-center.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-canonical-file:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact repository state
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: false
+
+      - name: Produce validated canonical p1-compile file
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('.github/workflows/p1-compile.yml')
+          text = path.read_text(encoding='utf-8')
+          candidate_path = "      - 'scripts/apply_p1_ship_debug_overlay_blockpos_center_26_2.py'\n"
+          candidate_step = "      - name: Apply frozen P1 ship debug overlay BlockPos center overlay\n        run: python3 scripts/apply_p1_ship_debug_overlay_blockpos_center_26_2.py upstream-vs2\n\n"
+          if candidate_path in text or candidate_step in text:
+              raise SystemExit('fail-closed: ship-debug-overlay center overlay is already canonical')
+
+          path_anchor = "      - 'scripts/apply_p1_tick_ship_chunks_chunkpos_accessors_26_2.py'\n"
+          if text.count(path_anchor) != 1:
+              raise SystemExit(f'fail-closed: expected one path anchor, found {text.count(path_anchor)}')
+          text = text.replace(path_anchor, path_anchor + candidate_path, 1)
+
+          step_anchor = "      - name: Apply frozen P1 tick ship chunks ChunkPos accessor overlay\n        run: python3 scripts/apply_p1_tick_ship_chunks_chunkpos_accessors_26_2.py upstream-vs2\n\n"
+          if text.count(step_anchor) != 1:
+              raise SystemExit(f'fail-closed: expected one step anchor, found {text.count(step_anchor)}')
+          text = text.replace(step_anchor, step_anchor + candidate_step, 1)
+
+          if text.count("'scripts/apply_p1_ship_debug_overlay_blockpos_center_26_2.py'") != 1:
+              raise SystemExit('fail-closed: candidate trigger path count is not one')
+          if text.count('python3 scripts/apply_p1_ship_debug_overlay_blockpos_center_26_2.py upstream-vs2') != 1:
+              raise SystemExit('fail-closed: candidate apply command count is not one')
+          Path('canonical-p1-compile.yml').write_text(text, encoding='utf-8')
+          PY
+          cp canonical-p1-compile.yml .github/workflows/p1-compile.yml
+          git diff --check
+          test "$(git diff --name-only | wc -l)" -eq 1
+          test "$(git diff --name-only)" = '.github/workflows/p1-compile.yml'
+          test "$(grep -Fc "'scripts/apply_p1_ship_debug_overlay_blockpos_center_26_2.py'" canonical-p1-compile.yml)" -eq 1
+          test "$(grep -Fc 'python3 scripts/apply_p1_ship_debug_overlay_blockpos_center_26_2.py upstream-vs2' canonical-p1-compile.yml)" -eq 1
+          sha256sum canonical-p1-compile.yml
+
+      - name: Upload canonical p1-compile file
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-ship-debug-overlay-center-canonical-file-${{ github.sha }}
+          path: canonical-p1-compile.yml
+          if-no-files-found: error
