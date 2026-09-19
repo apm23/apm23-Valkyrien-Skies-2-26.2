@@ -1,0 +1,85 @@
+name: P1 renderer-state probe
+
+on:
+  push:
+    paths:
+      - 'scripts/apply_p1_entityhandler_renderstate_26_2.py'
+      - '.github/workflows/p1-renderstate-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  renderer-state-probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact upstream baseline
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Replay canonical frozen P1 overlays in canonical order
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import shlex
+          import subprocess
+
+          workflow = Path('.github/workflows/p1-compile.yml').read_text(encoding='utf-8')
+          commands = re.findall(
+              r'^\s*run:\s+(python3 scripts/apply_p1_[^\n]+ upstream-vs2)\s*$',
+              workflow,
+              flags=re.MULTILINE,
+          )
+          if len(commands) < 50:
+              raise SystemExit(f'fail-closed: expected canonical overlay chain, found only {len(commands)} commands')
+          if any('entityhandler_renderstate_26_2.py' in command for command in commands):
+              raise SystemExit('fail-closed: renderer-state overlay is already canonical; retire this probe instead')
+          print(f'Replaying {len(commands)} canonical overlay commands')
+          for command in commands:
+              print('+', command)
+              subprocess.run(shlex.split(command), check=True)
+          PY
+
+      - name: Apply isolated P1 entity-handler render-state overlay
+        run: python3 scripts/apply_p1_entityhandler_renderstate_26_2.py upstream-vs2
+
+      - name: Validate isolated renderer delta
+        shell: bash
+        run: |
+          set -euo pipefail
+          git -C upstream-vs2 diff --check
+          git -C upstream-vs2 diff -- \
+            common/src/main/kotlin/org/valkyrienskies/mod/common/entity/handling/VSEntityHandler.kt \
+            common/src/main/kotlin/org/valkyrienskies/mod/common/entity/handling/AbstractShipyardEntityHandler.kt \
+            common/src/main/kotlin/org/valkyrienskies/mod/common/entity/handling/WorldEntityHandler.kt
+
+      - name: Show Gradle runtime
+        working-directory: upstream-vs2
+        run: ./gradlew --version
+
+      - name: Compile standalone common + Fabric sources
+        shell: bash
+        working-directory: upstream-vs2
+        run: |
+          set -o pipefail
+          ./gradlew :common:compileJava :common:compileKotlin :fabric:compileJava :fabric:compileKotlin --stacktrace --no-daemon 2>&1 | tee ../p1-renderstate-probe.log
+
+      - name: Upload renderer probe diagnostic log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-renderstate-probe-${{ github.sha }}
+          path: p1-renderstate-probe.log
+          if-no-files-found: warn
