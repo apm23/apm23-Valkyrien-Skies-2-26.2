@@ -1,0 +1,206 @@
+name: P1 renderer dispatcher API inspection
+
+on:
+  push:
+    paths:
+      - '.github/workflows/p1-render-dispatcher-api-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-renderer-dispatcher-api:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact upstream baseline
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Replay canonical frozen P1 overlays in canonical order
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import shlex
+          import subprocess
+
+          workflow = Path('.github/workflows/p1-compile.yml').read_text(encoding='utf-8')
+          commands = re.findall(
+              r'^\s*run:\s+(python3 scripts/apply_p1_[^\n]+ upstream-vs2)\s*$',
+              workflow,
+              flags=re.MULTILINE,
+          )
+          if len(commands) < 50:
+              raise SystemExit(f'fail-closed: expected canonical overlay chain, found only {len(commands)} commands')
+          print(f'Replaying {len(commands)} canonical overlay commands')
+          for command in commands:
+              print('+', command)
+              subprocess.run(shlex.split(command), check=True)
+          PY
+
+      - name: Reapply frozen renderer-handler proof overlay
+        run: python3 scripts/apply_p1_entityhandler_renderstate_26_2.py upstream-vs2
+
+      - name: Reapply frozen Sable compile-boundary proof overlay
+        run: python3 scripts/apply_p1_sable_companion_compileonly_26_2.py upstream-vs2
+
+      - name: Reapply frozen optional Create helper exclusion
+        run: python3 scripts/apply_p1_deployer_scroll_option_exclusion_26_2.py upstream-vs2
+
+      - name: Reapply frozen entity authority interpolation bridge
+        run: python3 scripts/apply_p1_entity_authority_interpolation_26_2.py upstream-vs2
+
+      - name: Resolve exact common compile classpath
+        shell: bash
+        working-directory: upstream-vs2
+        run: |
+          set -euo pipefail
+          cat > ../p1-render-dispatcher-classpath.init.gradle <<'GRADLE'
+          gradle.projectsEvaluated {
+              def commonProject = gradle.rootProject.findProject(':common')
+              if (commonProject == null) {
+                  throw new GradleException('fail-closed: :common project not found')
+              }
+              commonProject.tasks.register('vsPrintMainCompileClasspath') {
+                  doLast {
+                      def sourceSets = commonProject.extensions.findByName('sourceSets')
+                      if (sourceSets == null) {
+                          throw new GradleException('fail-closed: sourceSets extension not found on :common')
+                      }
+                      sourceSets.getByName('main').compileClasspath.files.each { file ->
+                          println('VS_CP_FILE=' + file.absolutePath)
+                      }
+                  }
+              }
+          }
+          GRADLE
+          ./gradlew -I ../p1-render-dispatcher-classpath.init.gradle :common:vsPrintMainCompileClasspath --no-daemon \
+            | tee ../p1-render-dispatcher-classpath.log
+          grep -q '^VS_CP_FILE=' ../p1-render-dispatcher-classpath.log
+
+      - name: Inspect exact Minecraft 26.2 renderer classes and descriptors
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' | tee p1-render-dispatcher-api-probe.log
+          from pathlib import Path
+          import os
+          import re
+          import subprocess
+          import zipfile
+
+          log = Path('p1-render-dispatcher-classpath.log').read_text(encoding='utf-8', errors='replace')
+          classpath = []
+          for line in log.splitlines():
+              if line.startswith('VS_CP_FILE='):
+                  path = Path(line.split('=', 1)[1])
+                  if path.exists() and path.suffix == '.jar':
+                      classpath.append(path)
+
+          if not classpath:
+              raise SystemExit('fail-closed: no jar entries found on :common main compile classpath')
+
+          required = {
+              'net/minecraft/client/renderer/entity/EntityRenderDispatcher.class': 'net.minecraft.client.renderer.entity.EntityRenderDispatcher',
+              'net/minecraft/client/renderer/entity/EntityRenderer.class': 'net.minecraft.client.renderer.entity.EntityRenderer',
+              'net/minecraft/client/renderer/entity/state/EntityRenderState.class': 'net.minecraft.client.renderer.entity.state.EntityRenderState',
+              'net/minecraft/client/Camera.class': 'net.minecraft.client.Camera',
+          }
+          found = {entry: [] for entry in required}
+
+          print('=== EXACT COMPILE CLASSPATH JARS CONTAINING RENDERER TARGETS ===')
+          for jar in classpath:
+              try:
+                  with zipfile.ZipFile(jar) as zf:
+                      names = set(zf.namelist())
+                      hits = [entry for entry in required if entry in names]
+                      if hits:
+                          print(f'JAR {jar}')
+                          for entry in hits:
+                              found[entry].append(jar)
+                              print(f'  HAS {entry}')
+                          related = sorted(
+                              name for name in names
+                              if name.startswith('net/minecraft/client/renderer/')
+                              and name.endswith('.class')
+                              and any(token in name for token in (
+                                  'CameraRenderState', 'SubmitNode', 'EntityRenderDispatcher',
+                                  'EntityRenderer', 'EntityRenderState'
+                              ))
+                          )
+                          for name in related:
+                              print(f'  RELATED {name}')
+              except zipfile.BadZipFile:
+                  pass
+
+          missing = [entry for entry, jars in found.items() if not jars]
+          if missing:
+              raise SystemExit('fail-closed: required mapped Minecraft classes missing from compile classpath: ' + ', '.join(missing))
+
+          # The same named Minecraft classes can occur in more than one Loom cache artifact.
+          # Inspect every candidate rather than silently choosing one.
+          for entry, class_name in required.items():
+              for jar in found[entry]:
+                  print('\n=== JAVAP', class_name, 'FROM', jar, '===')
+                  proc = subprocess.run(
+                      ['javap', '-classpath', str(jar), '-p', '-s', '-c', class_name],
+                      text=True,
+                      stdout=subprocess.PIPE,
+                      stderr=subprocess.STDOUT,
+                      check=False,
+                  )
+                  print(proc.stdout)
+                  if proc.returncode != 0:
+                      raise SystemExit(f'fail-closed: javap failed for {class_name} from {jar}')
+
+          # Inspect exact related state/submission classes discovered next to the dispatcher,
+          # without guessing their package names.
+          seen = set()
+          for jars in found.values():
+              for jar in jars:
+                  if jar in seen:
+                      continue
+                  seen.add(jar)
+                  with zipfile.ZipFile(jar) as zf:
+                      related = sorted(
+                          name for name in zf.namelist()
+                          if name.startswith('net/minecraft/client/renderer/')
+                          and name.endswith('.class')
+                          and ('$' not in name)
+                          and any(token in name for token in ('CameraRenderState', 'SubmitNodeCollector'))
+                      )
+                  for name in related:
+                      class_name = name[:-6].replace('/', '.')
+                      print('\n=== JAVAP RELATED', class_name, 'FROM', jar, '===')
+                      proc = subprocess.run(
+                          ['javap', '-classpath', str(jar), '-p', '-s', class_name],
+                          text=True,
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.STDOUT,
+                          check=False,
+                      )
+                      print(proc.stdout)
+                      if proc.returncode != 0:
+                          raise SystemExit(f'fail-closed: javap failed for related class {class_name} from {jar}')
+          PY
+
+      - name: Upload exact renderer API inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-render-dispatcher-api-probe-${{ github.sha }}
+          path: |
+            p1-render-dispatcher-classpath.log
+            p1-render-dispatcher-api-probe.log
+          if-no-files-found: warn
