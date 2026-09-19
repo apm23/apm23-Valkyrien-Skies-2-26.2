@@ -25,6 +25,7 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 ## Current reconciliation — MassDatapackResolver Identifier vocabulary proven
 
 - Current proven implementation HEAD: `a40316e93a61594018fd6f8f9d4b913d7fb2eb80` (`P1: wire MassDatapackResolver Identifier proof`).
+- Continuity-ledger HEAD before selecting the next hypothesis was `93ce968d94d4f1542ec74691d3bb5ee69772a536` (`ledger: freeze MassDatapackResolver Identifier proof`), whose parent is the proven implementation HEAD `a40316e93a61594018fd6f8f9d4b913d7fb2eb80`. Exact-head P0 run `35411893672`, job `105812999132`, completed `success`. No P1 run exists for that ledger-only commit because `MASTER_STATE.md` is not a P1 workflow trigger; compiler evidence therefore remains the exact source proof run below.
 - Exact-head P0 provenance run `35411562202`, job `105812049740`, completed `success` for `a40316e93a61594018fd6f8f9d4b913d7fb2eb80` and re-confirmed upstream commit `f39132148e717d325933b4ce6e9e9fb13d929390` / tree `91116399605d3ecd1c93b0011560e09281ee1fa4`.
 - Exact-head P1 standalone compile run `35411562107`, job `105812049438`, completed `failure` only because later independent Minecraft 26.2 source/API errors remain.
 - Every traceable overlay applied successfully, including `apply_p1_massdatapackresolver_identifier_26_2.py`; explicit port-delta validation and Gradle runtime steps succeeded.
@@ -60,7 +61,7 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 - active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
 - active_proof_head: `a40316e93a61594018fd6f8f9d4b913d7fb2eb80; MassDatapackResolver ResourceLocation-to-Identifier proof complete and frozen`
 - active_proof_run: `P0 35411562202 / job 105812049740 success; P1 35411562107 / job 105812049438 failure with targeted Identifier diagnostics cleared`
-- active_hypothesis: `none selected yet; inspect the exact Minecraft 26.2 API boundary for the next isolated remaining compiler cluster before editing source`
+- active_hypothesis: `Pinned DimensionParametersResolver.kt contains exactly two ResourceLocation vocabulary occurrences: the import and the apply-map key. Minecraft 26.2 reload maps use Identifier keys. Replace only those two vocabulary occurrences with Identifier while deliberately leaving SimpleJsonResourceReloadListener generic/constructor migration, apply shape/nullability, JSON parsing, priority selection, dimensionMap semantics, and all unrelated files unchanged.`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 
@@ -190,11 +191,12 @@ Do not reintroduce without new direct evidence:
 
 ## next_safe_action
 
-1. Preserve exact `MassDatapackResolver.kt` Identifier-vocabulary proof HEAD `a40316e93a61594018fd6f8f9d4b913d7fb2eb80`, P0 `35411562202` / job `105812049740`, P1 `35411562107` / job `105812049438`, artifact `10574698116`, ZIP SHA-256 `41dc8482808a7de1a46bf4f680c00560ae085a267118e3a9dddec1f5997d2506`.
-2. Reconcile actual HEAD after this proof-ledger commit and allow the automatically triggered exact-head P0/P1 workflows to settle before any new source patch.
-3. After those runs settle, inspect only the newest exact-head compiler evidence plus the current Minecraft 26.2 API boundary for one isolated remaining cluster. Do not assume the `SimpleJsonResourceReloadListener` migration is a type-argument-only edit; its typed reload semantics must be inspected before changing `MassDatapackResolver.kt`.
-4. Select and document exactly one next root hypothesis only after that evidence inspection. Preserve all frozen proofs and all deferred/failed-hypothesis locks.
-5. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet. No video is authorized during compile/API-port work.
+1. Preserve exact `MassDatapackResolver.kt` Identifier-vocabulary proof HEAD `a40316e93a61594018fd6f8f9d4b913d7fb2eb80`, P0 `35411562202` / job `105812049740`, P1 `35411562107` / job `105812049438`, artifact `10574698116`, ZIP SHA-256 `41dc8482808a7de1a46bf4f680c00560ae085a267118e3a9dddec1f5997d2506`, plus continuity-ledger P0 `35411893672` / job `105812999132` success.
+2. Add one fail-closed overlay for pinned `DimensionParametersResolver.kt` that replaces exactly its two `ResourceLocation` vocabulary occurrences with `Identifier`. Fail closed if the pinned count differs or `Identifier` is already present before this overlay.
+3. Wire only that overlay into P1 after all currently frozen overlays and add `DimensionParametersResolver.kt` to the explicit port-delta display. Do not alter `SimpleJsonResourceReloadListener` generic/constructor semantics, apply shape/nullability, JSON parsing, dimension priority semantics, `dimensionMap`, Create/SNR/Copycats, persistence, rendering, physics, or unrelated files.
+4. Proof target: both unresolved `ResourceLocation` diagnostics in `DimensionParametersResolver.kt` disappear. Its independent typed reload-listener/generic/constructor/apply diagnostics and cascades may remain, and the overall compile may remain red.
+5. After proof completes, record exact HEAD, P0/P1 run/job/artifact/hash and targeted diagnostic result before selecting another cluster.
+6. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet. No video is authorized during compile/API-port work.
 
 ## Video validation
 
