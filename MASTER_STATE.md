@@ -22,17 +22,17 @@ GitHub code is the implementation source of truth. This file is the durable cont
 
 The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are applied by explicit fail-closed overlay scripts so every adaptation stays traceable to upstream VS2 source.
 
-## Current reconciliation — TestHingeBlockEntity Value I/O persistence proven
+## Current reconciliation — ValkyrienSkiesMod CreativeModeTab.Output access proven
 
-- Current proven implementation HEAD: `4641ae31765f0d067923cc1ef54b9a26abe99a19` (`P1: wire TestHingeBlockEntity Value I/O proof`).
-- Exact-head P0 provenance run `35421661792`, job `105840387680`, completed `success` and re-confirmed the pinned upstream VS2 identity.
-- Exact-head P1 standalone compile run `35421661791`, job `105840387789`, completed `failure` only because later independent Minecraft 26.2 source/API errors remain.
-- Every traceable overlay applied successfully, including the prior frozen `TestHingeBlockEntity` `getLong` Optional overlay and the isolated `apply_p1_testhinge_blockentity_value_io_26_2.py`; explicit `git diff --check` / port-delta validation and Gradle runtime steps succeeded.
-- The isolated adaptation changes only the Minecraft 26.2 `BlockEntity` persistence boundary in real upstream `TestHingeBlockEntity`: legacy `saveAdditional(CompoundTag, HolderLookup.Provider)` / `loadAdditional(CompoundTag, HolderLookup.Provider)` become `saveAdditional(ValueOutput)` / `loadAdditional(ValueInput)`.
-- The persisted schema is preserved exactly: `shipId0`, `shipId1`, `pos0x`, `pos0y`, `pos0z`, `pos1x`, `pos1y`, `pos1z`, `rot0x`, `rot0y`, `rot0z`, `rot0w`, `rot1x`, `rot1y`, `rot1z`, `rot1w`. Save still writes the same ship IDs, position vectors and quaternion components.
-- Load keeps the proven `shipId*` Optional long fallback behavior and preserves the upstream completeness rule for vector/quaternion payloads: any missing position or rotation component aborts this hinge load instead of inventing a partial vector/quaternion. `VSRevoluteJoint`, `VSJointPose`, `maxForceTorque = null`, `driveFreeSpin = true`, and `makeConstraint = true` semantics are unchanged.
-- Exact run `35421661791` contains **no compiler diagnostic for `TestHingeBlockEntity.kt`**. The prior `saveAdditional` / `loadAdditional` override failures and `CompoundTag` versus `ValueInput` / `ValueOutput` argument mismatches are cleared, with no replacement diagnostic in the target file.
-- Diagnostic artifact: `p1-compile-log-4641ae31765f0d067923cc1ef54b9a26abe99a19`, artifact ID `10577638892`, size `6490` bytes, ZIP SHA-256 `a6b44f7d7248a9364dc31f1ddc9231ffa45212a895f10db752be4b432deae47a`.
+- Current proven implementation HEAD: `5c8a80eca1b996c4b89d5a394d7cfb9115d3f070` (`P1: wire CreativeModeTab Output access proof`).
+- Exact-head P0 provenance run `35423048611`, job `105844091418`, completed `success` and re-confirmed the pinned upstream VS2 identity.
+- Exact-head P1 standalone compile run `35423048671`, job `105844092374`, completed `failure` only because later independent Minecraft 26.2 source/API errors remain.
+- Every traceable overlay applied successfully, including the prior frozen source/API overlays and isolated `apply_p1_creativetab_output_access_26_2.py`; explicit `git diff --check` / port-delta validation and Gradle runtime steps succeeded.
+- Exact Minecraft 26.2 inspection established that vanilla `CreativeModeTab.Output` is now `protected`, while the Fabric creative-tab API explicitly marks `net/minecraft/world/item/CreativeModeTab$Output` as `transitive-accessible` in its class-tweaker contract. The current standalone no-remap common compile sees Fabric API through plain compile-only scaffolding, so that dependency transitive-access contract is not reflected in the common compile Minecraft jar.
+- The isolated adaptation mirrors only that Fabric 26.2 access contract into the existing VS2 common access widener with `accessible class net/minecraft/world/item/CreativeModeTab$Output`. It does **not** alter `ValkyrienSkiesMod.createCreativeTab()`, its item list, item order, icon/title, registration key, or creative-tab behavior.
+- Exact run `35423048671` contains **no compiler diagnostic for `ValkyrienSkiesMod.kt`**. The prior line-192-through-203 protected-`CreativeModeTab.Output` diagnostics are cleared with no replacement diagnostic in that file.
+- Diagnostic artifact: `p1-compile-log-5c8a80eca1b996c4b89d5a394d7cfb9115d3f070`, artifact ID `10578021452`, size `6329` bytes, ZIP SHA-256 `f5691678a8ebdd7967c193846b906b8114fa4bacd9068836f061d83a9bb0cd1b`.
+- Prior `TestHingeBlockEntity` Value I/O persistence proof remains frozen at HEAD `4641ae31765f0d067923cc1ef54b9a26abe99a19`, P0 `35421661792` / job `105840387680`, P1 `35421661791` / job `105840387789`, artifact `10577638892`, ZIP SHA-256 `a6b44f7d7248a9364dc31f1ddc9231ffa45212a895f10db752be4b432deae47a`.
 - Prior `MassDatapackResolver` registry-tag proof remains frozen at HEAD `ea2084954eb4edd2bd9922aa1f59342b76709809`, P0 `35420504812` / job `105837166152`, P1 `35420504781` / job `105837162566`, artifact `10577252400`, ZIP SHA-256 `d0dab3e4652c4d00f62f1c9aeccaae98c8a1401e8651e86bd9de7aa12d2f28ac`.
 - Prior `MassDatapackResolver` typed reload-listener proof remains frozen at HEAD `27e181c70184b2aac38eeb1a646905d93ba45023`, P0 `35419426729` / job `105834163091`, P1 `35419426780` / job `105834163164`, artifact `10577550502`, ZIP SHA-256 `cf373d90a2b42bc5bc92866fe39d97a43ce6ae6e7deb4fd3f2f37d307719fd57`.
 - The first typed-listener probe `0fdf41ec2e506f45fba3b28fa1715a0438393a09` remains a failed-partial hypothesis: changing only `objects` to non-null while retaining `ResourceManager?` / `ProfilerFiller?` produced `'apply' overrides nothing`; P0 `35419191257` / job `105833522135`, P1 `35419191192` / job `105833522020`, artifact `10577705252`, ZIP SHA-256 `d42d410f4f0d95733a8b02ec5045d792daa644ea158274797073324186b557c3`.
@@ -44,7 +44,7 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 - Prior `MassDatapackResolver.kt` Identifier proof remains frozen at HEAD `a40316e93a61594018fd6f8f9d4b913d7fb2eb80`, P0 `35411562202` / job `105812049740`, P1 `35411562107` / job `105812049438`, artifact `10574698116`, ZIP SHA-256 `41dc8482808a7de1a46bf4f680c00560ae085a267118e3a9dddec1f5997d2506`.
 - Prior `MassDatapackResolver` dummy-`BlockGetter` minY proof remains frozen at HEAD `563cbcba7bb1c92ca27820ef785d11bb88872524`, P0 `35410678210` / job `105809557245`, P1 `35410678254` / job `105809557590`, artifact `10573811879`, ZIP SHA-256 `ef0e33b2db1cff60f1e1d14658cbb9d50523309a227806cf3f09776fd23df3f2`.
 - Prior `SeamlessChunksManager` ChunkPos packed-key proof remains frozen at HEAD `75a434c728f1ca020b550882967085ccc53d5c3b`, P0 `35409275352` / job `105805422622`, P1 `35409275363` / job `105805423593`, artifact `10574055235`, ZIP SHA-256 `cb032a68942404c798debc540ad7b387c1f06ac41d6854f570aa43e70894a9b6`.
-- No networking, entity dragging/reference-space behavior, local-control authority, interpolation, ship lifecycle, collision, physics, player, camera, rendering, or unrelated gameplay semantics were changed by this proof.
+- No networking, entity dragging/reference-space behavior, local-control authority, interpolation, ship lifecycle, collision, physics, player, camera, rendering, persistence, or unrelated gameplay semantics were changed by this proof.
 - No code from retired `apm23/VS2-Create_Interactive` has been imported or reused as implementation source.
 
 ## Target runtime baseline
@@ -62,9 +62,9 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
-- active_proof_head: `4641ae31765f0d067923cc1ef54b9a26abe99a19; TestHingeBlockEntity Value I/O persistence proof complete and frozen`
-- active_proof_run: `P0 35421661792 / job 105840387680 success; P1 35421661791 / job 105840387789 failure with all TestHingeBlockEntity diagnostics cleared`
-- active_hypothesis: `none selected yet; inspect the exact Minecraft 26.2 API boundary for one isolated remaining compiler cluster before source mutation. The TestHingeBlockEntity ValueInput/ValueOutput boundary is frozen independently and does not authorize mechanical persistence edits elsewhere. Preserve the broader ShipSavedData lifecycle/factory boundary, ShipMountingEntity entity persistence/hurt boundary, assembly/relocation component semantics, authority-sensitive VSGamePackets/EntityDragger local-control and lerp boundary, VSGameUtils resource/mixin boundary, keybinding translation semantics, nullable message semantics, rendering, ticketing, Sable, and other deferred locks.`
+- active_proof_head: `5c8a80eca1b996c4b89d5a394d7cfb9115d3f070; ValkyrienSkiesMod CreativeModeTab.Output access proof complete and frozen`
+- active_proof_run: `P0 35423048611 / job 105844091418 success; P1 35423048671 / job 105844092374 failure with all ValkyrienSkiesMod diagnostics cleared`
+- active_hypothesis: `none selected yet; inspect the exact Minecraft 26.2 API boundary for one isolated remaining compiler cluster before source mutation. The CreativeModeTab.Output access-widener proof mirrors one explicit Fabric 26.2 access contract only and does not authorize broad access widening or source/event rewrites elsewhere. Preserve the ShipSavedData lifecycle/factory boundary, ShipMountingEntity entity persistence/hurt boundary, assembly/relocation component semantics, authority-sensitive VSGamePackets/EntityDragger local-control and lerp boundary, VSGameUtils resource/mixin boundary, keybinding translation semantics, nullable message semantics, rendering, ticketing, Sable, Create-compat classpath boundary, and other deferred locks.`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 
@@ -82,7 +82,7 @@ Source/API clusters proven clean in exact-head runs:
 - data-provider `ResourceLocation -> Identifier` plus registry-holder `location() -> identifier()`;
 - `BlockStateInfoProvider.kt`, `SimpleSoundInstanceOnShip.kt`, `VSEntityManager.kt` Identifier clusters;
 - `EmptyRenderer.kt` resource vocabulary and Minecraft 26.2 `EntityRenderState` generic/create-state migration, preserving no-op renderer intent;
-- `ValkyrienSkiesMod.kt` resource vocabulary only; creative-tab migration remains separate;
+- `ValkyrienSkiesMod.kt` resource vocabulary plus Minecraft 26.2 `CreativeModeTab.Output` accessibility through the exact Fabric creative-tab transitive-access contract mirrored into the VS2 common access widener; the upstream `createCreativeTab()` item list/order/body remains unchanged and exact run `35423048671` has no remaining diagnostic for this file;
 - `EntityData.kt` non-null generic bounds;
 - `NbtUtil.kt` guarded Optional numeric reads with legacy zero defaults;
 - Direction unit-vector accessor migrations in `VectorConversionsMC.kt`, `ValkyrienSkies.kt`, `TestFlapBlock.kt`, `TestWingBlock.kt`, `TestThrusterBlockEntity.kt`, `EntityDragger.kt`, and `TestChairBlock.kt`;
@@ -101,7 +101,7 @@ Source/API clusters proven clean in exact-head runs:
 - `VSEntityHandlerDataLoader.kt` Minecraft 26.2 typed `SimpleJsonResourceReloadListener<JsonElement>` constructor/generic migration using `ExtraCodecs.JSON` + `FileToIdConverter.json("vs_entities")`, preserving the upstream raw-JSON/apply/handler-pairing semantics;
 - `VSGamePackets.kt` two `ResourceLocation -> Identifier` vocabulary sites, with local-control/lerp/networking semantics intentionally separate.
 
-Representative remaining compiler areas from exact run `35421661791`: Create compat classpath/API drift; separate `ShipSavedData` SavedData persistence migration; deferred `VSGameUtils` resource-key/Identifier plus build-height/chunk-position APIs; `ValkyrienSkiesMod` creative-tab output API; assembly/tick/ValueInput-ValueOutput/structure processor migrations; TestChair entity-create/`moveTo`; deferred nullable command/item messages; deferred keybinding category; ShipMountingEntity persistence/hurt; entity-handler rendering; VSGamePackets/EntityDragger local-control and VSGamePackets lerp API drift; chunk tickets; Sable; relocation. `TestHingeBlockEntity` and `MassDatapackResolver` have no remaining compiler diagnostic in this run.
+Representative remaining compiler areas from exact run `35423048671`: Create compat classpath/intermediary/API drift; separate `ShipSavedData` SavedData persistence migration; deferred `VSGameUtils` resource-key/Identifier plus build-height/chunk-position APIs; assembly/tick/ValueInput-ValueOutput/structure processor migrations; TestChair entity-create/`moveTo`; deferred nullable command/item messages; deferred keybinding category; ShipMountingEntity persistence/hurt; entity-handler rendering; VSGamePackets/EntityDragger local-control and VSGamePackets lerp API drift; chunk tickets/VSTicketType; Sable; relocation. `ValkyrienSkiesMod`, `TestHingeBlockEntity`, and `MassDatapackResolver` have no remaining compiler diagnostic in this run.
 
 ## Proof chain retained
 
@@ -143,6 +143,7 @@ Representative remaining compiler areas from exact run `35421661791`: Create com
 - `27e181c70184b2aac38eeb1a646905d93ba45023`: MassDatapackResolver typed reload-listener constructor/generic/apply boundary; P0 `35419426729`; job `105834163091`; P1 `35419426780`; job `105834163164`; artifact `10577550502`; SHA-256 `cf373d90a2b42bc5bc92866fe39d97a43ce6ae6e7deb4fd3f2f37d307719fd57`.
 - `ea2084954eb4edd2bd9922aa1f59342b76709809`: MassDatapackResolver registry-tag lookup `getTag(TagKey) -> get(TagKey)` with deferred tag semantics preserved; P0 `35420504812`; job `105837166152`; P1 `35420504781`; job `105837162566`; artifact `10577252400`; SHA-256 `d0dab3e4652c4d00f62f1c9aeccaae98c8a1401e8651e86bd9de7aa12d2f28ac`.
 - `4641ae31765f0d067923cc1ef54b9a26abe99a19`: TestHingeBlockEntity `ValueInput` / `ValueOutput` persistence boundary preserving the flat key schema and hinge joint-load semantics; P0 `35421661792`; job `105840387680`; P1 `35421661791`; job `105840387789`; artifact `10577638892`; SHA-256 `a6b44f7d7248a9364dc31f1ddc9231ffa45212a895f10db752be4b432deae47a`.
+- `5c8a80eca1b996c4b89d5a394d7cfb9115d3f070`: `ValkyrienSkiesMod` `CreativeModeTab.Output` accessibility via one common access-widener line mirroring Fabric 26.2's explicit transitive-access contract, with creative-tab source behavior unchanged; P0 `35423048611`; job `105844091418`; P1 `35423048671`; job `105844092374`; artifact `10578021452`; SHA-256 `f5691678a8ebdd7967c193846b906b8114fa4bacd9068836f061d83a9bb0cd1b`.
 
 ## Deferred / boundary locks
 
@@ -154,6 +155,7 @@ Do not collapse these broader boundaries into compile-only edits:
 - Typed `SimpleJsonResourceReloadListener<T>` migration is frozen green independently for `VSEntityHandlerDataLoader`, `DimensionParametersResolver`, and `MassDatapackResolver`.
 - `MassDatapackResolver` registry-tag lookup is also frozen green independently: the 26.2 `Registry.get(TagKey)` path is proven while preserving upstream deferred `tagsAreLoaded`, Optional/HolderSet, missing-tag, priority/application, and registration semantics.
 - `TestHingeBlockEntity` persistence is frozen green independently: this proves only that block entity's exact flat-key `ValueInput` / `ValueOutput` boundary. It does **not** authorize mechanical migration of `ShipSavedData`, `ShipMountingEntity`, `AssemblyUtil`, `ShipAssembler`, or `RelocationUtil`; those have separate lifecycle/factory/component/entity semantics and must be inspected independently.
+- `ValkyrienSkiesMod` creative-tab access is frozen green independently: it mirrors the explicit Fabric 26.2 `CreativeModeTab$Output` transitive-access contract only. Do not broadly widen unrelated Minecraft classes or rewrite the upstream creative-tab item population into a Fabric event path without separate evidence.
 - `VSGamePackets.kt` / `EntityDragger.kt` local-control and lerp API drift is authority-sensitive; do not replace removed vanilla APIs with synthetic carry, custom authority, teleport chase, or invented client-control semantics.
 
 ## Sable contract
@@ -171,7 +173,7 @@ Forbidden final substitutes: custom VS2-style reference frames, synthetic carry 
 ## Milestones
 
 ### P0 — Upstream import + provenance
-Frozen green. Exact upstream identity/pin/license/provenance is established and repeatedly re-confirmed. Latest proven implementation HEAD `4641ae31765f0d067923cc1ef54b9a26abe99a19` has exact-head P0 run `35421661792` / job `105840387680` success.
+Frozen green. Exact upstream identity/pin/license/provenance is established and repeatedly re-confirmed. Latest proven implementation HEAD `5c8a80eca1b996c4b89d5a394d7cfb9115d3f070` has exact-head P0 run `35423048611` / job `105844091418` success.
 
 ### P1 — Standalone VS2 26.2 compile/boot
 Port actual VS2 until common/Fabric compile, standalone client/server boot, and core/native initialization are proven without Create/SNR/Copycats hiding failures.
@@ -212,13 +214,14 @@ Do not reintroduce without new direct evidence:
 - assuming legacy nullable `Map<Identifier?, JsonElement?>` still overrides Minecraft 26.2 typed `SimpleJsonResourceReloadListener<JsonElement>.apply`; exact run `35418399392` disproved this and the proven DimensionParameters boundary uses `MutableMap<Identifier, JsonElement>`;
 - assuming `MassDatapackResolver.VSMassDataLoader.apply` can be ported by making only its `objects` map non-null while leaving `ResourceManager?` / `ProfilerFiller?`; exact probe `0fdf41ec2e506f45fba3b28fa1715a0438393a09`, P1 `35419191192`, disproved this. The proven 26.2 boundary requires all three apply arguments non-null;
 - mechanically copying the proven `TestHingeBlockEntity` Value I/O shape into broader persistence/component/entity paths without first proving their Minecraft 26.2 lifecycle and codec/component semantics;
+- treating the proven `CreativeModeTab.Output` access line as authorization for broad access widening or replacing upstream creative-tab source behavior with event-driven population without independent evidence;
 - mechanically replacing removed `isControlledByLocalInstance` / `lerpTo` calls without proving the current Minecraft 26.2 authority/interpolation boundary and preserving upstream VS2 semantics.
 
 ## next_safe_action
 
-1. Preserve exact `TestHingeBlockEntity` Value I/O persistence proof HEAD `4641ae31765f0d067923cc1ef54b9a26abe99a19`, P0 `35421661792` / job `105840387680`, P1 `35421661791` / job `105840387789`, artifact `10577638892`, ZIP SHA-256 `a6b44f7d7248a9364dc31f1ddc9231ffa45212a895f10db752be4b432deae47a`.
+1. Preserve exact `ValkyrienSkiesMod` CreativeModeTab.Output access proof HEAD `5c8a80eca1b996c4b89d5a394d7cfb9115d3f070`, P0 `35423048611` / job `105844091418`, P1 `35423048671` / job `105844092374`, artifact `10578021452`, ZIP SHA-256 `f5691678a8ebdd7967c193846b906b8114fa4bacd9068836f061d83a9bb0cd1b`.
 2. Reconcile actual HEAD after this proof-ledger commit and require its exact-head P0 provenance run to settle successfully before any new source mutation.
-3. After provenance settles, inspect only the newest exact-head compiler evidence plus the exact Minecraft 26.2 API boundary for **one** isolated remaining compiler cluster. The proven `TestHingeBlockEntity` Value I/O shape is evidence for that one block entity only; do not mechanically apply it to `ShipSavedData`, `ShipMountingEntity`, assembly/relocation, or any other persistence path. Do not assume local-control, lerp, rendering, tickets, creative-tab, VSGameUtils, keybinding, nullable-message, Create-compat, Sable, or other drift is a mechanical rename/signature edit.
+3. After provenance settles, inspect only the newest exact-head compiler evidence plus the exact Minecraft 26.2 API boundary for **one** isolated remaining compiler cluster. The CreativeModeTab access-widener pattern is evidence for that one explicit Fabric access contract only; do not mechanically widen unrelated APIs. Preserve the independent `ShipSavedData`, `VSGameUtils`, `VSKeyBindings`, nullable-message, ShipMountingEntity, assembly/relocation, rendering, authority/local-control/lerp, ticketing, Sable, and Create-compat boundaries.
 4. Select and document exactly one next root hypothesis only after that API-boundary inspection. Preserve all frozen proofs, deferred boundaries, and failed-hypothesis locks.
 5. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet. No video is authorized during compile/API-port work.
 
