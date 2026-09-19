@@ -82,6 +82,7 @@ on:
       - 'scripts/apply_p1_airwaterrandompos_buildheight_26_2.py'
       - 'scripts/apply_p1_tick_ship_chunks_chunkpos_accessors_26_2.py'
       - 'scripts/apply_p1_ship_debug_overlay_blockpos_center_26_2.py'
+      - 'scripts/apply_p1_world_weather_blockpos_center_26_2.py'
       - '.github/workflows/p1-compile.yml'
       - 'upstream-vs2'
       - 'BASELINE_LOCK.json'
@@ -342,6 +343,9 @@ jobs:
 
       - name: Apply frozen P1 ship debug overlay BlockPos center overlay
         run: python3 scripts/apply_p1_ship_debug_overlay_blockpos_center_26_2.py upstream-vs2
+
+      - name: Apply frozen P1 world weather BlockPos center overlay
+        run: python3 scripts/apply_p1_world_weather_blockpos_center_26_2.py upstream-vs2
 
       - name: Show and validate port delta
         shell: bash
