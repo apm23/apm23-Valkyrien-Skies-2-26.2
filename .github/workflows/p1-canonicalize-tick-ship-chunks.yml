@@ -1,0 +1,70 @@
+name: P1 canonicalize tick ship chunks ChunkPos accessor overlay
+
+on:
+  push:
+    paths:
+      - '.github/workflows/p1-canonicalize-tick-ship-chunks.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-canonical-file:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact repository state
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: false
+
+      - name: Produce validated canonical p1-compile file
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('.github/workflows/p1-compile.yml')
+          text = path.read_text(encoding='utf-8')
+
+          path_anchor = "      - 'scripts/apply_p1_airwaterrandompos_buildheight_26_2.py'\n"
+          path_insert = path_anchor + "      - 'scripts/apply_p1_tick_ship_chunks_chunkpos_accessors_26_2.py'\n"
+          if text.count(path_anchor) != 1:
+              raise SystemExit(f'fail-closed: expected one AirAndWaterRandomPos path anchor, found {text.count(path_anchor)}')
+          if 'scripts/apply_p1_tick_ship_chunks_chunkpos_accessors_26_2.py' in text:
+              raise SystemExit('fail-closed: tick-ship-chunks overlay already canonical')
+          text = text.replace(path_anchor, path_insert, 1)
+
+          step_anchor = (
+              "      - name: Apply frozen P1 AirAndWaterRandomPos build-height overlay\n"
+              "        run: python3 scripts/apply_p1_airwaterrandompos_buildheight_26_2.py upstream-vs2\n"
+          )
+          step_insert = step_anchor + (
+              "\n      - name: Apply frozen P1 tick ship chunks ChunkPos accessor overlay\n"
+              "        run: python3 scripts/apply_p1_tick_ship_chunks_chunkpos_accessors_26_2.py upstream-vs2\n"
+          )
+          if text.count(step_anchor) != 1:
+              raise SystemExit(f'fail-closed: expected one AirAndWaterRandomPos step anchor, found {text.count(step_anchor)}')
+          text = text.replace(step_anchor, step_insert, 1)
+
+          if text.count("'scripts/apply_p1_tick_ship_chunks_chunkpos_accessors_26_2.py'") != 1:
+              raise SystemExit('fail-closed: canonical trigger path count mismatch')
+          if text.count('python3 scripts/apply_p1_tick_ship_chunks_chunkpos_accessors_26_2.py upstream-vs2') != 1:
+              raise SystemExit('fail-closed: canonical apply step count mismatch')
+
+          path.write_text(text, encoding='utf-8')
+          PY
+          git diff --check -- .github/workflows/p1-compile.yml
+          git diff -- .github/workflows/p1-compile.yml
+          test "$(git diff --name-only | wc -l)" -eq 1
+          test "$(git diff --name-only)" = '.github/workflows/p1-compile.yml'
+          cp .github/workflows/p1-compile.yml canonical-p1-compile.yml
+
+      - name: Upload canonical p1-compile file
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-tick-ship-chunks-canonical-file-${{ github.sha }}
+          path: canonical-p1-compile.yml
+          if-no-files-found: error
