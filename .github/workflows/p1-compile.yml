@@ -33,6 +33,7 @@ on:
       - 'scripts/apply_p1_massdatapackresolver_miny_26_2.py'
       - 'scripts/apply_p1_massdatapackresolver_identifier_26_2.py'
       - 'scripts/apply_p1_massdatapackresolver_reload_listener_26_2.py'
+      - 'scripts/apply_p1_massdatapackresolver_registry_tag_26_2.py'
       - 'scripts/apply_p1_dimensionparametersresolver_identifier_26_2.py'
       - 'scripts/apply_p1_dimensionparametersresolver_reload_listener_26_2.py'
       - 'scripts/apply_p1_vsentityhandlerdataloader_identifier_26_2.py'
@@ -151,6 +152,9 @@ jobs:
 
       - name: Apply traceable P1 MassDatapackResolver reload-listener overlay
         run: python3 scripts/apply_p1_massdatapackresolver_reload_listener_26_2.py upstream-vs2
+
+      - name: Apply traceable P1 MassDatapackResolver registry-tag overlay
+        run: python3 scripts/apply_p1_massdatapackresolver_registry_tag_26_2.py upstream-vs2
 
       - name: Apply traceable P1 DimensionParametersResolver Identifier overlay
         run: python3 scripts/apply_p1_dimensionparametersresolver_identifier_26_2.py upstream-vs2
