@@ -22,7 +22,7 @@ GitHub code is the implementation source of truth. This file is the durable cont
 
 The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are applied by explicit fail-closed overlay scripts so every adaptation stays traceable to upstream VS2 source.
 
-## Current reconciliation — SeamlessChunksManager ChunkPos packing proven
+## Current reconciliation — SeamlessChunksManager ChunkPos packing proven; MassDatapackResolver dummy BlockGetter minY proof selected
 
 - Current proven implementation HEAD: `75a434c728f1ca020b550882967085ccc53d5c3b` (`P1: wire SeamlessChunksManager ChunkPos pack proof`).
 - Exact-head P0 provenance run `35409275352`, job `105805422622`, completed `success` for `75a434c728f1ca020b550882967085ccc53d5c3b`.
@@ -34,6 +34,9 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 - Therefore the isolated `SeamlessChunksManager` packed chunk-key migration is proven clean and frozen independently from later compiler clusters.
 - Diagnostic artifact: `p1-compile-log-75a434c728f1ca020b550882967085ccc53d5c3b`, artifact ID `10574055235`, size `7635` bytes, ZIP SHA-256 `cb032a68942404c798debc540ad7b387c1f06ac41d6854f570aa43e70894a9b6`.
 - Pinned upstream `SeamlessChunksManager.kt` blob remains `df412c0d8771657fd0edc7b3ca6db14b0f30350f`.
+- Exact run `35409275363` exposes a smaller independent `MassDatapackResolver.kt` API cluster in its dummy `BlockGetter`: Minecraft 26.2 reports that the anonymous object does not implement abstract `getMinY(): Int`, while the pinned `override fun getMinBuildHeight(): Int = 0` overrides nothing.
+- Selected next hypothesis: in pinned `MassDatapackResolver.kt` only, rename exactly `override fun getMinBuildHeight(): Int = 0` to `override fun getMinY(): Int = 0`. Preserve the dummy world's minimum Y value `0`, height `255`, block/fluid behavior, collision-map construction, and all datapack/reload semantics.
+- Expected proof: the paired diagnostics `Class '<anonymous>' is not abstract and does not implement ... getMinY()` and `'getMinBuildHeight' overrides nothing` disappear. Other `MassDatapackResolver.kt` errors may remain and are outside this isolated proof.
 - `ShipSavedData.save` remains deferred: Minecraft 26.2 SavedData persistence is broader than a signature-only edit and must reconcile the current SavedDataType/codec/factory path.
 - `VSGameUtils.kt` Identifier migration remains deferred because its resource-key path crosses `ResourceKeyAccessor` and `MixinLevel`; do not apply a partial one-file replacement.
 - `VSKeyBindings.kt` remains deferred because Minecraft 26.2 `KeyMapping.Category` migration changes category translation-key handling; a compile-only type swap must not silently break `category.valkyrienskies.driving`.
@@ -55,9 +58,9 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
-- active_proof_head: `none; SeamlessChunksManager ChunkPos packing proof frozen green`
+- active_proof_head: `none; MassDatapackResolver dummy BlockGetter getMinY proof selected but not yet patched/wired`
 - active_proof_run: `none`
-- active_hypothesis: `none; select the next smallest independent Minecraft 26.2 source/API cluster only from exact run 35409275363 after the post-ledger P0 provenance run settles`
+- active_hypothesis: `Minecraft 26.2 BlockGetter renamed the lower-build-bound override used by the dummy MassDatapackResolver world from getMinBuildHeight() to getMinY(). Rename only that one override while preserving its return value and dummy-world semantics.`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 
@@ -94,7 +97,7 @@ Source/API clusters proven clean in exact-head runs:
 - `CompatUtil.kt` two legacy null-entity ClipContext arguments migrated to explicit `CollisionContext.empty()` while preserving no-entity collision-context semantics and raycast flow;
 - `SeamlessChunksManager.kt` three packed chunk-key calls migrated from legacy `toLong()/asLong(int,int)` to Minecraft 26.2 `pack()/pack(int,int)` without changing queue or packet semantics.
 
-Representative remaining compiler areas from exact run `35409275363`: Create compat classpath/API drift; separate `ShipSavedData` SavedData persistence migration; `VSGameUtils` resource-key/Identifier plus build-height/chunk-position APIs; `ValkyrienSkiesMod` creative-tab output API; assembly/tick/ValueInput-ValueOutput/structure processor migrations; TestChair entity-create/`moveTo`; TestHingeBlockEntity persistence; deferred nullable command/item messages; reload-listener/Identifier generics; keybinding category; ShipMountingEntity persistence/hurt; entity-handler rendering; networking/local-control/lerp; `EntityDragger` local-control; chunk tickets; Sable; relocation.
+Representative remaining compiler areas from exact run `35409275363`: Create compat classpath/API drift; separate `ShipSavedData` SavedData persistence migration; `VSGameUtils` resource-key/Identifier plus build-height/chunk-position APIs; `ValkyrienSkiesMod` creative-tab output API; assembly/tick/ValueInput-ValueOutput/structure processor migrations; TestChair entity-create/`moveTo`; TestHingeBlockEntity persistence; deferred nullable command/item messages; reload-listener/Identifier generics; `MassDatapackResolver` resource/reload APIs plus the selected dummy-BlockGetter minY rename; keybinding category; ShipMountingEntity persistence/hurt; entity-handler rendering; networking/local-control/lerp; `EntityDragger` local-control; chunk tickets; Sable; relocation.
 
 ## Proof chain retained
 
@@ -184,10 +187,10 @@ Do not reintroduce without new direct evidence:
 ## next_safe_action
 
 1. Preserve exact SeamlessChunksManager ChunkPos packing proof HEAD `75a434c728f1ca020b550882967085ccc53d5c3b`, P0 `35409275352` / job `105805422622`, P1 `35409275363` / job `105805423593`, artifact `10574055235`, ZIP SHA-256 `cb032a68942404c798debc540ad7b387c1f06ac41d6854f570aa43e70894a9b6`.
-2. Reconcile actual HEAD after this ledger update and allow its automatically triggered P0 provenance workflow to settle before another proof setup.
-3. Re-read exact P1 diagnostic evidence from run `35409275363` and select one smallest independent Minecraft 26.2 source/API cluster. Respect all deferred/failed-hypothesis locks: do not partially patch `VSGameUtils` ResourceLocation/ResourceKey accessors, do not signature-only patch `ShipSavedData.save`, do not invent nullable ship/name fallbacks, and do not touch physics/rendering/gameplay ownership without direct evidence.
-4. Add only one fail-closed overlay for the selected cluster, wire only that overlay into P1, and keep the explicit port-delta display traceable to the exact upstream file.
-5. Proof only the selected diagnostic cluster; overall compile may remain red on unrelated clusters.
+2. Reconcile actual HEAD after this hypothesis-ledger update and allow its automatically triggered P0 provenance workflow to settle before proof setup.
+3. Add one fail-closed overlay for pinned `MassDatapackResolver.kt` that replaces exactly `override fun getMinBuildHeight(): Int = 0` with `override fun getMinY(): Int = 0` and fails closed if the pinned anchor/count differs.
+4. Wire only that overlay into P1 and add/retain `MassDatapackResolver.kt` in the explicit port-delta display. Do not alter reload/datapack resource APIs, collision-map construction, dummy-world height/value behavior, Create/SNR/Copycats, persistence, rendering, physics, or unrelated files.
+5. Proof target: the paired dummy-`BlockGetter` diagnostics requiring `getMinY()` and rejecting `getMinBuildHeight()` disappear. Other `MassDatapackResolver.kt` diagnostics may remain and overall compile may remain red.
 6. After proof completes, record exact HEAD, P0/P1 run/job/artifact/hash and targeted diagnostic result before selecting another cluster.
 7. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet. No video is authorized during compile/API-port work.
 
