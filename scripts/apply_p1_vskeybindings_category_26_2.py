@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
-import re
+import json
 import sys
 
 root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("upstream-vs2")
@@ -53,25 +53,38 @@ source_path.write_text(text, encoding="utf-8")
 old_key = "category.valkyrienskies.driving"
 new_key = "key.category.valkyrienskies.driving"
 updated_locales = []
-pattern = re.compile(r'^(\s*)"category\.valkyrienskies\.driving"(\s*:\s*)(.+?)(,?)$', re.MULTILINE)
 
 for path in sorted(lang_dir.glob("*.json")):
     lang_text = path.read_text(encoding="utf-8")
-    if old_key not in lang_text:
+    data = json.loads(lang_text)
+    if old_key not in data:
         continue
-    if new_key in lang_text:
+    if new_key in data:
         raise SystemExit(f"new Minecraft 26.2 category translation key already present in {path}")
-    matches = list(pattern.finditer(lang_text))
-    if len(matches) != 1:
-        raise SystemExit(f"expected exactly one {old_key!r} entry in {path}, found {len(matches)}")
-    match = matches[0]
-    indent, separator, value, comma = match.groups()
-    replacement = (
-        f'{indent}"{old_key}"{separator}{value},\n'
-        f'{indent}"{new_key}"{separator}{value}{comma}'
-    )
-    lang_text = lang_text[:match.start()] + replacement + lang_text[match.end():]
-    path.write_text(lang_text, encoding="utf-8")
+
+    lines = lang_text.splitlines(keepends=True)
+    candidates = [i for i, line in enumerate(lines) if f'"{old_key}"' in line]
+    if len(candidates) != 1:
+        raise SystemExit(f"expected exactly one {old_key!r} line in {path}, found {len(candidates)}")
+
+    index = candidates[0]
+    original = lines[index]
+    newline = "\r\n" if original.endswith("\r\n") else "\n" if original.endswith("\n") else ""
+    body = original[:-len(newline)] if newline else original
+    indent = body[: len(body) - len(body.lstrip(" \t"))]
+    trimmed = body.rstrip(" \t")
+    had_comma = trimmed.endswith(",")
+
+    value_json = json.dumps(data[old_key], ensure_ascii=False)
+    old_line = f'{indent}"{old_key}": {value_json},{newline}'
+    new_line = f'{indent}"{new_key}": {value_json}' + ("," if had_comma else "") + newline
+    lines[index:index + 1] = [old_line, new_line]
+
+    updated = "".join(lines)
+    parsed = json.loads(updated)
+    if parsed.get(old_key) != data[old_key] or parsed.get(new_key) != data[old_key]:
+        raise SystemExit(f"category translation value was not preserved in {path}")
+    path.write_text(updated, encoding="utf-8", newline="")
     updated_locales.append(path.name)
 
 if "en_us.json" not in updated_locales:
