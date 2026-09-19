@@ -55,17 +55,6 @@ jobs:
               subprocess.run(shlex.split(command), check=True)
           PY
 
-      - name: Reapply frozen proof overlays
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 scripts/apply_p1_entityhandler_renderstate_26_2.py upstream-vs2
-          python3 scripts/apply_p1_sable_companion_compileonly_26_2.py upstream-vs2
-          python3 scripts/apply_p1_deployer_scroll_option_exclusion_26_2.py upstream-vs2
-          python3 scripts/apply_p1_entity_authority_interpolation_26_2.py upstream-vs2
-          python3 scripts/apply_p1_entity_renderer_submit_26_2.py upstream-vs2
-          python3 scripts/apply_p1_distance_manager_ticket_storage_26_2.py upstream-vs2
-
       - name: Apply isolated shipyard teleport bridge
         shell: bash
         run: |
