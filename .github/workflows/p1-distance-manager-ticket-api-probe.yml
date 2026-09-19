@@ -1,0 +1,200 @@
+name: P1 distance manager ticket API inspection
+
+on:
+  push:
+    paths:
+      - '.github/workflows/p1-distance-manager-ticket-api-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-distance-manager-ticket-api:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact upstream baseline
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Replay canonical frozen P1 overlays in canonical order
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import shlex
+          import subprocess
+
+          workflow = Path('.github/workflows/p1-compile.yml').read_text(encoding='utf-8')
+          commands = re.findall(
+              r'^\s*run:\s+(python3 scripts/apply_p1_[^\n]+ upstream-vs2)\s*$',
+              workflow,
+              flags=re.MULTILINE,
+          )
+          if len(commands) < 50:
+              raise SystemExit(f'fail-closed: expected canonical overlay chain, found only {len(commands)} commands')
+          print(f'Replaying {len(commands)} canonical overlay commands')
+          for command in commands:
+              print('+', command)
+              subprocess.run(shlex.split(command), check=True)
+          PY
+
+      - name: Reapply frozen renderer-handler proof overlay
+        run: python3 scripts/apply_p1_entityhandler_renderstate_26_2.py upstream-vs2
+
+      - name: Reapply frozen Sable compile-boundary proof overlay
+        run: python3 scripts/apply_p1_sable_companion_compileonly_26_2.py upstream-vs2
+
+      - name: Reapply frozen optional Create helper exclusion
+        run: python3 scripts/apply_p1_deployer_scroll_option_exclusion_26_2.py upstream-vs2
+
+      - name: Reapply frozen entity authority interpolation bridge
+        run: python3 scripts/apply_p1_entity_authority_interpolation_26_2.py upstream-vs2
+
+      - name: Reapply frozen renderer submit bridge
+        run: python3 scripts/apply_p1_entity_renderer_submit_26_2.py upstream-vs2
+
+      - name: Resolve exact common compile classpath
+        shell: bash
+        working-directory: upstream-vs2
+        run: |
+          set -euo pipefail
+          cat > ../p1-distance-manager-classpath.init.gradle <<'GRADLE'
+          gradle.projectsEvaluated {
+              def commonProject = gradle.rootProject.findProject(':common')
+              if (commonProject == null) {
+                  throw new GradleException('fail-closed: :common project not found')
+              }
+              commonProject.tasks.register('vsPrintMainCompileClasspath') {
+                  doLast {
+                      def sourceSets = commonProject.extensions.findByName('sourceSets')
+                      if (sourceSets == null) {
+                          throw new GradleException('fail-closed: sourceSets extension not found on :common')
+                      }
+                      sourceSets.getByName('main').compileClasspath.files.each { file ->
+                          println('VS_CP_FILE=' + file.absolutePath)
+                      }
+                  }
+              }
+          }
+          GRADLE
+          ./gradlew -I ../p1-distance-manager-classpath.init.gradle :common:vsPrintMainCompileClasspath --no-daemon \
+            | tee ../p1-distance-manager-classpath.log
+          grep -q '^VS_CP_FILE=' ../p1-distance-manager-classpath.log
+
+      - name: Inspect exact Minecraft 26.2 ticket and distance manager API
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' | tee p1-distance-manager-ticket-api-probe.log
+          from pathlib import Path
+          import subprocess
+          import zipfile
+
+          log = Path('p1-distance-manager-classpath.log').read_text(encoding='utf-8', errors='replace')
+          classpath = []
+          for line in log.splitlines():
+              if line.startswith('VS_CP_FILE='):
+                  path = Path(line.split('=', 1)[1])
+                  if path.exists() and path.suffix == '.jar':
+                      classpath.append(path)
+
+          if not classpath:
+              raise SystemExit('fail-closed: no jar entries found on :common main compile classpath')
+
+          required = {
+              'net/minecraft/server/level/DistanceManager.class': 'net.minecraft.server.level.DistanceManager',
+              'net/minecraft/server/level/Ticket.class': 'net.minecraft.server.level.Ticket',
+              'net/minecraft/util/SortedArraySet.class': 'net.minecraft.util.SortedArraySet',
+          }
+          found = {entry: [] for entry in required}
+
+          print('=== EXACT COMPILE CLASSPATH JARS CONTAINING DISTANCE/TICKET TARGETS ===')
+          for jar in classpath:
+              try:
+                  with zipfile.ZipFile(jar) as zf:
+                      names = set(zf.namelist())
+                      hits = [entry for entry in required if entry in names]
+                      if hits:
+                          print(f'JAR {jar}')
+                          for entry in hits:
+                              found[entry].append(jar)
+                              print(f'  HAS {entry}')
+              except zipfile.BadZipFile:
+                  pass
+
+          missing = [entry for entry, jars in found.items() if not jars]
+          if missing:
+              raise SystemExit('fail-closed: required mapped Minecraft classes missing from compile classpath: ' + ', '.join(missing))
+
+          for entry, class_name in required.items():
+              for jar in found[entry]:
+                  print('\n=== JAVAP', class_name, 'FROM', jar, '===')
+                  proc = subprocess.run(
+                      ['javap', '-classpath', str(jar), '-p', '-s', '-c', class_name],
+                      text=True,
+                      stdout=subprocess.PIPE,
+                      stderr=subprocess.STDOUT,
+                      check=False,
+                  )
+                  print(proc.stdout)
+                  if proc.returncode != 0:
+                      raise SystemExit(f'fail-closed: javap failed for {class_name} from {jar}')
+
+          # Fail closed unless the exact mapped class still exposes the field name used by
+          # pinned VS2 and its type is now a SortedArraySet of non-generic Ticket values.
+          combined = []
+          for jar in found['net/minecraft/server/level/DistanceManager.class']:
+              proc = subprocess.run(
+                  ['javap', '-classpath', str(jar), '-p', 'net.minecraft.server.level.DistanceManager'],
+                  text=True,
+                  stdout=subprocess.PIPE,
+                  stderr=subprocess.STDOUT,
+                  check=True,
+              )
+              combined.append(proc.stdout)
+          dm = '\n'.join(combined)
+          if 'tickets' not in dm:
+              raise SystemExit('fail-closed: DistanceManager no longer exposes a mapped tickets field')
+          if 'SortedArraySet<net.minecraft.server.level.Ticket>' not in dm:
+              raise SystemExit('fail-closed: exact tickets field is not proven as SortedArraySet<Ticket>')
+
+          ticket_outputs = []
+          for jar in found['net/minecraft/server/level/Ticket.class']:
+              proc = subprocess.run(
+                  ['javap', '-classpath', str(jar), '-p', 'net.minecraft.server.level.Ticket'],
+                  text=True,
+                  stdout=subprocess.PIPE,
+                  stderr=subprocess.STDOUT,
+                  check=True,
+              )
+              ticket_outputs.append(proc.stdout)
+          ticket_text = '\n'.join(ticket_outputs)
+          declaration_lines = [line.strip() for line in ticket_text.splitlines() if 'class net.minecraft.server.level.Ticket' in line]
+          if not declaration_lines:
+              raise SystemExit('fail-closed: could not find Ticket class declaration')
+          if any('Ticket<' in line for line in declaration_lines):
+              raise SystemExit('fail-closed: Ticket is still generic; do not apply non-generic adaptation')
+
+          print('DISTANCE_MANAGER_TICKET_API_PROVEN tickets=Long2ObjectOpenHashMap<SortedArraySet<Ticket>> ticket_generic=false')
+          PY
+
+      - name: Upload exact distance manager ticket API inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-distance-manager-ticket-api-probe-${{ github.sha }}
+          path: |
+            p1-distance-manager-classpath.log
+            p1-distance-manager-ticket-api-probe.log
+          if-no-files-found: warn
