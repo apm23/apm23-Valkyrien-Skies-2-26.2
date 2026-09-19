@@ -22,17 +22,18 @@ GitHub code is the implementation source of truth. This file is the durable cont
 
 The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are applied by explicit fail-closed overlay scripts so every adaptation stays traceable to upstream VS2 source.
 
-## Current reconciliation — MassDatapackResolver registry-tag lookup proven
+## Current reconciliation — TestHingeBlockEntity Value I/O persistence proven
 
-- Current proven implementation HEAD: `ea2084954eb4edd2bd9922aa1f59342b76709809` (`P1: wire MassDatapackResolver registry-tag proof`).
-- Exact-head P0 provenance run `35420504812`, job `105837166152`, completed `success` and re-confirmed the pinned upstream VS2 identity.
-- Exact-head P1 standalone compile run `35420504781`, job `105837162566`, completed `failure` only because later independent Minecraft 26.2 source/API errors remain.
-- Every traceable overlay applied successfully, including the prior frozen MassDatapackResolver minY, Identifier, typed reload-listener overlays and the isolated `apply_p1_massdatapackresolver_registry_tag_26_2.py`; explicit `git diff --check` / port-delta validation and Gradle runtime steps succeeded.
-- Exact Minecraft 26.2 registry inspection established that `Registry<T>` exposes tag lookup through `get(TagKey<T>) -> Optional<HolderSet.Named<T>>`; the pinned upstream VS2 code used legacy `getTag(TagKey)` at the same deferred tag-resolution boundary.
-- The isolated adaptation changes exactly one source expression after overlays: `BuiltInRegistries.BLOCK.getTag(TagKey.create(Registries.BLOCK, tagInfo.id))` becomes `BuiltInRegistries.BLOCK.get(TagKey.create(Registries.BLOCK, tagInfo.id))`.
-- The fail-closed overlay pins and preserves the real upstream `VSGameEvents.tagsAreLoaded` timing, nullable `Optional<HolderSet.Named<Block>>?` wrapper, missing-tag `isPresent` check and warning/skip behavior, `tag.get().forEach` holder iteration, block registry-key lookup, priority/mass/friction/elasticity application, deferred tag collection, and block-state/physics registration semantics.
-- Exact run `35420504781` contains **no compiler diagnostic for `MassDatapackResolver.kt`**. The prior sole line-105 `Unresolved reference 'getTag'` diagnostic is cleared and no replacement regression appeared in that file.
-- Diagnostic artifact: `p1-compile-log-ea2084954eb4edd2bd9922aa1f59342b76709809`, artifact ID `10577252400`, size `6584` bytes, ZIP SHA-256 `d0dab3e4652c4d00f62f1c9aeccaae98c8a1401e8651e86bd9de7aa12d2f28ac`.
+- Current proven implementation HEAD: `4641ae31765f0d067923cc1ef54b9a26abe99a19` (`P1: wire TestHingeBlockEntity Value I/O proof`).
+- Exact-head P0 provenance run `35421661792`, job `105840387680`, completed `success` and re-confirmed the pinned upstream VS2 identity.
+- Exact-head P1 standalone compile run `35421661791`, job `105840387789`, completed `failure` only because later independent Minecraft 26.2 source/API errors remain.
+- Every traceable overlay applied successfully, including the prior frozen `TestHingeBlockEntity` `getLong` Optional overlay and the isolated `apply_p1_testhinge_blockentity_value_io_26_2.py`; explicit `git diff --check` / port-delta validation and Gradle runtime steps succeeded.
+- The isolated adaptation changes only the Minecraft 26.2 `BlockEntity` persistence boundary in real upstream `TestHingeBlockEntity`: legacy `saveAdditional(CompoundTag, HolderLookup.Provider)` / `loadAdditional(CompoundTag, HolderLookup.Provider)` become `saveAdditional(ValueOutput)` / `loadAdditional(ValueInput)`.
+- The persisted schema is preserved exactly: `shipId0`, `shipId1`, `pos0x`, `pos0y`, `pos0z`, `pos1x`, `pos1y`, `pos1z`, `rot0x`, `rot0y`, `rot0z`, `rot0w`, `rot1x`, `rot1y`, `rot1z`, `rot1w`. Save still writes the same ship IDs, position vectors and quaternion components.
+- Load keeps the proven `shipId*` Optional long fallback behavior and preserves the upstream completeness rule for vector/quaternion payloads: any missing position or rotation component aborts this hinge load instead of inventing a partial vector/quaternion. `VSRevoluteJoint`, `VSJointPose`, `maxForceTorque = null`, `driveFreeSpin = true`, and `makeConstraint = true` semantics are unchanged.
+- Exact run `35421661791` contains **no compiler diagnostic for `TestHingeBlockEntity.kt`**. The prior `saveAdditional` / `loadAdditional` override failures and `CompoundTag` versus `ValueInput` / `ValueOutput` argument mismatches are cleared, with no replacement diagnostic in the target file.
+- Diagnostic artifact: `p1-compile-log-4641ae31765f0d067923cc1ef54b9a26abe99a19`, artifact ID `10577638892`, size `6490` bytes, ZIP SHA-256 `a6b44f7d7248a9364dc31f1ddc9231ffa45212a895f10db752be4b432deae47a`.
+- Prior `MassDatapackResolver` registry-tag proof remains frozen at HEAD `ea2084954eb4edd2bd9922aa1f59342b76709809`, P0 `35420504812` / job `105837166152`, P1 `35420504781` / job `105837162566`, artifact `10577252400`, ZIP SHA-256 `d0dab3e4652c4d00f62f1c9aeccaae98c8a1401e8651e86bd9de7aa12d2f28ac`.
 - Prior `MassDatapackResolver` typed reload-listener proof remains frozen at HEAD `27e181c70184b2aac38eeb1a646905d93ba45023`, P0 `35419426729` / job `105834163091`, P1 `35419426780` / job `105834163164`, artifact `10577550502`, ZIP SHA-256 `cf373d90a2b42bc5bc92866fe39d97a43ce6ae6e7deb4fd3f2f37d307719fd57`.
 - The first typed-listener probe `0fdf41ec2e506f45fba3b28fa1715a0438393a09` remains a failed-partial hypothesis: changing only `objects` to non-null while retaining `ResourceManager?` / `ProfilerFiller?` produced `'apply' overrides nothing`; P0 `35419191257` / job `105833522135`, P1 `35419191192` / job `105833522020`, artifact `10577705252`, ZIP SHA-256 `d42d410f4f0d95733a8b02ec5045d792daa644ea158274797073324186b557c3`.
 - Prior `DimensionParametersResolver` typed reload-listener proof remains frozen at HEAD `ac739bbf0c1598087a6ae9b158117c4764ce3079`, P0 `35418630206` / job `105831997380`, P1 `35418630221` / job `105831997436`, artifact `10576109658`, ZIP SHA-256 `58f0e1a82a74ebc096c610a8d98dd51efc56c1e9248a79e446517cdb7f30ea97`.
@@ -43,7 +44,7 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 - Prior `MassDatapackResolver.kt` Identifier proof remains frozen at HEAD `a40316e93a61594018fd6f8f9d4b913d7fb2eb80`, P0 `35411562202` / job `105812049740`, P1 `35411562107` / job `105812049438`, artifact `10574698116`, ZIP SHA-256 `41dc8482808a7de1a46bf4f680c00560ae085a267118e3a9dddec1f5997d2506`.
 - Prior `MassDatapackResolver` dummy-`BlockGetter` minY proof remains frozen at HEAD `563cbcba7bb1c92ca27820ef785d11bb88872524`, P0 `35410678210` / job `105809557245`, P1 `35410678254` / job `105809557590`, artifact `10573811879`, ZIP SHA-256 `ef0e33b2db1cff60f1e1d14658cbb9d50523309a227806cf3f09776fd23df3f2`.
 - Prior `SeamlessChunksManager` ChunkPos packed-key proof remains frozen at HEAD `75a434c728f1ca020b550882967085ccc53d5c3b`, P0 `35409275352` / job `105805422622`, P1 `35409275363` / job `105805423593`, artifact `10574055235`, ZIP SHA-256 `cb032a68942404c798debc540ad7b387c1f06ac41d6854f570aa43e70894a9b6`.
-- No networking, entity dragging/reference-space behavior, local-control authority, interpolation, ship lifecycle, collision, physics, player, camera, rendering, persistence, or unrelated gameplay semantics were changed by this proof.
+- No networking, entity dragging/reference-space behavior, local-control authority, interpolation, ship lifecycle, collision, physics, player, camera, rendering, or unrelated gameplay semantics were changed by this proof.
 - No code from retired `apm23/VS2-Create_Interactive` has been imported or reused as implementation source.
 
 ## Target runtime baseline
@@ -61,9 +62,9 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
-- active_proof_head: `ea2084954eb4edd2bd9922aa1f59342b76709809; MassDatapackResolver registry-tag lookup proof complete and frozen`
-- active_proof_run: `P0 35420504812 / job 105837166152 success; P1 35420504781 / job 105837162566 failure with all MassDatapackResolver diagnostics cleared`
-- active_hypothesis: `none selected yet; inspect the exact Minecraft 26.2 API boundary for one isolated remaining compiler cluster before source mutation. Preserve the authority-sensitive VSGamePackets/EntityDragger local-control and lerp boundary, the broader ShipSavedData persistence boundary, VSGameUtils resource/mixin boundary, keybinding translation semantics, nullable message semantics, rendering, ticketing, Sable, and other deferred locks.`
+- active_proof_head: `4641ae31765f0d067923cc1ef54b9a26abe99a19; TestHingeBlockEntity Value I/O persistence proof complete and frozen`
+- active_proof_run: `P0 35421661792 / job 105840387680 success; P1 35421661791 / job 105840387789 failure with all TestHingeBlockEntity diagnostics cleared`
+- active_hypothesis: `none selected yet; inspect the exact Minecraft 26.2 API boundary for one isolated remaining compiler cluster before source mutation. The TestHingeBlockEntity ValueInput/ValueOutput boundary is frozen independently and does not authorize mechanical persistence edits elsewhere. Preserve the broader ShipSavedData lifecycle/factory boundary, ShipMountingEntity entity persistence/hurt boundary, assembly/relocation component semantics, authority-sensitive VSGamePackets/EntityDragger local-control and lerp boundary, VSGameUtils resource/mixin boundary, keybinding translation semantics, nullable message semantics, rendering, ticketing, Sable, and other deferred locks.`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 
@@ -90,7 +91,7 @@ Source/API clusters proven clean in exact-head runs:
 - `MinecraftPlayer.kt` admin/config permission predicates;
 - dynamic command permission migrations through Backend/GetAir/GetGravity/Dry/Rename/Scale/Splitting/Static/Teleport/Delete/GetShip/Remass;
 - `TestHingeBlock.kt` `getShape`, `getTicker`, four onPaste `getLong` Optional unwraps, and removal hook migration;
-- `TestHingeBlockEntity.kt` two load-time `getLong` Optional unwraps;
+- `TestHingeBlockEntity.kt` two load-time `getLong` Optional unwraps plus Minecraft 26.2 `ValueInput` / `ValueOutput` persistence-hook migration preserving the exact flat persisted key schema, missing-component abort behavior, and `VSRevoluteJoint` / `makeConstraint` semantics; exact run `35421661791` has no remaining diagnostic for this file;
 - `ShipSavedData.kt` three load-time `getByteArray` Optional unwraps preserving empty-array behavior;
 - `CompatUtil.kt` `BlockPos.center`, build-height semantics, and explicit empty collision-context migrations;
 - `SeamlessChunksManager.kt` packed chunk-key migration;
@@ -100,7 +101,7 @@ Source/API clusters proven clean in exact-head runs:
 - `VSEntityHandlerDataLoader.kt` Minecraft 26.2 typed `SimpleJsonResourceReloadListener<JsonElement>` constructor/generic migration using `ExtraCodecs.JSON` + `FileToIdConverter.json("vs_entities")`, preserving the upstream raw-JSON/apply/handler-pairing semantics;
 - `VSGamePackets.kt` two `ResourceLocation -> Identifier` vocabulary sites, with local-control/lerp/networking semantics intentionally separate.
 
-Representative remaining compiler areas from exact run `35420504781`: Create compat classpath/API drift; separate `ShipSavedData` SavedData persistence migration; deferred `VSGameUtils` resource-key/Identifier plus build-height/chunk-position APIs; `ValkyrienSkiesMod` creative-tab output API; assembly/tick/ValueInput-ValueOutput/structure processor migrations; TestChair entity-create/`moveTo`; TestHingeBlockEntity persistence; deferred nullable command/item messages; deferred keybinding category; ShipMountingEntity persistence/hurt; entity-handler rendering; VSGamePackets/EntityDragger local-control and VSGamePackets lerp API drift; chunk tickets; Sable; relocation. `MassDatapackResolver` has no remaining compiler diagnostic in this run.
+Representative remaining compiler areas from exact run `35421661791`: Create compat classpath/API drift; separate `ShipSavedData` SavedData persistence migration; deferred `VSGameUtils` resource-key/Identifier plus build-height/chunk-position APIs; `ValkyrienSkiesMod` creative-tab output API; assembly/tick/ValueInput-ValueOutput/structure processor migrations; TestChair entity-create/`moveTo`; deferred nullable command/item messages; deferred keybinding category; ShipMountingEntity persistence/hurt; entity-handler rendering; VSGamePackets/EntityDragger local-control and VSGamePackets lerp API drift; chunk tickets; Sable; relocation. `TestHingeBlockEntity` and `MassDatapackResolver` have no remaining compiler diagnostic in this run.
 
 ## Proof chain retained
 
@@ -141,6 +142,7 @@ Representative remaining compiler areas from exact run `35420504781`: Create com
 - `ac739bbf0c1598087a6ae9b158117c4764ce3079`: DimensionParametersResolver typed reload-listener constructor/generic/apply boundary; P0 `35418630206`; job `105831997380`; P1 `35418630221`; job `105831997436`; artifact `10576109658`; SHA-256 `58f0e1a82a74ebc096c610a8d98dd51efc56c1e9248a79e446517cdb7f30ea97`.
 - `27e181c70184b2aac38eeb1a646905d93ba45023`: MassDatapackResolver typed reload-listener constructor/generic/apply boundary; P0 `35419426729`; job `105834163091`; P1 `35419426780`; job `105834163164`; artifact `10577550502`; SHA-256 `cf373d90a2b42bc5bc92866fe39d97a43ce6ae6e7deb4fd3f2f37d307719fd57`.
 - `ea2084954eb4edd2bd9922aa1f59342b76709809`: MassDatapackResolver registry-tag lookup `getTag(TagKey) -> get(TagKey)` with deferred tag semantics preserved; P0 `35420504812`; job `105837166152`; P1 `35420504781`; job `105837162566`; artifact `10577252400`; SHA-256 `d0dab3e4652c4d00f62f1c9aeccaae98c8a1401e8651e86bd9de7aa12d2f28ac`.
+- `4641ae31765f0d067923cc1ef54b9a26abe99a19`: TestHingeBlockEntity `ValueInput` / `ValueOutput` persistence boundary preserving the flat key schema and hinge joint-load semantics; P0 `35421661792`; job `105840387680`; P1 `35421661791`; job `105840387789`; artifact `10577638892`; SHA-256 `a6b44f7d7248a9364dc31f1ddc9231ffa45212a895f10db752be4b432deae47a`.
 
 ## Deferred / boundary locks
 
@@ -151,6 +153,7 @@ Do not collapse these broader boundaries into compile-only edits:
 - Nullable ship slug/name command/item messages: do not invent fallback values merely to satisfy Kotlin vararg nullability.
 - Typed `SimpleJsonResourceReloadListener<T>` migration is frozen green independently for `VSEntityHandlerDataLoader`, `DimensionParametersResolver`, and `MassDatapackResolver`.
 - `MassDatapackResolver` registry-tag lookup is also frozen green independently: the 26.2 `Registry.get(TagKey)` path is proven while preserving upstream deferred `tagsAreLoaded`, Optional/HolderSet, missing-tag, priority/application, and registration semantics.
+- `TestHingeBlockEntity` persistence is frozen green independently: this proves only that block entity's exact flat-key `ValueInput` / `ValueOutput` boundary. It does **not** authorize mechanical migration of `ShipSavedData`, `ShipMountingEntity`, `AssemblyUtil`, `ShipAssembler`, or `RelocationUtil`; those have separate lifecycle/factory/component/entity semantics and must be inspected independently.
 - `VSGamePackets.kt` / `EntityDragger.kt` local-control and lerp API drift is authority-sensitive; do not replace removed vanilla APIs with synthetic carry, custom authority, teleport chase, or invented client-control semantics.
 
 ## Sable contract
@@ -168,7 +171,7 @@ Forbidden final substitutes: custom VS2-style reference frames, synthetic carry 
 ## Milestones
 
 ### P0 — Upstream import + provenance
-Frozen green. Exact upstream identity/pin/license/provenance is established and repeatedly re-confirmed. Latest proven implementation HEAD `ea2084954eb4edd2bd9922aa1f59342b76709809` has exact-head P0 run `35420504812` / job `105837166152` success.
+Frozen green. Exact upstream identity/pin/license/provenance is established and repeatedly re-confirmed. Latest proven implementation HEAD `4641ae31765f0d067923cc1ef54b9a26abe99a19` has exact-head P0 run `35421661792` / job `105840387680` success.
 
 ### P1 — Standalone VS2 26.2 compile/boot
 Port actual VS2 until common/Fabric compile, standalone client/server boot, and core/native initialization are proven without Create/SNR/Copycats hiding failures.
@@ -208,13 +211,14 @@ Do not reintroduce without new direct evidence:
 - substituting CompatUtil old exclusive `maxBuildHeight` directly with current inclusive `getMaxY()`;
 - assuming legacy nullable `Map<Identifier?, JsonElement?>` still overrides Minecraft 26.2 typed `SimpleJsonResourceReloadListener<JsonElement>.apply`; exact run `35418399392` disproved this and the proven DimensionParameters boundary uses `MutableMap<Identifier, JsonElement>`;
 - assuming `MassDatapackResolver.VSMassDataLoader.apply` can be ported by making only its `objects` map non-null while leaving `ResourceManager?` / `ProfilerFiller?`; exact probe `0fdf41ec2e506f45fba3b28fa1715a0438393a09`, P1 `35419191192`, disproved this. The proven 26.2 boundary requires all three apply arguments non-null;
+- mechanically copying the proven `TestHingeBlockEntity` Value I/O shape into broader persistence/component/entity paths without first proving their Minecraft 26.2 lifecycle and codec/component semantics;
 - mechanically replacing removed `isControlledByLocalInstance` / `lerpTo` calls without proving the current Minecraft 26.2 authority/interpolation boundary and preserving upstream VS2 semantics.
 
 ## next_safe_action
 
-1. Preserve exact `MassDatapackResolver` registry-tag proof HEAD `ea2084954eb4edd2bd9922aa1f59342b76709809`, P0 `35420504812` / job `105837166152`, P1 `35420504781` / job `105837162566`, artifact `10577252400`, ZIP SHA-256 `d0dab3e4652c4d00f62f1c9aeccaae98c8a1401e8651e86bd9de7aa12d2f28ac`.
+1. Preserve exact `TestHingeBlockEntity` Value I/O persistence proof HEAD `4641ae31765f0d067923cc1ef54b9a26abe99a19`, P0 `35421661792` / job `105840387680`, P1 `35421661791` / job `105840387789`, artifact `10577638892`, ZIP SHA-256 `a6b44f7d7248a9364dc31f1ddc9231ffa45212a895f10db752be4b432deae47a`.
 2. Reconcile actual HEAD after this proof-ledger commit and require its exact-head P0 provenance run to settle successfully before any new source mutation.
-3. After provenance settles, inspect only the newest exact-head compiler evidence plus the exact Minecraft 26.2 API boundary for **one** isolated remaining compiler cluster. Do not assume any remaining local-control, lerp, persistence, rendering, tickets, creative-tab, VSGameUtils, assembly/ValueInput-ValueOutput, keybinding, nullable-message, Create-compat, Sable, or relocation drift is a mechanical rename/signature edit.
+3. After provenance settles, inspect only the newest exact-head compiler evidence plus the exact Minecraft 26.2 API boundary for **one** isolated remaining compiler cluster. The proven `TestHingeBlockEntity` Value I/O shape is evidence for that one block entity only; do not mechanically apply it to `ShipSavedData`, `ShipMountingEntity`, assembly/relocation, or any other persistence path. Do not assume local-control, lerp, rendering, tickets, creative-tab, VSGameUtils, keybinding, nullable-message, Create-compat, Sable, or other drift is a mechanical rename/signature edit.
 4. Select and document exactly one next root hypothesis only after that API-boundary inspection. Preserve all frozen proofs, deferred boundaries, and failed-hypothesis locks.
 5. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet. No video is authorized during compile/API-port work.
 
