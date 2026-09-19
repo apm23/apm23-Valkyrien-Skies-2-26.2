@@ -1,4 +1,5 @@
 name: P1 canonicalize frozen proof overlays
+# One-shot recovery harness; generated canonical commit deletes this workflow.
 
 on:
   push:
