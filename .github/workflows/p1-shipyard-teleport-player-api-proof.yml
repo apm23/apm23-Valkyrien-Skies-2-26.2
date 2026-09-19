@@ -45,9 +45,12 @@ jobs:
           commands = re.findall(r'^\s*run:\s+(python3 scripts/apply_p1_[^\n]+ upstream-vs2)\s*$', workflow, flags=re.MULTILINE)
           if len(commands) < 50:
               raise SystemExit(f'fail-closed: expected canonical overlay chain, found only {len(commands)} commands')
-          if any('shipyard_teleport' in c for c in commands):
-              raise SystemExit('fail-closed: teleport overlay unexpectedly canonicalized before proof')
+          teleport = [c for c in commands if 'shipyard_teleport' in c]
+          if len(teleport) not in (0, 2):
+              raise SystemExit(f'fail-closed: expected zero or two canonical teleport overlays, found {teleport}')
           for command in commands:
+              if 'shipyard_teleport' in command:
+                  continue
               print('+', command)
               subprocess.run(shlex.split(command), check=True)
           PY

@@ -66,6 +66,8 @@ on:
       - 'scripts/apply_p1_relocationutil_blockupdated_26_2.py'
       - 'scripts/apply_p1_relocationutil_loot_clear_26_2.py'
       - 'scripts/apply_p1_relocationutil_blockentity_value_input_26_2.py'
+      - 'scripts/apply_p1_shipyard_teleport_api_26_2.py'
+      - 'scripts/apply_p1_shipyard_teleport_player_api_26_2.py'
       - '.github/workflows/p1-compile.yml'
       - 'upstream-vs2'
       - 'BASELINE_LOCK.json'
@@ -279,6 +281,12 @@ jobs:
       - name: Apply traceable P1 RelocationUtil block-entity ValueInput overlay
         run: python3 scripts/apply_p1_relocationutil_blockentity_value_input_26_2.py upstream-vs2
 
+      - name: Apply traceable P1 shipyard teleport API overlay
+        run: python3 scripts/apply_p1_shipyard_teleport_api_26_2.py upstream-vs2
+
+      - name: Apply traceable P1 shipyard teleport ServerPlayer API overlay
+        run: python3 scripts/apply_p1_shipyard_teleport_player_api_26_2.py upstream-vs2
+
       - name: Show and validate port delta
         shell: bash
         run: |
@@ -294,6 +302,7 @@ jobs:
           git -C upstream-vs2 diff -- common/src/main/kotlin/org/valkyrienskies/mod/common/world/ChunkManagement.kt common/src/main/kotlin/org/valkyrienskies/mod/common/world/VSTicketType.kt
           git -C upstream-vs2 diff -- common/src/main/kotlin/org/valkyrienskies/mod/common/assembly/AssemblyUtil.kt
           git -C upstream-vs2 diff -- common/src/main/kotlin/org/valkyrienskies/mod/util/RelocationUtil.kt
+          git -C upstream-vs2 diff -- common/src/main/java/org/valkyrienskies/mod/mixin/feature/shipyard_entities/MixinEntity.java common/src/main/java/org/valkyrienskies/mod/mixin/server/command/level/MixinServerPlayer.java common/src/main/java/org/valkyrienskies/mod/mixin/server/network/MixinServerGamePacketListenerImpl.java
           git -C upstream-vs2 diff -- common/src/main/kotlin/org/valkyrienskies/mod/common/item/ShipAssemblerItem.kt common/src/main/kotlin/org/valkyrienskies/mod/common/item/ShipCreatorItem.kt common/src/main/kotlin/org/valkyrienskies/mod/common/item/ShipRemoverItem.kt
           git -C upstream-vs2 diff -- common/src/main/java/org/valkyrienskies/mod/mixin/accessors/resource/ResourceKeyAccessor.java common/src/main/java/org/valkyrienskies/mod/mixin/world/level/MixinLevel.java
           git -C upstream-vs2 status --short -- common/src/main/java/org/valkyrienskies/mod/common/util/NullableTranslatableCompat.java
