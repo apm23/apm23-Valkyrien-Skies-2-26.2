@@ -7,9 +7,12 @@ mixin registration. Its old Create/intermediary API currently blocks Minecraft
 26.2 standalone compilation even though P1 must not port Create internals before
 P3.
 
-This overlay excludes only that single helper from the common Kotlin source set.
-It does not modify Create APIs, VS2 ship-space/physics/collision/entity authority,
-or any runtime/mixin registration.
+The helper is physically stored under common/src/main/java despite being Kotlin.
+An exact probe proved that excluding it from the Kotlin source-set block does not
+filter this source root. This overlay therefore excludes only that single helper
+from the common Java source-set root that actually owns the path. It does not
+modify Create APIs, VS2 ship-space/physics/collision/entity authority, or any
+runtime/mixin registration.
 """
 
 from pathlib import Path
@@ -62,11 +65,11 @@ def main() -> None:
         raise SystemExit("fail-closed: matching direct Create runtime/mixin registration now exists")
 
     text = build.read_text(encoding="utf-8")
-    old = '''        kotlin {\n            exclude "org/valkyrienskies/mod/compat/hexcasting/**"\n            exclude "org/valkyrienskies/mod/compat/flywheel/**"\n'''
-    new = '''        kotlin {\n            exclude "org/valkyrienskies/mod/compat/hexcasting/**"\n            exclude "org/valkyrienskies/mod/compat/flywheel/**"\n            exclude "org/valkyrienskies/mod/compat/create/DeployerScrollOptionSlot.kt"\n'''
+    old = '''        java {\n            exclude "org/valkyrienskies/mod/mixin/mod_compat/hexcasting/**"\n            exclude "org/valkyrienskies/mod/mixin/mod_compat/flywheel/**"\n'''
+    new = '''        java {\n            exclude "org/valkyrienskies/mod/mixin/mod_compat/hexcasting/**"\n            exclude "org/valkyrienskies/mod/mixin/mod_compat/flywheel/**"\n            exclude "org/valkyrienskies/mod/compat/create/DeployerScrollOptionSlot.kt"\n'''
     count = text.count(old)
     if count != 1:
-        raise SystemExit(f"fail-closed: expected exactly one common Kotlin sourceSet anchor, found {count}")
+        raise SystemExit(f"fail-closed: expected exactly one common Java sourceSet anchor, found {count}")
     if TARGET in text:
         raise SystemExit("fail-closed: DeployerScrollOptionSlot exclusion already present unexpectedly")
 
