@@ -19,6 +19,7 @@ on:
       - 'scripts/apply_p1_remass_permission_26_2.py'
       - 'scripts/apply_p1_entitydragger_direction_26_2.py'
       - 'scripts/apply_p1_testchair_direction_26_2.py'
+      - 'scripts/apply_p1_testchair_entity_creation_26_2.py'
       - 'scripts/apply_p1_emptyrenderer_identifier_26_2.py'
       - 'scripts/apply_p1_emptyrenderer_renderstate_26_2.py'
       - 'scripts/apply_p1_valkyrienskiesmod_identifier_26_2.py'
@@ -113,6 +114,9 @@ jobs:
 
       - name: Apply traceable P1 TestChair Direction overlay
         run: python3 scripts/apply_p1_testchair_direction_26_2.py upstream-vs2
+
+      - name: Apply traceable P1 TestChair entity-creation overlay
+        run: python3 scripts/apply_p1_testchair_entity_creation_26_2.py upstream-vs2
 
       - name: Apply traceable P1 EmptyRenderer Identifier overlay
         run: python3 scripts/apply_p1_emptyrenderer_identifier_26_2.py upstream-vs2
