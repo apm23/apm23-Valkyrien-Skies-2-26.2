@@ -22,32 +22,33 @@ GitHub code is the implementation source of truth. This file is the durable cont
 
 The upstream baseline remains pinned. Minecraft 26.2 changes are applied by explicit fail-closed overlays so every adaptation remains traceable to upstream VS2 source.
 
-## Current reconciliation — VSGameUtils ResourceKey / Identifier boundary proven and frozen
+## Current reconciliation — VSGameUtils build-height / chunk-key boundary proven and frozen
 
-- Current proven implementation HEAD: `a5e219c7036937ce0ef4b5dfe5032bd82c764ee9` (`p1: run VSGameUtils ResourceKey Identifier proof`).
-- Exact-head P0 provenance run `35427279261`, job `105855291717`, completed `success`; the exact upstream gitlink remained `f39132148e717d325933b4ce6e9e9fb13d929390`.
-- Exact-head P1 standalone compile run `35427279257`, job `105855291754`, completed `failure` only because independent Minecraft 26.2 source/API clusters remain.
+- Current proven implementation HEAD: `24802fb75610a3ceb1614fda1a78cab1fab7cfe5` (`p1: run VSGameUtils height chunk-key proof`).
+- Exact-head P0 provenance run `35427744252`, job `105856539289`, completed `success`; the exact upstream gitlink remained `f39132148e717d325933b4ce6e9e9fb13d929390`.
+- Exact-head P1 standalone compile run `35427743996`, job `105856538642`, completed `failure` only because independent Minecraft 26.2 source/API clusters remain.
 - Every overlay step through this proof, `Show and validate port delta`, and Gradle runtime setup completed successfully; compilation reached the real `:common:compileKotlin` boundary.
-- Root cause proven for this isolated cluster: pinned upstream VS2's `DimensionId` bridge uses Minecraft `ResourceKey` through `ResourceKeyAccessor`; Minecraft 26.2 changed the resource vocabulary from `ResourceLocation` to `Identifier` and the public key accessor from `location()` to `identifier()`, while the private `ResourceKey.create(Identifier, Identifier)` shape and `registryName` field used by the existing VS2 mixin accessor/invoker remain available.
-- `scripts/apply_p1_vsgameutils_resourcekey_identifier_26_2.py` is fail-closed and targets exactly three upstream files:
+- Root cause proven for this isolated cluster: pinned upstream VS2 uses the legacy Minecraft level-height names `minBuildHeight` / `maxBuildHeight` and the old packed chunk-key factory `ChunkPos.asLong(x, z)`. Minecraft 26.2 exposes the same required semantics through `getMinY()`, `getHeight()`, and `ChunkPos.pack(x, z)`.
+- Exact equivalent Minecraft 26.2 semantics were already independently frozen green in `CompatUtil` (`minBuildHeight -> getMinY()`, exclusive `maxBuildHeight -> getMinY() + getHeight()`) and `SeamlessChunksManager` (`ChunkPos.asLong` / `toLong` packed-key uses -> `ChunkPos.pack` / `pack`). This proof applies those already-proven API semantics only to the remaining `VSGameUtils` expressions.
+- `scripts/apply_p1_vsgameutils_height_chunkkey_26_2.py` is fail-closed and targets exactly one upstream file:
   - `common/src/main/kotlin/org/valkyrienskies/mod/common/VSGameUtils.kt`
-  - `common/src/main/java/org/valkyrienskies/mod/mixin/accessors/resource/ResourceKeyAccessor.java`
-  - `common/src/main/java/org/valkyrienskies/mod/mixin/world/level/MixinLevel.java`
-- The adaptation preserves the exact upstream dimension identity architecture: `DimensionId` is still encoded as `<registry namespace>:<registry path>:<dimension namespace>:<dimension path>`, the same cache remains authoritative, and `getResourceKey()` still reconstructs the key through the existing `ResourceKeyAccessor.callCreate(...)` invoker rather than introducing a new dimension/reference-space system.
-- The patch only changes `ResourceLocation -> Identifier`, the accessor/invoker parameter/return vocabulary accordingly, and `dim.location() -> dim.identifier()`.
-- No build-height semantics, chunk packing/tickets, ship lifecycle, ship/reference-space, transforms, physics, collision, entity dragging, player/camera, networking, authority, or gameplay behavior is changed by this proof.
-- Exact run `35427279257` contains **no remaining compiler diagnostic for the former `ResourceLocation` sites in `VSGameUtils.kt`, `ResourceKeyAccessor.java`, or `MixinLevel.java` and no replacement diagnostic in the Java mixin files**. The only remaining `VSGameUtils.kt` diagnostics are the deliberately untouched independent sites: `minBuildHeight`, `maxBuildHeight`, and `ChunkPos.asLong`.
-- Diagnostic artifact: `p1-compile-log-a5e219c7036937ce0ef4b5dfe5032bd82c764ee9`, artifact ID `10578904709`, size `6028` bytes, ZIP SHA-256 `6bbcd694cdeb5c5fe6bbb00bcaaf0b322092df30ca3e1a5b241007e836b137ad`.
+- The adaptation preserves the exact upstream range semantics: `LevelYRange(minBuildHeight, maxBuildHeight - 1)` becomes `LevelYRange(getMinY(), getMinY() + getHeight() - 1)`, retaining the same inclusive maximum Y.
+- The adaptation preserves the exact packed `(chunkX, chunkZ)` key semantics for `ServerChunkCache.isPositionTicking(...)`: `ChunkPos.asLong(chunkX, chunkZ)` becomes `ChunkPos.pack(chunkX, chunkZ)`.
+- The separately frozen `VSGameUtils` / `ResourceKeyAccessor` / `MixinLevel` dimension-identity bridge is untouched by this proof.
+- No ship lifecycle, ship/reference-space, transforms, physics, collision, entity dragging, player/camera, networking, authority, rendering, chunk-ticket lifetime policy, or gameplay behavior is changed by this proof.
+- Exact run `35427743996` contains **no compiler diagnostic for `VSGameUtils.kt` at all**. The former `minBuildHeight`, `maxBuildHeight`, and `ChunkPos.asLong` diagnostics are cleared and no replacement diagnostic appears for `getMinY()`, `getHeight()`, or `ChunkPos.pack(...)`; all remaining diagnostics belong to independent clusters listed below.
+- Diagnostic artifact: `p1-compile-log-24802fb75610a3ceb1614fda1a78cab1fab7cfe5`, artifact ID `10579727750`, size `5979` bytes, ZIP SHA-256 `35defb49532853a55d5e0b52e6d49efff3e1e5392d4766a455e068c42eea2bcb`.
 - No code from retired `apm23/VS2-Create_Interactive` has been imported or reused as implementation source.
 
 ## Frozen proof ancestry / negative evidence
 
-The immediately prior ledger checkpoint is `276720126ad05965270c5a88679f994971fdb2ae` (`ledger: freeze nullable translation argument proof`). Its historical proof records and failed probes remain frozen evidence and must not be replayed merely because a later compiler error resembles them.
+The immediately prior ledger checkpoint is `00b9f3c1a97a90bc94912133072233dcb5190dec` (`ledger: freeze VSGameUtils ResourceKey Identifier proof`). Its historical proof records and failed probes remain frozen evidence and must not be replayed merely because a later compiler error resembles them.
 
+- `a5e219c7036937ce0ef4b5dfe5032bd82c764ee9`: VSGameUtils ResourceKey / Identifier boundary proof; P0 `35427279261` / job `105855291717`; P1 `35427279257` / job `105855291754`; artifact `10578904709`; SHA-256 `6bbcd694cdeb5c5fe6bbb00bcaaf0b322092df30ca3e1a5b241007e836b137ad`.
 - `ee7e9c56be55fd95114d0f7e194be69185db4385`: nullable translation-argument proof; P0 `35426650197` / job `105853673536`; P1 `35426650191` / job `105853673479`; artifact `10579029076`; SHA-256 `4d66cffe1cc65e689f321233c2b65aaf524699874214c41fc7b97ff1c198afba`.
 - `169e0007dcbeb2263701e6b41e40757de6d62ff2`: TestChair entity creation / positioning proof; P0 `35424938143` / job `105849132808`; P1 `35424938174` / job `105849132961`; artifact `10578643862`; SHA-256 `d9e90d3e6ec99f1203285e429f69be9ba6a5c82aae7e209196f93dcb88e938d1`.
 - `2c763500338955135d0700b273594a87dab9d982`: VSKeyBindings current `KeyMapping.Category` migration plus localized translation bridge; P0 `35424232816` / job `105847304720`; P1 `35424232856` / job `105847304996`; artifact `10578617703`; SHA-256 `c9e0d1f2f1e18390794ee14f41493e133d2d174c4e0fa58463c2381983013bb1`. Failed partial probes `e108526cbd728454c175c76bffc610d4e074da49`, `fcc65187d79c4b546883875da3597345db1e01cd`, `e9a3efd58acb2af9539628eb2875e6cb829c3cec`, and `fb3c7e65a4c2089f6fa695114734d14836bde1d3` are negative evidence.
-- `5c8a80eca1b996c4b89d5a394d7cfb9115d3f070`: `CreativeModeTab.Output` accessibility proof; P0 `35423048611` / job `105844091418`; P1 `35423048671` / job `105844092374`; artifact `10578021452`; SHA-256 `f5691678a8ebdd7967c193846b906b8114fa4bacd9068836f061d83a9bb0cd1b`.
+- `5c8a80eca1b996c4b89d5a394d7cfb9115d3f070`: `CreativeModeTab.Output` accessibility proof; P0 `35423048611` / job `105844091418`; P1 `35423048671` / job `105844092374`; artifact `10578021452`; SHA-256 `f5691678a8ebdd7967c193846b9068836f061d83a9bb0cd1b`.
 - `4641ae31765f0d067923cc1ef54b9a26abe99a19`: TestHingeBlockEntity `ValueInput` / `ValueOutput` persistence proof; P0 `35421661792` / job `105840387680`; P1 `35421661791` / job `105840387789`; artifact `10577638892`; SHA-256 `a6b44f7d7248a9364dc31f1ddc9231ffa45212a895f10db752be4b432deae47a`.
 - `ea2084954eb4edd2bd9922aa1f59342b76709809`: MassDatapackResolver registry-tag lookup proof; P0 `35420504812` / job `105837166152`; P1 `35420504781` / job `105837162566`; artifact `10577252400`; SHA-256 `d0dab3e4652c4d00f62f1c9aeccaae98c8a1401e8651e86bd9de7aa12d2f28ac`.
 - `27e181c70184b2aac38eeb1a646905d93ba45023`: MassDatapackResolver typed reload-listener proof.
@@ -77,8 +78,8 @@ All other earlier frozen-green proofs recorded by prior ledgers remain frozen ev
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
-- active_proof_head: `a5e219c7036937ce0ef4b5dfe5032bd82c764ee9; VSGameUtils ResourceKey / Identifier boundary complete and frozen`
-- active_proof_run: `P0 35427279261 / job 105855291717 success; P1 35427279257 / job 105855291754 failure with ResourceKey/Identifier/mixin diagnostics cleared; remaining VSGameUtils diagnostics are only minBuildHeight, maxBuildHeight, and asLong`
+- active_proof_head: `24802fb75610a3ceb1614fda1a78cab1fab7cfe5; VSGameUtils build-height / chunk-key boundary complete and frozen`
+- active_proof_run: `P0 35427744252 / job 105856539289 success; P1 35427743996 / job 105856538642 failure with all VSGameUtils build-height/chunk-key diagnostics cleared and no VSGameUtils diagnostic remaining`
 - active_hypothesis: `none selected; choose the next isolated cluster only after exact Minecraft 26.2 API inspection`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
@@ -112,32 +113,33 @@ Source/API clusters already proven clean include:
 - VSKeyBindings current Category migration with legacy localization semantics preserved;
 - TestChairBlock current entity-create / `snapTo` adaptation while preserving original VS2 mounting/riding flow;
 - six nullable ship-slug translation sites through `NullableTranslatableCompat`, preserving exact nullable values without fallback;
-- `VSGameUtils` / `ResourceKeyAccessor` / `MixinLevel` ResourceKey identity bridge migrated to Minecraft 26.2 `Identifier` vocabulary while preserving the existing VS2 DimensionId encoding, cache, accessor/invoker path, and dimension semantics.
+- `VSGameUtils` / `ResourceKeyAccessor` / `MixinLevel` ResourceKey identity bridge migrated to Minecraft 26.2 `Identifier` vocabulary while preserving the existing VS2 DimensionId encoding, cache, accessor/invoker path, and dimension semantics;
+- `VSGameUtils` build-height range and packed ticking-chunk key migrated to `getMinY()` / `getHeight()` / `ChunkPos.pack(...)` with the original inclusive range and packed-coordinate semantics preserved.
 
-## Remaining compiler areas from exact run `35427279257`
+## Remaining compiler areas from exact run `35427743996`
 
-These remain unresolved and independent from the frozen VSGameUtils ResourceKey/Identifier proof:
+These remain unresolved and independent from the frozen VSGameUtils proofs:
 
 - Create compatibility intermediary/classpath/API drift in `DeployerScrollOptionSlot.kt`; this must not be used to pull P3/Create architecture into P1.
 - `ShipSavedData` broader SavedData `save` lifecycle/factory boundary.
-- `VSGameUtils` now has only the untouched build-height / chunk-position sites: `minBuildHeight`, `maxBuildHeight`, and `ChunkPos.asLong`; the ResourceKey/Identifier/mixin-facing vocabulary subcluster is proven clear.
 - `AssemblyUtil` and `ShipAssembler`: block update flags, scheduled ticks, ValueInput/ValueOutput component persistence, shipyard allocation, structure processor API, chunk tickets, and related semantics.
 - `ShipMountingEntity`: current entity persistence (`ValueInput`/`ValueOutput`), server hurt contract, and constructor/level boundary.
-- rendering/entity-handler drift: render-state generics, buffer/render type classes, projectile class relocations, and render-offset boundary.
+- rendering/entity-handler drift: render-state generics, buffer/render type classes, projectile class relocations, render-offset boundary, and `VSGameEvents` render-type vocabulary.
 - `VSGamePackets` / `EntityDragger`: removed/changed local-control and interpolation APIs (`isControlledByLocalInstance`, `lerpTo`) are authority-sensitive and remain locked pending exact semantics.
 - chunk-ticket APIs in `ChunkManagement` / `VSTicketType` and ShipAssembler.
 - Sable dependency boundary.
 - `RelocationUtil`: ValueInput/ValueOutput/component loading, loot-key nullability, update flags, and related relocation semantics.
 
-The ResourceKey/Identifier/mixin-vocabulary subcluster is **not** a remaining compiler area after `a5e219c7036937ce0ef4b5dfe5032bd82c764ee9`.
+`VSGameUtils.kt` is **not** a remaining compiler area after `24802fb75610a3ceb1614fda1a78cab1fab7cfe5`.
 
 ## Locked / deferred lessons
 
 - Never mechanically invent a 26.2 API name from an old symbol. Inspect exact API semantics first.
 - Frozen nullable ship-slug semantics: do not add `slug ?: ...`, synthetic names, empty-string fallback, or any alternate naming authority. The bridge forwards the original nullable value directly.
 - Frozen VSGameUtils ResourceKey identity semantics: retain the upstream four-part DimensionId encoding, existing cache, and ResourceKey accessor/invoker architecture; do not replace it with a new dimension identifier or reference-space authority merely because 26.2 renamed resource classes/accessors.
+- Frozen VSGameUtils height semantics: preserve `minY` and the original inclusive maximum as `getMinY() + getHeight() - 1`; do not reinterpret the Y range.
+- Frozen VSGameUtils packed chunk-key semantics: use Minecraft's current `ChunkPos.pack(x, z)` equivalent for the original packed `(x,z)` key; do not invent a custom key or alter chunk ticking policy.
 - `ShipSavedData` broader SavedData save/factory lifecycle is a semantic boundary; prior byte-array Optional proof does not authorize a broad persistence rewrite.
-- The remaining `VSGameUtils` build-height and chunk-key sites are separate from the frozen ResourceKey identity proof; inspect exact 26.2 semantics before mutation even though equivalent APIs have been proven elsewhere.
 - TestChair proof authorizes only its existing chair create/place flow; it does not authorize ShipMountingEntity internals or moving-space changes.
 - `VSGamePackets` / `EntityDragger` local-control and interpolation APIs are authority-sensitive; never replace them with guessed per-tick movement, manual carry, teleports, or camera forcing.
 - Assembly/Relocation ValueInput/ValueOutput migrations must preserve block-entity/component semantics rather than merely compile.
@@ -176,9 +178,9 @@ Forbidden as final architecture: custom VS2-style replacement frames, synthetic 
 
 ## next_safe_action
 
-1. Preserve the frozen `a5e219c7036937ce0ef4b5dfe5032bd82c764ee9` VSGameUtils ResourceKey/Identifier proof, the prior `ee7e9c56be55fd95114d0f7e194be69185db4385` nullable-translation proof, and all earlier frozen-green proofs. Do not edit those sites unless direct regression evidence appears.
+1. Preserve the frozen `24802fb75610a3ceb1614fda1a78cab1fab7cfe5` VSGameUtils build-height/chunk-key proof, the prior `a5e219c7036937ce0ef4b5dfe5032bd82c764ee9` ResourceKey/Identifier proof, the `ee7e9c56be55fd95114d0f7e194be69185db4385` nullable-translation proof, and all earlier frozen-green proofs. Do not edit those sites unless direct regression evidence appears.
 2. After this ledger-only commit, require exact-head P0 provenance success before any further source mutation.
-3. Then inspect only the newest compiler evidence plus the exact Minecraft 26.2 API for **one** remaining isolated cluster. Do not mechanically patch the locked ShipSavedData, ShipMountingEntity, assembly/relocation, authority-sensitive entity/networking, rendering, ticketing, Sable, remaining VSGameUtils build-height/chunk-key, or Create-compat boundaries without semantic proof.
+3. Then inspect only the newest compiler evidence plus the exact Minecraft 26.2 API for **one** remaining isolated cluster. Do not mechanically patch the locked ShipSavedData, ShipMountingEntity, assembly/relocation, authority-sensitive entity/networking, rendering, ticketing, Sable, or Create-compat boundaries without semantic proof.
 4. Choose exactly one root hypothesis only after API inspection, then use the smallest fail-closed traceable overlay and prove that cluster separately.
 5. Remain in standalone P1. Do not use Create/SNR/Copycats to hide standalone VS2 failures. Do not record ordinary compile/debug/hypothesis-test video.
 
