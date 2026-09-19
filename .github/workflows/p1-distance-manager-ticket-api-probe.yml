@@ -92,12 +92,13 @@ jobs:
             | tee ../p1-distance-manager-classpath.log
           grep -q '^VS_CP_FILE=' ../p1-distance-manager-classpath.log
 
-      - name: Inspect exact Minecraft 26.2 ticket and distance manager API
+      - name: Inspect exact Minecraft 26.2 ticket storage boundary
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY' | tee p1-distance-manager-ticket-api-probe.log
           from pathlib import Path
+          import re
           import subprocess
           import zipfile
 
@@ -115,7 +116,7 @@ jobs:
           required = {
               'net/minecraft/server/level/DistanceManager.class': 'net.minecraft.server.level.DistanceManager',
               'net/minecraft/server/level/Ticket.class': 'net.minecraft.server.level.Ticket',
-              'net/minecraft/util/SortedArraySet.class': 'net.minecraft.util.SortedArraySet',
+              'net/minecraft/world/level/TicketStorage.class': 'net.minecraft.world.level.TicketStorage',
           }
           found = {entry: [] for entry in required}
 
@@ -137,7 +138,9 @@ jobs:
           if missing:
               raise SystemExit('fail-closed: required mapped Minecraft classes missing from compile classpath: ' + ', '.join(missing))
 
+          outputs = {}
           for entry, class_name in required.items():
+              class_outputs = []
               for jar in found[entry]:
                   print('\n=== JAVAP', class_name, 'FROM', jar, '===')
                   proc = subprocess.run(
@@ -150,43 +153,32 @@ jobs:
                   print(proc.stdout)
                   if proc.returncode != 0:
                       raise SystemExit(f'fail-closed: javap failed for {class_name} from {jar}')
+                  class_outputs.append(proc.stdout)
+              outputs[class_name] = '\n'.join(class_outputs)
 
-          # Fail closed unless the exact mapped class still exposes the field name used by
-          # pinned VS2 and its type is now a SortedArraySet of non-generic Ticket values.
-          combined = []
-          for jar in found['net/minecraft/server/level/DistanceManager.class']:
-              proc = subprocess.run(
-                  ['javap', '-classpath', str(jar), '-p', 'net.minecraft.server.level.DistanceManager'],
-                  text=True,
-                  stdout=subprocess.PIPE,
-                  stderr=subprocess.STDOUT,
-                  check=True,
-              )
-              combined.append(proc.stdout)
-          dm = '\n'.join(combined)
-          if 'tickets' not in dm:
-              raise SystemExit('fail-closed: DistanceManager no longer exposes a mapped tickets field')
-          if 'SortedArraySet<net.minecraft.server.level.Ticket>' not in dm:
-              raise SystemExit('fail-closed: exact tickets field is not proven as SortedArraySet<Ticket>')
+          dm = outputs['net.minecraft.server.level.DistanceManager']
+          if 'private final net.minecraft.world.level.TicketStorage ticketStorage;' not in dm:
+              raise SystemExit('fail-closed: exact DistanceManager ticketStorage field not proven')
+          if re.search(r'^\s*(?:private|protected|public).*\btickets\s*;', dm, flags=re.MULTILINE):
+              raise SystemExit('fail-closed: old DistanceManager tickets field still exists; do not assume storage relocation')
 
-          ticket_outputs = []
-          for jar in found['net/minecraft/server/level/Ticket.class']:
-              proc = subprocess.run(
-                  ['javap', '-classpath', str(jar), '-p', 'net.minecraft.server.level.Ticket'],
-                  text=True,
-                  stdout=subprocess.PIPE,
-                  stderr=subprocess.STDOUT,
-                  check=True,
-              )
-              ticket_outputs.append(proc.stdout)
-          ticket_text = '\n'.join(ticket_outputs)
+          ticket_text = outputs['net.minecraft.server.level.Ticket']
           declaration_lines = [line.strip() for line in ticket_text.splitlines() if 'class net.minecraft.server.level.Ticket' in line]
           if not declaration_lines:
               raise SystemExit('fail-closed: could not find Ticket class declaration')
           if any('Ticket<' in line for line in declaration_lines):
               raise SystemExit('fail-closed: Ticket is still generic; do not apply non-generic adaptation')
 
-          print('DISTANCE_MANAGER_TICKET_API_PROVEN tickets=Long2ObjectOpenHashMap<SortedArraySet<Ticket>> ticket_generic=false')
+          storage = outputs['net.minecraft.world.level.TicketStorage']
+          signature = re.compile(
+              r'public\s+java\.util\.List<net\.minecraft\.server\.level\.Ticket>\s+getTickets\(long\);\s*'
+              r'descriptor:\s*\(J\)Ljava/util/List;',
+              flags=re.MULTILINE,
+          )
+          if not signature.search(storage):
+              raise SystemExit('fail-closed: TicketStorage.getTickets(long) -> List<Ticket> signature not proven')
+
+          print('DISTANCE_MANAGER_TICKET_STORAGE_API_PROVEN ticket_storage_field=true getTickets_signature=true ticket_generic=false')
           PY
 
       - name: Upload exact distance manager ticket API inspection
