@@ -24,10 +24,12 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'PY'
+          import base64
+          import zlib
           from pathlib import Path
 
-          path = Path('MASTER_STATE.md')
-          text = path.read_text(encoding='utf-8')
+          def dec(value):
+              return zlib.decompress(base64.b64decode(value)).decode('utf-8')
 
           def replace_between(text, start, end, replacement):
               if text.count(start) != 1 or text.count(end) != 1:
@@ -36,133 +38,23 @@ jobs:
               _, after = rest.split(end, 1)
               return before + replacement + end + after
 
-          current_start = '## Current reconciliation —'
-          poi_marker = '### POIManager ChunkPos construction boundary — frozen\n'
-          current = '''## Current reconciliation — canonical P1 chain through AirAndWaterRandomPos max-build boundary
+          current = dec('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')
+          frontier = dec('eNqVVsly20YQvfMrukoXSSUAIrVZ8kmWbEeJF5UpO0diOGiSEwIzyMyAFHXKR+QL8yV5DXCRl1TFVVKJhDC9vH7v9ezt0SeulLHGTulXtVCkXVWbkmninY2Gfa93o6yzRquSlI9monSkvH98dnkyuOj3j49zUnhweX589mKgTwfj0+MLvtSnxVj3L09PJv1ioPVJ8QK/4wmf50hgIxIGOjw8OT6mnL13/iqnwqipdSEaHUhp70KgkwuyzleqNE9cUHCN1ygM1YXDQ1qaOMO/6Q9UrUmrmirl5+zJjQP7BRcpPcxMIPzwwhRscdbZckXKFmR5gTdr9pUJwThL0dFYRT1LJuYRwSJPnTccUrQPQJRH/jZh7Y3zdP/x7hswBmenl/2L8/yql5DnyiG/QFhtcbyifMIqNp4zZbJaxdnIc1R+yhHYZ+/No7HXxl/b4ndk959QpavuXUilv/wlwlpeovqFCWZc8rNwQGw+CjNTj/SssfPQxbqRz+9V3Z2XPhrv2UYae6eKZy2SsbpsCr7q9VO6vsvwjokrZAuRi2TqZO5ArFJ1LYVe399R4c0kpr1BSro0eD9D4IJ99svn26zgcTNNugdUmgnrlQad1kdOUuriZ3WpVjgSueTa+YgTIIZl4CnZtCtL0w5mm49cEwPmSKr0rIpVAmSf2JJq4gyNxFUS2AYTzYKpsSZidqcoUGDIls6XxZRt1jLDU4jOqyk/b+YsJVdHZES/ogEVzdiUUmnBtXRj9QqTRQUNH60xE9G4ssMG875BXZGzG1evAG/bx1BhVhQaD6YA6jiT557B24gi8IYqneXkvk++AS4V79p5NrIACYD0cUvtrsHd5JKfY8MVxOYF6rx9Lix7zJ5ySIvRjdIotdUNyL5AR8hDg/N0kEqeNtyr0un5W44g6iZiftuGBIApKP2B0WWI+4VrAMDRV38OoHUO2psaU9jAj8jvEOhN2ZiiTbGN61slPKCtHLAtiR9r5AmUD9tZvoOSy3xX2juzwFhetyTbxNgIElWrMtkiTBXjU/HyRxQ6akdUe57An0TLKFXRuDQiBdYz1TliLZ6xS34r5B9qz2w/ojZQ/NsS8hY6QRwo3WC47PcPuvKH0TdaZvjAFdQR+SscxnIuWYszKJD8iyob/tjEuon0jMjPuNDSfrTEtxmk1sEjcH1q1bmb3f8org2VdWraBWrps51U+w1TMa1h+/xHnoFQnboy3akFnvemdMub0tQ3cEp+jJt4/62s7xX58gfj2umL7vtQ097eHn1AfHifLUwhxP7nr79JBJOIYJJOMLTRxFoIzocjRHZuAn34EHu9ewOjKqgz76ueNFQ5eIvXmazSTOrPnJ9mC1XOV/BYG+Yw2qxyRVYJdtlPWvfDjKnuksr2263QIMvKOQ8nknbEF8VkvGumWFUQm9FJiCscyfX3St/u2bh0kJUJsonoy3BAM+fm4QqR4F2CjFqKab1uYPcFK5sURsDFQoUGdAOuilM3YQ18p9gWWAQ8ao1wE2qlPDZ5rZZy49jFAf28R+yU3hssAa/g92I5IMC89U0XeFP0xpUkLMwA/wkk28MXm14f9w+yJzB3N8EORPQAV1vvD8h5vUHWZti6g3BIcyGuC9fLO5sKGWhYrkZ1f2RlcKpsO2DfjQ0ljLaZRoPz0SCtV/kRLWdGz4TCUh9CC7Jbx82/H1x7X8gxoBQTwoUEH9FI2nYilw8sQBLnmcqY2gqodhjxSm46aA7YM6Dq7jwt4Ju9sbkAJWOl5yzXn+cyADgfXGdlNFOBxixrFR0bYbnrQnZspxXHlO5sEA/OoIrF+lIl6XYNJesdsgCkY/DDr7rCMd97KFaMm/Ivw7eq4s/RlOG3mIY/G7ll3a4Z8YrjEmXcYcMNQZuwn6bpATD95pQJLZ53drjm1ua9EpccXF+Ecvjs5k19hDlXYu+g6uYJbmCNt7QQJ4XKO+ImQlyAMFML3PU6+m4YSwG3ZdveUfkRl79S1vS/va0R2w==')
+          old_state = dec('eNplUcuO2jAU3c9X3OWMqrRJeCQpqwiYTioBUWCm7co49k3iGWMj20EwX1+HRUHq8krncc85ARyNfkfmiHXU4XfYlxHZbl6r+ZLkZUHyRV7u8l2xWZNiTcpq86Nabrf7hwAoc+KEpJaafaDxxFWxXs6r/HlH4imJyc/8Lb9KrIrfnrqoiufdHc/b6oZ0SLmnJqMoS+IkrVPEeMqQh5zF04SnY6QZ1mk84WGMWToDRpVWglEJZQSso0KB64zu2w7KTbGiirZoYN716qPUFphWzmOEav+zNr0a0oYwmoyTKJ6OsywC2zOG1s4GMcCzJ8AVfQON70C3Z5g+HIXEGyydQGO8uUATaCUv0FAhe4MzoMaJZhCOwkkWT8ZZlExnMApD4IK2SlsnmIVvMEqg8ZLeRml4pyfKvN8RDtT4uu/SdJejdh1aYX0chWcH9kClJzrAk+CoGAY19Rtx6JVwICysxFmoXJhc8V9+dFNRxfVh6OtAz0HdC8m9+pBRmxkY7C0OaT5R+U6Y7K33DTwUat0rTs0FJJ5Qfm3RrYT68/j05d/9gqLt3OMTXEugjXfzg/kfJPJhqZdlvoAjtRYtlOH+4S8Nm9wT')
+          new_state = dec('eNptkc2P2jAQxe/7V8xx95AlX8CmSJUiYNtUAqJAP27GsSeJS7Aj29kG/vo6VBUrtYeR3uX33rwZDzqtfiKzxFhq8QMc84Dsd1+L5ZqkeUbSVZof0kO225JsS/Ji96lY7/fHBw8os+INSdkqdkLtwE22XS+L9PVAwhkJyZf0W3qz2GQ/HLoqstfDO87Fqoo0SLlDk5k/fQlZHJaxP8eExbxkQRJHVcBDxiL+4qascLYARqWSgtEW8gBYQ4UE22jV1w2kQqeSf3ctdEElV+dcGTjTwSt70XIoVS851Zd/dtC9HGv7EE3jeThPYj+ZgekZQ2MW/3fFwTnADf9LRUmS3Kn7mkydO9Hi3TwIoNJKWoHaU7K9QEVF22tcANVWVKNx4E+TKJwHge8vIPJ94ILWUhkrmIEJRHOQSp9pK67IwaheM4TKhbhgS3WNFmhpUNp3VZtLp2yDRhjXVeJgwTgDh1jAN8FRMvRK6j7JoZfCgjBQIbVur4lLPRHTiI6wppcnM9mIQcjlqDe0g5sYjzJMri7tT3+NvcGx5xUlbEcf2u47+kuihudh8nwF76MTj09OPj65L3WdkDXc7kErd2v3VbdCi7x2+vM6XUFHjUEDuX98+A1y6+nx')
+          next_action = dec('eNpVVEtv3DYQvutXDJBLAuixazd1e2ztNCnQFEac5GrNkqMVsxSpkOI+/Ov7kXKM5rTia+Z7zb56RU7Oy2PkQR5ZLca7qtq29Hk0kazovQQKorxTxhrOx6T8NJmFcK69SpO4pew33tlLTc4vFH0KSmgO3g8tfZLvyQQhOaN+Mwprut/kw6M4drgXk1ISI+1k8LjHKDGi7VqlO/lwGKw/0ZTWRm111dJ9kCjhiKpHCRcagn8SRzufnGaseYfqqKSJrX0+7ZzsUaC8MVpyZ+PoPaiA6+LDpa2uW/oS8S4sZgBY6rebt79fX91st5tNTxwJwEilEECaFIA6o9jS9WbTaMN75+NiFHV0fdM4Hya25kl0MxgrGYNbDGglZzPZD+/+uOsg5YxDcAU1VB7Z7SW21S8t/e3iLGrpik6UtaXZOCea+kF4SUE69Do8xtHMj2pM7hC7j+Zs3G3+/shz+42P3FNf1vc+9jDOB21c7sRFcR/Q6y16DQBgIFTRDy2ycMnxtDP75FOsSQXJz7wDETa2UdZH3AO0YPmyAjduv+LMIkVzfsHbnrv26af2qKYhps9nr9/g9PWbfnXLPcekaCbnkVMslr0otYaq+vV/Ecj95AwPM4KsR8MnRpDi94QfDWsgb7YbXqlkS4jqcvHCQQO8qENN1jOoN3kb3/6Q5pq0QbxjDv2PnSCQ3jVHtkkQ2JGPxgdsA7yfKDsCEHXhEmc+uQJJJob3Kq7cLIJ209KdL7MCYjvjMgkM1MksI/XFxj+tV4f3siwS+pr+gZd/2WQ0rPDWmoKJ0zL6YJZLhgXfQvfhy11ND0tIKgfks0wz2EpNmCGru5ISoAmmBDOQDmZYarot5na3fr4oxvqBdxaPfACNC63DqCyMkNBWv+WBnhiTk0XVbHMm7rcvfBLm57ngw7+ffhQtZo+Yumy9pa8PVyVHABlfXua/GdixhgQz/Gx5p2WX9pRH1rdV9R8+l69F')
 
-Current proven canonical source boundary before this ledger-only reconciliation commit:
-- canonical implementation HEAD: `960582c42b407e9c4dbc1943f1d2cc3d8c3dbfe6`
-- canonical P1 chain contains **80 ordered fail-closed overlays**.
-- exact-head P0 provenance run `35472794096`: `success`.
-- exact-head AirAndWaterRandomPos proof run `35472793999`: `success`.
-- exact-head canonical standalone compile run `35472794011`: compiler-frontier failure only; every overlay/apply/delta-validation step before compilation was green.
-- compile artifact: `p1-compile-log-960582c42b407e9c4dbc1943f1d2cc3d8c3dbfe6`, ID `10593271100`, size `21778` bytes, SHA-256 `568f6f3df75b7032cd829c5d4e7d811c176c2c021a1c3eb87d6d175e592e56fb`.
-- compiler log contains **300 `error:` diagnostics across 37 normalized source files**; no javac cap marker was observed.
-- `MixinAirAndWaterRandomPos.java` is absent from that frontier. Compared with the previous POI artifact, it disappeared and `feature/tick_ship_chunks/MixinChunkMap.java` became newly visible.
-
-### AirAndWaterRandomPos max-build boundary — frozen
-
-Pinned upstream target:
-`common/src/main/java/org/valkyrienskies/mod/mixin/feature/ai/path_retargeting/MixinAirAndWaterRandomPos.java`.
-
-Minimal 26.2 bridge:
-- `pathfinderMob.level().getMaxBuildHeight()` -> `pathfinderMob.level().getMinY() + pathfinderMob.level().getHeight()` only as the existing exclusive upper-build-height argument to `RandomPos.moveUpOutOfSolid(...)`.
-- This reuses the already-frozen CompatUtil build-height mapping in `scripts/apply_p1_compatutil_buildheight_26_2.py`.
-- Existing real VS2/vanilla authorities remain unchanged: loaded-ship intersection, `ship.getWorldToShip().transformPosition(...)`, `BlockPos.containing(...)`, `GoalUtils.isRestricted(...)`, `GoalUtils.hasMalus(...)`, the existing `moveUpOutOfSolid` callback, and `cir.setReturnValue(blockPosInShip)` / break behavior.
-- No AI policy, pathfinding implementation, ship transform, movement/collision/camera authority, or custom reference frame was introduced.
-
-Evidence:
-- fail-closed overlay commit `ce05d19f2a270146dd17c36d0cd691d315d51ce5`.
-- isolated proof workflow HEAD `149d1cfee44748749a8f2f07531aa04b5faf9a63`.
-- isolated P0 `35471647834`: success.
-- isolated AirAndWaterRandomPos proof `35471647847`: success.
-- staging helper HEAD `593db47ed2305a95e4932f8bbcf3d432e3b69bc8`.
-- staging helper run `35472674502`: success; it only produced and validated the canonical `p1-compile.yml` as an artifact and did not attempt Actions self-push.
-- helper artifact `10593280871`, artifact SHA-256 `649ac5344c09786e1df3b3ed3b430da9eb053f014820bd19fb875f6087896a16`; validated `canonical-p1-compile.yml` SHA-256 `f36e88a9f9e28603f1d7c2b1a6407324a4e7345cebdf0d8bd4cb620b1b51701e`.
-- canonical commit `960582c42b407e9c4dbc1943f1d2cc3d8c3dbfe6` was fast-forwarded through the GitHub connector and removed the temporary helper in the same atomic tree.
-- exact canonical P0 `35472794096`: success.
-- exact canonical AirAndWaterRandomPos proof `35472793999`: success.
-- exact canonical compile `35472794011`: frontier-only failure; artifact `10593271100`; 300 diagnostics / 37 normalized source files; target absent.
-
-'''
-          text = replace_between(text, current_start, poi_marker, current)
-
-          frontier_start = '## Remaining Java compile frontier\n'
-          target_marker = '## Target runtime baseline\n'
-          frontier = '''## Remaining Java compile frontier
-
-Canonical artifact `10593271100` at `960582c42b407e9c4dbc1943f1d2cc3d8c3dbfe6` contains **300 `error:` diagnostics across 37 normalized source files** with no javac cap marker observed. This is evidence only and never permission to batch-fix categories.
-
-Compared with prior POI artifact `10592549176`:
-- removed from frontier: `feature/ai/path_retargeting/MixinAirAndWaterRandomPos.java`;
-- newly visible: `feature/tick_ship_chunks/MixinChunkMap.java`.
-
-Current broad categories include:
-1. AI/entity nested-goal and mapping/API drift.
-2. client/render/HUD/debug-render lifecycle drift.
-3. entity/player/teleport-reconnect and collision API drift outside already-frozen authority-sensitive units.
-4. chunk/worldgen/server storage/API drift.
-5. optional compatibility/dependency residue, including old mapped Create/Copycat and Sable surfaces that are not standalone-P1 runtime authority.
-
-Current smallest observed units include:
-- `feature/tick_ship_chunks/MixinChunkMap.java`: direct `ChunkPos.x/z` field access is private in 26.2.
-- `MixinBlockGetter.java`: `Direction.getNearest(double,double,double)` descriptor drift.
-- `LavaFluidMixin.java`: `randomTick` now expects `ServerLevel`.
-- `MixinLivingEntity.java`: removed local-authority method; authority-sensitive, not preferred for a blind mechanical patch.
-- `MixinDebugScreenOverlay.java`: removed `BlockPos.getCenter()`.
-- `StructureTemplateMixin.java`: block-entity save ValueOutput API drift.
-- `feature/world_weather/MixinLevelRenderer.java`: removed `BlockPos.getCenter()`.
-- `world/chunk/MixinLevelChunk.java`: `ChunkSerializer` mapping/API drift.
-- `compat/create/AirFlowClipContext.java`: old mapped Create/Copycat dependency residue; not preferred for standalone P1.
-
-### Next candidate — tick-ship-chunks ChunkPos accessors, proof first
-
-Pinned target:
-`common/src/main/java/org/valkyrienskies/mod/mixin/feature/tick_ship_chunks/MixinChunkMap.java`.
-
-The pinned file contains six coordinate reads through public-style `chunkPos.x/z` fields across two existing VS2 hooks: the ship-aware Euclidean-distance calculation used for random ticking, and the shipyard spawning-distance override. Minecraft 26.2 makes those fields private and exposes record-style `x()/z()` accessors.
-
-There is already a frozen direct local precedent in `scripts/apply_p1_naturalspawner_chunkpos_accessors_26_2.py`, which maps real VS2 `ChunkPos` coordinate reads from `.x/.z` to `.x()/.z()` without changing spawn policy. Therefore this is the smallest evidence-backed next candidate.
-
-No patch has been applied to this target yet. Inspect/prove only the coordinate-access vocabulary change. Preserve `VSGameUtilsKt.squaredDistanceBetweenInclShips(...)`, `VSGameUtilsKt.isChunkInShipyard(...)`, loaded-ship lookup, dimension lookup, return values, random-tick behavior, and spawning semantics exactly.
-
-'''
-          text = replace_between(text, frontier_start, target_marker, frontier)
-
-          old_state = '''- project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
-- active_blocker: `MINECRAFT_26_2_JAVA_API_MIXIN_DRIFT`
-- active_proof_head: `73197278b8ee26ced0dc267d84ea9eb825d02e98; canonical P1 chain through POIManager ChunkPos containing`
-- active_proof_run: `P0 35471264991 success; POI exact proof 35471264941 success; canonical compile 35471264985 frontier-only failure; artifact 10592549176; 300 diagnostics / 37 files; no javac cap marker`
-- active_hypothesis: `next smallest evidence-backed unit is MixinAirAndWaterRandomPos max-build accessor; reuse frozen exclusive-max boundary level.getMinY()+level.getHeight() only after this ledger HEAD passes P0`
-'''
-          new_state = '''- project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
-- active_blocker: `MINECRAFT_26_2_JAVA_API_MIXIN_DRIFT`
-- active_proof_head: `960582c42b407e9c4dbc1943f1d2cc3d8c3dbfe6; canonical P1 chain through AirAndWaterRandomPos max-build boundary`
-- active_proof_run: `P0 35472794096 success; AirAndWaterRandomPos exact proof 35472793999 success; canonical compile 35472794011 frontier-only failure; artifact 10593271100; 300 diagnostics / 37 normalized source files; target absent`
-- active_hypothesis: `next smallest evidence-backed unit is feature/tick_ship_chunks/MixinChunkMap ChunkPos x/z access; reuse frozen NaturalSpawner .x/.z -> .x()/.z() mapping only after this ledger HEAD passes P0`
-'''
+          path = Path('MASTER_STATE.md')
+          text = path.read_text(encoding='utf-8')
+          text = replace_between(text, '## Current reconciliation —', '### POIManager ChunkPos construction boundary — frozen\n', current)
+          text = replace_between(text, '## Remaining Java compile frontier\n', '## Target runtime baseline\n', frontier)
           if text.count(old_state) != 1:
               raise SystemExit(f'fail-closed project-state anchor count {text.count(old_state)}')
           text = text.replace(old_state, new_state, 1)
-
-          next_start = '## next_safe_action\n'
-          video_marker = '## Video and milestone gate\n'
-          next_action = '''## next_safe_action
-
-1. This ledger reconciliation commit is documentation-only, not source proof. Require exact-head P0 provenance success before another source/workflow mutation.
-2. Preserve every frozen boundary above and all frozen/negative evidence in Git history.
-3. Use artifact `10593271100` as the current canonical 300-diagnostic / 37-normalized-file frontier unless HEAD/compiler state changes.
-4. Inspect/prove only pinned `feature/tick_ship_chunks/MixinChunkMap.java` `ChunkPos` coordinate accessors.
-5. If still bounded and unambiguous, create one fail-closed overlay changing only the six pinned `.x/.z` coordinate reads to `.x()/.z()` and an exact-file exhaustive compiler proof.
-6. Preserve the existing ship-aware squared-distance calculation, shipyard check, loaded-ship lookup, dimension lookup, return-value behavior, random ticking, and spawning semantics exactly.
-7. Do not combine this with `MixinBlockGetter`, LavaFluid, collision authority, render/HUD, StructureTemplate, world/chunk serializer drift, Create/Copycat, Sable, or any other cluster.
-8. Remain standalone P1. Do not use Create/SNR/Copycats to hide real VS2 failures. Do not record ordinary compile/debug video.
-
-'''
-          text = replace_between(text, next_start, video_marker, next_action)
-
-          required = [
-              '960582c42b407e9c4dbc1943f1d2cc3d8c3dbfe6',
-              '35472793999',
-              '35472794011',
-              '10593271100',
-              'feature/tick_ship_chunks/MixinChunkMap.java',
-              'six pinned `.x/.z` coordinate reads',
-          ]
-          for token in required:
+          text = replace_between(text, '## next_safe_action\n', '## Video and milestone gate\n', next_action)
+          for token in ('960582c42b407e9c4dbc1943f1d2cc3d8c3dbfe6', '35472793999', '35472794011', '10593271100', 'feature/tick_ship_chunks/MixinChunkMap.java', 'six pinned `.x/.z` coordinate reads'):
               if token not in text:
                   raise SystemExit(f'fail-closed missing reconciled ledger token: {token}')
-
           path.write_text(text, encoding='utf-8')
           PY
           git diff --check -- MASTER_STATE.md
