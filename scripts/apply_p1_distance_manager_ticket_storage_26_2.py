@@ -45,13 +45,17 @@ def apply(root: Path) -> None:
     accessor = accessor_path.read_text(encoding="utf-8")
     server_level = server_level_path.read_text(encoding="utf-8")
 
-    old_accessor_imports = (
-        "import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;\n",
-        "import net.minecraft.server.level.Ticket;\n",
-        "import net.minecraft.util.SortedArraySet;\n",
+    old_import_block = (
+        "import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;\n"
+        "import net.minecraft.server.level.DistanceManager;\n"
+        "import net.minecraft.server.level.Ticket;\n"
+        "import net.minecraft.util.SortedArraySet;\n"
     )
-    for old_import in old_accessor_imports:
-        require_count(accessor, old_import, 1, "DistanceManagerAccessor pinned import")
+    new_import_block = (
+        "import net.minecraft.server.level.DistanceManager;\n"
+        "import net.minecraft.world.level.TicketStorage;\n"
+    )
+    require_count(accessor, old_import_block, 1, "DistanceManagerAccessor pinned import block")
 
     old_accessor = (
         '    @Accessor("tickets")\n'
@@ -78,11 +82,7 @@ def apply(root: Path) -> None:
     lifecycle_tokens = ("addTicket", "removeTicket", "addRegionTicket", "removeRegionTicket")
     lifecycle_counts_before = {token: server_level.count(token) for token in lifecycle_tokens}
 
-    accessor = accessor.replace(
-        "".join(old_accessor_imports),
-        "import net.minecraft.world.level.TicketStorage;\n",
-        1,
-    )
+    accessor = accessor.replace(old_import_block, new_import_block, 1)
     accessor = accessor.replace(
         old_accessor,
         '    @Accessor("ticketStorage")\n    TicketStorage getTicketStorage();',
@@ -100,7 +100,15 @@ def apply(root: Path) -> None:
         1,
     )
 
+    require_count(accessor, "import net.minecraft.server.level.DistanceManager;", 1, "DistanceManager import")
     require_count(accessor, "import net.minecraft.world.level.TicketStorage;", 1, "TicketStorage import")
+    for obsolete_import in (
+        "import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;",
+        "import net.minecraft.server.level.Ticket;",
+        "import net.minecraft.util.SortedArraySet;",
+    ):
+        if obsolete_import in accessor:
+            fail(f"obsolete accessor import remains: {obsolete_import}")
     require_count(accessor, '@Accessor("ticketStorage")', 1, "ticketStorage accessor annotation")
     require_count(accessor, "TicketStorage getTicketStorage();", 1, "ticketStorage accessor method")
     if '@Accessor("tickets")' in accessor or "getTickets();" in accessor:
