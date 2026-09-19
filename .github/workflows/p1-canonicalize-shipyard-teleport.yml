@@ -34,7 +34,6 @@ jobs:
           compile_path = Path('.github/workflows/p1-compile.yml')
           proof_path = Path('.github/workflows/p1-shipyard-teleport-player-api-proof.yml')
           self_path = Path('.github/workflows/p1-canonicalize-shipyard-teleport.yml')
-
           frozen = (
               'apply_p1_entityhandler_renderstate_26_2.py',
               'apply_p1_sable_companion_compileonly_26_2.py',
@@ -43,6 +42,7 @@ jobs:
               'apply_p1_entity_renderer_submit_26_2.py',
               'apply_p1_distance_manager_ticket_storage_26_2.py',
           )
+
           compile_text = compile_path.read_text(encoding='utf-8')
           present = [name for name in frozen if name in compile_text]
           if present:
@@ -52,64 +52,15 @@ jobs:
           if compile_text.count('python3 scripts/apply_p1_shipyard_teleport_player_api_26_2.py upstream-vs2') != 1:
               raise SystemExit('fail-closed: canonical ServerPlayer teleport anchor missing')
 
-          old_paths = """      - 'scripts/apply_p1_relocationutil_blockentity_value_input_26_2.py'
-      - 'scripts/apply_p1_shipyard_teleport_api_26_2.py'
-      - 'scripts/apply_p1_shipyard_teleport_player_api_26_2.py'
-"""
-          new_paths = """      - 'scripts/apply_p1_relocationutil_blockentity_value_input_26_2.py'
-      - 'scripts/apply_p1_entityhandler_renderstate_26_2.py'
-      - 'scripts/apply_p1_sable_companion_compileonly_26_2.py'
-      - 'scripts/apply_p1_deployer_scroll_option_exclusion_26_2.py'
-      - 'scripts/apply_p1_entity_authority_interpolation_26_2.py'
-      - 'scripts/apply_p1_entity_renderer_submit_26_2.py'
-      - 'scripts/apply_p1_distance_manager_ticket_storage_26_2.py'
-      - 'scripts/apply_p1_shipyard_teleport_api_26_2.py'
-      - 'scripts/apply_p1_shipyard_teleport_player_api_26_2.py'
-"""
+          old_paths = "      - 'scripts/apply_p1_relocationutil_blockentity_value_input_26_2.py'\n      - 'scripts/apply_p1_shipyard_teleport_api_26_2.py'\n      - 'scripts/apply_p1_shipyard_teleport_player_api_26_2.py'\n"
+          new_paths = "      - 'scripts/apply_p1_relocationutil_blockentity_value_input_26_2.py'\n      - 'scripts/apply_p1_entityhandler_renderstate_26_2.py'\n      - 'scripts/apply_p1_sable_companion_compileonly_26_2.py'\n      - 'scripts/apply_p1_deployer_scroll_option_exclusion_26_2.py'\n      - 'scripts/apply_p1_entity_authority_interpolation_26_2.py'\n      - 'scripts/apply_p1_entity_renderer_submit_26_2.py'\n      - 'scripts/apply_p1_distance_manager_ticket_storage_26_2.py'\n      - 'scripts/apply_p1_shipyard_teleport_api_26_2.py'\n      - 'scripts/apply_p1_shipyard_teleport_player_api_26_2.py'\n"
           replace_once(compile_path, old_paths, new_paths, 'canonical frozen-overlay push paths')
 
-          old_steps = """      - name: Apply traceable P1 RelocationUtil block-entity ValueInput overlay
-        run: python3 scripts/apply_p1_relocationutil_blockentity_value_input_26_2.py upstream-vs2
-
-      - name: Apply traceable P1 shipyard teleport API overlay
-"""
-          new_steps = """      - name: Apply traceable P1 RelocationUtil block-entity ValueInput overlay
-        run: python3 scripts/apply_p1_relocationutil_blockentity_value_input_26_2.py upstream-vs2
-
-      - name: Apply frozen P1 entity-handler render-state overlay
-        run: python3 scripts/apply_p1_entityhandler_renderstate_26_2.py upstream-vs2
-
-      - name: Apply frozen P1 Sable compile-boundary overlay
-        run: python3 scripts/apply_p1_sable_companion_compileonly_26_2.py upstream-vs2
-
-      - name: Apply frozen P1 optional Create deployer exclusion overlay
-        run: python3 scripts/apply_p1_deployer_scroll_option_exclusion_26_2.py upstream-vs2
-
-      - name: Apply frozen P1 entity authority/interpolation overlay
-        run: python3 scripts/apply_p1_entity_authority_interpolation_26_2.py upstream-vs2
-
-      - name: Apply frozen P1 entity renderer submit overlay
-        run: python3 scripts/apply_p1_entity_renderer_submit_26_2.py upstream-vs2
-
-      - name: Apply frozen P1 DistanceManager TicketStorage overlay
-        run: python3 scripts/apply_p1_distance_manager_ticket_storage_26_2.py upstream-vs2
-
-      - name: Apply traceable P1 shipyard teleport API overlay
-"""
+          old_steps = "      - name: Apply traceable P1 RelocationUtil block-entity ValueInput overlay\n        run: python3 scripts/apply_p1_relocationutil_blockentity_value_input_26_2.py upstream-vs2\n\n      - name: Apply traceable P1 shipyard teleport API overlay\n"
+          new_steps = "      - name: Apply traceable P1 RelocationUtil block-entity ValueInput overlay\n        run: python3 scripts/apply_p1_relocationutil_blockentity_value_input_26_2.py upstream-vs2\n\n      - name: Apply frozen P1 entity-handler render-state overlay\n        run: python3 scripts/apply_p1_entityhandler_renderstate_26_2.py upstream-vs2\n\n      - name: Apply frozen P1 Sable compile-boundary overlay\n        run: python3 scripts/apply_p1_sable_companion_compileonly_26_2.py upstream-vs2\n\n      - name: Apply frozen P1 optional Create deployer exclusion overlay\n        run: python3 scripts/apply_p1_deployer_scroll_option_exclusion_26_2.py upstream-vs2\n\n      - name: Apply frozen P1 entity authority/interpolation overlay\n        run: python3 scripts/apply_p1_entity_authority_interpolation_26_2.py upstream-vs2\n\n      - name: Apply frozen P1 entity renderer submit overlay\n        run: python3 scripts/apply_p1_entity_renderer_submit_26_2.py upstream-vs2\n\n      - name: Apply frozen P1 DistanceManager TicketStorage overlay\n        run: python3 scripts/apply_p1_distance_manager_ticket_storage_26_2.py upstream-vs2\n\n      - name: Apply traceable P1 shipyard teleport API overlay\n"
           replace_once(compile_path, old_steps, new_steps, 'canonical frozen-overlay steps')
 
-          old_reapply = """      - name: Reapply frozen proof overlays
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 scripts/apply_p1_entityhandler_renderstate_26_2.py upstream-vs2
-          python3 scripts/apply_p1_sable_companion_compileonly_26_2.py upstream-vs2
-          python3 scripts/apply_p1_deployer_scroll_option_exclusion_26_2.py upstream-vs2
-          python3 scripts/apply_p1_entity_authority_interpolation_26_2.py upstream-vs2
-          python3 scripts/apply_p1_entity_renderer_submit_26_2.py upstream-vs2
-          python3 scripts/apply_p1_distance_manager_ticket_storage_26_2.py upstream-vs2
-
-"""
+          old_reapply = "      - name: Reapply frozen proof overlays\n        shell: bash\n        run: |\n          set -euo pipefail\n          python3 scripts/apply_p1_entityhandler_renderstate_26_2.py upstream-vs2\n          python3 scripts/apply_p1_sable_companion_compileonly_26_2.py upstream-vs2\n          python3 scripts/apply_p1_deployer_scroll_option_exclusion_26_2.py upstream-vs2\n          python3 scripts/apply_p1_entity_authority_interpolation_26_2.py upstream-vs2\n          python3 scripts/apply_p1_entity_renderer_submit_26_2.py upstream-vs2\n          python3 scripts/apply_p1_distance_manager_ticket_storage_26_2.py upstream-vs2\n\n"
           replace_once(proof_path, old_reapply, '', 'teleport proof duplicate frozen-overlay replay')
 
           final_compile = compile_path.read_text(encoding='utf-8')
@@ -119,7 +70,6 @@ jobs:
                   raise SystemExit(f'fail-closed: canonical count mismatch for {command}')
           if 'Reapply frozen proof overlays' in proof_path.read_text(encoding='utf-8'):
               raise SystemExit('fail-closed: duplicate frozen-overlay proof step still present')
-
           if not self_path.is_file():
               raise SystemExit('fail-closed: temporary canonicalizer missing')
           self_path.unlink()
