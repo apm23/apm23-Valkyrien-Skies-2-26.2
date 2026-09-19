@@ -94,17 +94,85 @@ jobs:
         working-directory: upstream-vs2
         run: ./gradlew --version
 
-      - name: Compile standalone common + Fabric sources
+      - name: Configure exhaustive javac diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > p1-renderer-submit-proof.init.gradle <<'GRADLE'
+          allprojects {
+              tasks.withType(org.gradle.api.tasks.compile.JavaCompile).configureEach {
+                  options.compilerArgs += ['-Xmaxerrs', '10000']
+              }
+          }
+          GRADLE
+
+      - name: Compile standalone sources and preserve unrelated failure
         shell: bash
         working-directory: upstream-vs2
         run: |
-          set -o pipefail
-          ./gradlew :common:compileJava :common:compileKotlin :fabric:compileJava :fabric:compileKotlin --stacktrace --no-daemon 2>&1 | tee ../p1-entity-renderer-submit-probe.log
+          set -uo pipefail
+          set +e
+          ./gradlew -I ../p1-renderer-submit-proof.init.gradle \
+            :common:compileJava :common:compileKotlin :fabric:compileJava :fabric:compileKotlin \
+            --stacktrace --no-daemon 2>&1 | tee ../p1-entity-renderer-submit-probe.log
+          status=${PIPESTATUS[0]}
+          set -e
+          printf '%s\n' "$status" > ../p1-entity-renderer-submit-gradle-status.txt
+          echo "GRADLE_EXIT_STATUS=$status"
+          exit 0
+
+      - name: Prove renderer submit cluster is compiler-clean
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          log_path = Path('p1-entity-renderer-submit-probe.log')
+          status_path = Path('p1-entity-renderer-submit-gradle-status.txt')
+          log = log_path.read_text(encoding='utf-8', errors='replace')
+          status = int(status_path.read_text(encoding='utf-8').strip())
+
+          if ':common:compileJava' not in log:
+              raise SystemExit('fail-closed: common Java compile task was never reached')
+          if status == 0:
+              print('FULL_STANDALONE_COMPILE_GREEN')
+          elif 'error:' not in log or 'Compilation failed' not in log:
+              raise SystemExit('fail-closed: Gradle failed without a normal javac compilation frontier')
+
+          if re.search(r'only showing the first\s+\d+\s+errors', log, flags=re.IGNORECASE):
+              raise SystemExit('fail-closed: javac diagnostics were still capped')
+
+          targets = (
+              'MixinEntityRenderDispatcher.java',
+              'MixinEntityRenderer.java',
+              'MixinEntityRenderState.java',
+              'EntityRendererCullingInvoker.java',
+              'VSEntityRenderStateContext.java',
+          )
+          target_errors = []
+          lines = log.splitlines()
+          for index, line in enumerate(lines):
+              if 'error:' not in line:
+                  continue
+              window = '\n'.join(lines[max(0, index - 1):index + 2])
+              if any(target in window for target in targets):
+                  target_errors.append(window)
+
+          if target_errors:
+              raise SystemExit('fail-closed: renderer submit cluster still has compiler diagnostics:\n' + '\n---\n'.join(target_errors))
+
+          unrelated = [line for line in lines if 'error:' in line]
+          print(f'RENDERER_SUBMIT_CLUSTER_COMPILER_CLEAN unrelated_error_diagnostics={len(unrelated)} gradle_status={status}')
+          PY
 
       - name: Upload renderer submit probe diagnostic log
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: p1-entity-renderer-submit-probe-${{ github.sha }}
-          path: p1-entity-renderer-submit-probe.log
+          path: |
+            p1-entity-renderer-submit-probe.log
+            p1-entity-renderer-submit-gradle-status.txt
           if-no-files-found: warn
