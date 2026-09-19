@@ -5,8 +5,8 @@ The pinned VS2 MassDatapackResolver intentionally consumes raw JsonElement value
 from the `vs_mass` JSON directory, clears/rebuilds its direct block map, and
 collects tag-backed entries for the later tagsAreLoaded callback. Minecraft 26.2
 changed SimpleJsonResourceReloadListener from the legacy (Gson, directory)
-constructor to a typed (Codec<T>, FileToIdConverter) boundary whose apply map has
-non-null Identifier/T type arguments.
+constructor to a typed (Codec<T>, FileToIdConverter) boundary whose apply map and
+ResourceManager/ProfilerFiller parameters are non-null at the Kotlin override boundary.
 
 This fail-closed overlay changes only that reload-listener boundary. It preserves
 the upstream raw JSON payload, `vs_mass` directory, map/tags clearing, object/array
@@ -32,7 +32,7 @@ new_codec_import = "import net.minecraft.util.ExtraCodecs\n"
 old_decl = '    class VSMassDataLoader : SimpleJsonResourceReloadListener(Gson(), "vs_mass") {'
 new_decl = '    class VSMassDataLoader : SimpleJsonResourceReloadListener<JsonElement>(ExtraCodecs.JSON, FileToIdConverter.json("vs_mass")) {'
 old_apply = """        override fun apply(\n            objects: MutableMap<Identifier, JsonElement>?,\n            resourceManager: ResourceManager?,\n            profiler: ProfilerFiller?\n        ) {\n"""
-new_apply = """        override fun apply(\n            objects: MutableMap<Identifier, JsonElement>,\n            resourceManager: ResourceManager?,\n            profiler: ProfilerFiller?\n        ) {\n"""
+new_apply = """        override fun apply(\n            objects: MutableMap<Identifier, JsonElement>,\n            resourceManager: ResourceManager,\n            profiler: ProfilerFiller\n        ) {\n"""
 
 # Pin unrelated semantics so this overlay cannot silently absorb the separate
 # registry-tag/API migration or change datapack parsing behavior.
@@ -53,7 +53,7 @@ if text.count(listener_import) != 1:
 if text.count(old_decl) != 1:
     raise SystemExit(f"expected exactly one legacy VSMassDataLoader declaration in {rel}")
 if old_apply not in text:
-    raise SystemExit(f"expected pinned nullable reload-listener apply map shape in {rel}")
+    raise SystemExit(f"expected pinned nullable reload-listener apply shape in {rel}")
 for needle, label in [
     (expected_map_clear, "map clear"),
     (expected_tags_clear, "tag clear"),
