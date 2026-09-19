@@ -22,30 +22,35 @@ GitHub code is the implementation source of truth. This file is the durable cont
 
 The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are applied by explicit fail-closed overlay scripts so every adaptation stays traceable to upstream VS2 source.
 
-## Current reconciliation — ValkyrienSkiesMod CreativeModeTab.Output access proven
+## Current reconciliation — VSKeyBindings KeyMapping.Category migration proven
 
-- Current proven implementation HEAD: `5c8a80eca1b996c4b89d5a394d7cfb9115d3f070` (`P1: wire CreativeModeTab Output access proof`).
-- Exact-head P0 provenance run `35423048611`, job `105844091418`, completed `success` and re-confirmed the pinned upstream VS2 identity.
-- Exact-head P1 standalone compile run `35423048671`, job `105844092374`, completed `failure` only because later independent Minecraft 26.2 source/API errors remain.
-- Every traceable overlay applied successfully, including the prior frozen source/API overlays and isolated `apply_p1_creativetab_output_access_26_2.py`; explicit `git diff --check` / port-delta validation and Gradle runtime steps succeeded.
-- Exact Minecraft 26.2 inspection established that vanilla `CreativeModeTab.Output` is now `protected`, while the Fabric creative-tab API explicitly marks `net/minecraft/world/item/CreativeModeTab$Output` as `transitive-accessible` in its class-tweaker contract. The current standalone no-remap common compile sees Fabric API through plain compile-only scaffolding, so that dependency transitive-access contract is not reflected in the common compile Minecraft jar.
-- The isolated adaptation mirrors only that Fabric 26.2 access contract into the existing VS2 common access widener with `accessible class net/minecraft/world/item/CreativeModeTab$Output`. It does **not** alter `ValkyrienSkiesMod.createCreativeTab()`, its item list, item order, icon/title, registration key, or creative-tab behavior.
-- Exact run `35423048671` contains **no compiler diagnostic for `ValkyrienSkiesMod.kt`**. The prior line-192-through-203 protected-`CreativeModeTab.Output` diagnostics are cleared with no replacement diagnostic in that file.
-- Diagnostic artifact: `p1-compile-log-5c8a80eca1b996c4b89d5a394d7cfb9115d3f070`, artifact ID `10578021452`, size `6329` bytes, ZIP SHA-256 `f5691678a8ebdd7967c193846b906b8114fa4bacd9068836f061d83a9bb0cd1b`.
-- Prior `TestHingeBlockEntity` Value I/O persistence proof remains frozen at HEAD `4641ae31765f0d067923cc1ef54b9a26abe99a19`, P0 `35421661792` / job `105840387680`, P1 `35421661791` / job `105840387789`, artifact `10577638892`, ZIP SHA-256 `a6b44f7d7248a9364dc31f1ddc9231ffa45212a895f10db752be4b432deae47a`.
-- Prior `MassDatapackResolver` registry-tag proof remains frozen at HEAD `ea2084954eb4edd2bd9922aa1f59342b76709809`, P0 `35420504812` / job `105837166152`, P1 `35420504781` / job `105837162566`, artifact `10577252400`, ZIP SHA-256 `d0dab3e4652c4d00f62f1c9aeccaae98c8a1401e8651e86bd9de7aa12d2f28ac`.
-- Prior `MassDatapackResolver` typed reload-listener proof remains frozen at HEAD `27e181c70184b2aac38eeb1a646905d93ba45023`, P0 `35419426729` / job `105834163091`, P1 `35419426780` / job `105834163164`, artifact `10577550502`, ZIP SHA-256 `cf373d90a2b42bc5bc92866fe39d97a43ce6ae6e7deb4fd3f2f37d307719fd57`.
-- The first typed-listener probe `0fdf41ec2e506f45fba3b28fa1715a0438393a09` remains a failed-partial hypothesis: changing only `objects` to non-null while retaining `ResourceManager?` / `ProfilerFiller?` produced `'apply' overrides nothing`; P0 `35419191257` / job `105833522135`, P1 `35419191192` / job `105833522020`, artifact `10577705252`, ZIP SHA-256 `d42d410f4f0d95733a8b02ec5045d792daa644ea158274797073324186b557c3`.
-- Prior `DimensionParametersResolver` typed reload-listener proof remains frozen at HEAD `ac739bbf0c1598087a6ae9b158117c4764ce3079`, P0 `35418630206` / job `105831997380`, P1 `35418630221` / job `105831997436`, artifact `10576109658`, ZIP SHA-256 `58f0e1a82a74ebc096c610a8d98dd51efc56c1e9248a79e446517cdb7f30ea97`.
-- Prior `VSEntityHandlerDataLoader` typed reload-listener proof remains frozen at HEAD `2af9d9ba1d48f8a0baf825398d3d441b1219f19d`, P0 `35417874772` / job `105829899174`, P1 `35417874723` / job `105829899066`, artifact `10575914762`, ZIP SHA-256 `51518277e80d405539aba99f690b27bfe4883be95d929b489b9d97a98cc8e7f3`.
-- Prior `VSGamePackets.kt` Identifier-vocabulary proof remains frozen at HEAD `9d82234aa769a6a0eece07f52e7d5ace2d334aab`, P0 `35415473227` / job `105823166889`, P1 `35415473246` / job `105823166851`, artifact `10575144592`, ZIP SHA-256 `0aae19b487b1088166b7ea1e8e72e4cb30ad3101c8c6e88c5620c797d9dd8ab1`.
-- Prior `VSEntityHandlerDataLoader.kt` Identifier proof remains frozen at HEAD `4a657f4625f69b26b9ccef9f7235cee271325d98`, P0 `35414238420` / job `105819598472`, P1 `35414238535` / job `105819599047`, artifact `10575555973`, ZIP SHA-256 `b980ea48f7b71f3ec9d79e119ff83d567fbaf16973871cb547570ae23bc83159`.
-- Prior `DimensionParametersResolver.kt` Identifier proof remains frozen at HEAD `19d15fccf7345fc80f91800356a105d3595db87c`, P0 `35413012083` / job `105816180721`, P1 `35413012178` / job `105816181236`, artifact `10574836065`, ZIP SHA-256 `ca585a823377e4752017103a7acbe30be1078035c084dd28a758496659f14b95`.
-- Prior `MassDatapackResolver.kt` Identifier proof remains frozen at HEAD `a40316e93a61594018fd6f8f9d4b913d7fb2eb80`, P0 `35411562202` / job `105812049740`, P1 `35411562107` / job `105812049438`, artifact `10574698116`, ZIP SHA-256 `41dc8482808a7de1a46bf4f680c00560ae085a267118e3a9dddec1f5997d2506`.
-- Prior `MassDatapackResolver` dummy-`BlockGetter` minY proof remains frozen at HEAD `563cbcba7bb1c92ca27820ef785d11bb88872524`, P0 `35410678210` / job `105809557245`, P1 `35410678254` / job `105809557590`, artifact `10573811879`, ZIP SHA-256 `ef0e33b2db1cff60f1e1d14658cbb9d50523309a227806cf3f09776fd23df3f2`.
-- Prior `SeamlessChunksManager` ChunkPos packed-key proof remains frozen at HEAD `75a434c728f1ca020b550882967085ccc53d5c3b`, P0 `35409275352` / job `105805422622`, P1 `35409275363` / job `105805423593`, artifact `10574055235`, ZIP SHA-256 `cb032a68942404c798debc540ad7b387c1f06ac41d6854f570aa43e70894a9b6`.
-- No networking, entity dragging/reference-space behavior, local-control authority, interpolation, ship lifecycle, collision, physics, player, camera, rendering, persistence, or unrelated gameplay semantics were changed by this proof.
+- Current proven implementation HEAD: `2c763500338955135d0700b273594a87dab9d982` (`P1: normalize touched keybinding locale lines`).
+- Exact-head P0 provenance run `35424232816`, job `105847304720`, completed `success` and re-confirmed the pinned upstream VS2 identity.
+- Exact-head P1 standalone compile run `35424232856`, job `105847304996`, completed `failure` only because independent remaining Minecraft 26.2 source/API errors remain.
+- All traceable overlays applied successfully; explicit `git diff --check` / port-delta validation and Gradle runtime steps succeeded; compilation reached the real `:common:compileKotlin` boundary.
+- The isolated Minecraft 26.2 keybinding adaptation changes only the category representation required by current vanilla: one shared category is registered as `KeyMapping.Category.register(Identifier.fromNamespaceAndPath("valkyrienskies", "driving"))`; the existing `shipDown` and `shipCruise` key mappings retain their names, default keys, registration flow, and shared category semantics.
+- Minecraft 26.2 derives the category translation key as `key.category.valkyrienskies.driving`. To preserve the upstream VS2 user-visible category text, `apply_p1_vskeybindings_category_26_2.py` keeps the legacy `category.valkyrienskies.driving` entry and adds `key.category.valkyrienskies.driving` with the **exact same localized value** in every upstream locale that carried the legacy entry: `ar_sa`, `en_pt`, `en_us`, `es_es`, `fi_fi`, `fr_fr`, `hi_in`, `ja_jp`, `ko_kr`, `pl_pl`, `ru_ru`, `sv_se`, `tr_tr`, `zh_cn`.
+- Locale mutation is fail-closed. Untouched locale bytes are preserved; only the two touched category lines are emitted with clean LF endings where needed so Git's whitespace checker does not reject CRLF on newly changed lines. The JSON is re-parsed and exact old/new translation-value equality is asserted before the overlay succeeds.
+- Exact run `35424232856` contains **no compiler diagnostic for `VSKeyBindings.kt`**. The prior `String` versus `KeyMapping.Category` type-mismatch diagnostic is cleared with no replacement diagnostic in that file.
+- Diagnostic artifact: `p1-compile-log-2c763500338955135d0700b273594a87dab9d982`, artifact ID `10578617703`, size `6291` bytes, ZIP SHA-256 `c9e0d1f2f1e18390794ee14f41493e133d2d174c4e0fa58463c2381983013bb1`.
+- Failed partial probes within this same hypothesis are retained as negative evidence: `e108526cbd728454c175c76bffc610d4e074da49` incorrectly assumed every legacy locale entry had a following JSON entry/comma; `fcc65187d79c4b546883875da3597345db1e01cd` used a whitespace regex that could span line boundaries; `e9a3efd58acb2af9539628eb2875e6cb829c3cec` used text I/O that normalized unrelated CRLF; `fb3c7e65a4c2089f6fa695114734d14836bde1d3` byte-preserved files but still emitted CRLF on touched lines, which `git diff --check` rejected as trailing whitespace. None reached a false compiler proof.
+- No networking, entity dragging/reference-space behavior, local-control authority, interpolation, ship lifecycle, collision, physics, player/camera behavior, rendering, persistence, or unrelated gameplay semantics were changed by this proof.
 - No code from retired `apm23/VS2-Create_Interactive` has been imported or reused as implementation source.
+
+### Immediately prior frozen proofs
+
+- `5c8a80eca1b996c4b89d5a394d7cfb9115d3f070`: `ValkyrienSkiesMod` `CreativeModeTab.Output` accessibility via one common access-widener line mirroring Fabric 26.2's explicit transitive-access contract, with creative-tab source behavior unchanged; P0 `35423048611` / job `105844091418`; P1 `35423048671` / job `105844092374`; artifact `10578021452`; SHA-256 `f5691678a8ebdd7967c193846b906b8114fa4bacd9068836f061d83a9bb0cd1b`.
+- `4641ae31765f0d067923cc1ef54b9a26abe99a19`: TestHingeBlockEntity `ValueInput` / `ValueOutput` persistence boundary preserving the flat key schema and hinge joint-load semantics; P0 `35421661792` / job `105840387680`; P1 `35421661791` / job `105840387789`; artifact `10577638892`; SHA-256 `a6b44f7d7248a9364dc31f1ddc9231ffa45212a895f10db752be4b432deae47a`.
+- `ea2084954eb4edd2bd9922aa1f59342b76709809`: MassDatapackResolver registry-tag lookup `getTag(TagKey) -> get(TagKey)` with deferred tag semantics preserved; P0 `35420504812` / job `105837166152`; P1 `35420504781` / job `105837162566`; artifact `10577252400`; SHA-256 `d0dab3e4652c4d00f62f1c9aeccaae98c8a1401e8651e86bd9de7aa12d2f28ac`.
+- `27e181c70184b2aac38eeb1a646905d93ba45023`: MassDatapackResolver typed reload-listener constructor/generic/apply boundary; P0 `35419426729` / job `105834163091`; P1 `35419426780` / job `105834163164`; artifact `10577550502`; SHA-256 `cf373d90a2b42bc5bc92866fe39d97a43ce6ae6e7deb4fd3f2f37d307719fd57`.
+- `ac739bbf0c1598087a6ae9b158117c4764ce3079`: DimensionParametersResolver typed reload-listener boundary; P0 `35418630206` / job `105831997380`; P1 `35418630221` / job `105831997436`; artifact `10576109658`; SHA-256 `58f0e1a82a74ebc096c610a8d98dd51efc56c1e9248a79e446517cdb7f30ea97`.
+- `2af9d9ba1d48f8a0baf825398d3d441b1219f19d`: VSEntityHandlerDataLoader typed reload-listener boundary; P0 `35417874772` / job `105829899174`; P1 `35417874723` / job `105829899066`; artifact `10575914762`; SHA-256 `51518277e80d405539aba99f690b27bfe4883be95d929b489b9d97a98cc8e7f3`.
+- `9d82234aa769a6a0eece07f52e7d5ace2d334aab`: VSGamePackets Identifier-vocabulary proof; P0 `35415473227` / job `105823166889`; P1 `35415473246` / job `105823166851`; artifact `10575144592`; SHA-256 `0aae19b487b1088166b7ea1e8e72e4cb30ad3101c8c6e88c5620c797d9dd8ab1`.
+- `4a657f4625f69b26b9ccef9f7235cee271325d98`: VSEntityHandlerDataLoader Identifier proof; P0 `35414238420` / job `105819598472`; P1 `35414238535` / job `105819599047`; artifact `10575555973`; SHA-256 `b980ea48f7b71f3ec9d79e119ff83d567fbaf16973871cb547570ae23bc83159`.
+- `19d15fccf7345fc80f91800356a105d3595db87c`: DimensionParametersResolver Identifier proof; P0 `35413012083` / job `105816180721`; P1 `35413012178` / job `105816181236`; artifact `10574836065`; SHA-256 `ca585a823377e4752017103a7acbe30be1078035c084dd28a758496659f14b95`.
+- `a40316e93a61594018fd6f8f9d4b913d7fb2eb80`: MassDatapackResolver Identifier proof; P0 `35411562202` / job `105812049740`; P1 `35411562107` / job `105812049438`; artifact `10574698116`; SHA-256 `41dc8482808a7de1a46bf4f680c00560ae085a267118e3a9dddec1f5997d2506`.
+- `563cbcba7bb1c92ca27820ef785d11bb88872524`: MassDatapackResolver dummy BlockGetter minY proof; P0 `35410678210` / job `105809557245`; P1 `35410678254` / job `105809557590`; artifact `10573811879`; SHA-256 `ef0e33b2db1cff60f1e1d14658cbb9d50523309a227806cf3f09776fd23df3f2`.
+- `75a434c728f1ca020b550882967085ccc53d5c3b`: SeamlessChunksManager ChunkPos packed-key proof; P0 `35409275352` / job `105805422622`; P1 `35409275363` / job `105805423593`; artifact `10574055235`; SHA-256 `cb032a68942404c798debc540ad7b387c1f06ac41d6854f570aa43e70894a9b6`.
 
 ## Target runtime baseline
 
@@ -62,9 +67,9 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
-- active_proof_head: `5c8a80eca1b996c4b89d5a394d7cfb9115d3f070; ValkyrienSkiesMod CreativeModeTab.Output access proof complete and frozen`
-- active_proof_run: `P0 35423048611 / job 105844091418 success; P1 35423048671 / job 105844092374 failure with all ValkyrienSkiesMod diagnostics cleared`
-- active_hypothesis: `none selected yet; inspect the exact Minecraft 26.2 API boundary for one isolated remaining compiler cluster before source mutation. The CreativeModeTab.Output access-widener proof mirrors one explicit Fabric 26.2 access contract only and does not authorize broad access widening or source/event rewrites elsewhere. Preserve the ShipSavedData lifecycle/factory boundary, ShipMountingEntity entity persistence/hurt boundary, assembly/relocation component semantics, authority-sensitive VSGamePackets/EntityDragger local-control and lerp boundary, VSGameUtils resource/mixin boundary, keybinding translation semantics, nullable message semantics, rendering, ticketing, Sable, Create-compat classpath boundary, and other deferred locks.`
+- active_proof_head: `2c763500338955135d0700b273594a87dab9d982; VSKeyBindings KeyMapping.Category + localized translation bridge proof complete and frozen`
+- active_proof_run: `P0 35424232816 / job 105847304720 success; P1 35424232856 / job 105847304996 failure with all VSKeyBindings diagnostics cleared`
+- active_hypothesis: `none selected yet; inspect the exact Minecraft 26.2 API boundary for one isolated remaining compiler cluster before source mutation. Preserve the ShipSavedData lifecycle/factory boundary, ShipMountingEntity entity persistence/hurt boundary, assembly/relocation component semantics, authority-sensitive VSGamePackets/EntityDragger local-control and lerp boundary, VSGameUtils resource/mixin boundary, nullable message semantics, rendering, ticketing, Sable, Create-compat classpath boundary, and all other deferred locks. Do not reinterpret the proven keybinding translation bridge as authorization to drop legacy localization or change input behavior.`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 
@@ -78,84 +83,41 @@ Build/toolchain frozen green:
 - dependency resolution reaches real `:common:compileKotlin`;
 - explicit source overlays are fail-closed.
 
-Source/API clusters proven clean in exact-head runs:
-- data-provider `ResourceLocation -> Identifier` plus registry-holder `location() -> identifier()`;
-- `BlockStateInfoProvider.kt`, `SimpleSoundInstanceOnShip.kt`, `VSEntityManager.kt` Identifier clusters;
-- `EmptyRenderer.kt` resource vocabulary and Minecraft 26.2 `EntityRenderState` generic/create-state migration, preserving no-op renderer intent;
-- `ValkyrienSkiesMod.kt` resource vocabulary plus Minecraft 26.2 `CreativeModeTab.Output` accessibility through the exact Fabric creative-tab transitive-access contract mirrored into the VS2 common access widener; the upstream `createCreativeTab()` item list/order/body remains unchanged and exact run `35423048671` has no remaining diagnostic for this file;
-- `EntityData.kt` non-null generic bounds;
-- `NbtUtil.kt` guarded Optional numeric reads with legacy zero defaults;
-- Direction unit-vector accessor migrations in `VectorConversionsMC.kt`, `ValkyrienSkies.kt`, `TestFlapBlock.kt`, `TestWingBlock.kt`, `TestThrusterBlockEntity.kt`, `EntityDragger.kt`, and `TestChairBlock.kt`;
-- `TestThrusterBlock.kt` Minecraft 26.2 `neighborChanged` signature;
-- `RaycastUtils.kt` floating-direction API and paired entity/location nullability expression;
-- `MinecraftPlayer.kt` admin/config permission predicates;
-- dynamic command permission migrations through Backend/GetAir/GetGravity/Dry/Rename/Scale/Splitting/Static/Teleport/Delete/GetShip/Remass;
-- `TestHingeBlock.kt` `getShape`, `getTicker`, four onPaste `getLong` Optional unwraps, and removal hook migration;
-- `TestHingeBlockEntity.kt` two load-time `getLong` Optional unwraps plus Minecraft 26.2 `ValueInput` / `ValueOutput` persistence-hook migration preserving the exact flat persisted key schema, missing-component abort behavior, and `VSRevoluteJoint` / `makeConstraint` semantics; exact run `35421661791` has no remaining diagnostic for this file;
-- `ShipSavedData.kt` three load-time `getByteArray` Optional unwraps preserving empty-array behavior;
-- `CompatUtil.kt` `BlockPos.center`, build-height semantics, and explicit empty collision-context migrations;
-- `SeamlessChunksManager.kt` packed chunk-key migration;
-- `MassDatapackResolver.kt` dummy `BlockGetter.getMinY()`, eight `ResourceLocation -> Identifier` vocabulary sites, Minecraft 26.2 typed raw-JSON `SimpleJsonResourceReloadListener<JsonElement>` constructor/generic/apply boundary using `ExtraCodecs.JSON` + `FileToIdConverter.json("vs_mass")`, and registry-tag lookup `getTag(TagKey) -> get(TagKey)` preserving deferred `tagsAreLoaded` / Optional / HolderSet / priority/application semantics; exact run `35420504781` has no remaining diagnostic for this file;
-- `DimensionParametersResolver.kt` two `ResourceLocation -> Identifier` vocabulary sites plus Minecraft 26.2 typed raw-JSON `SimpleJsonResourceReloadListener<JsonElement>` constructor/generic/apply-boundary migration using `ExtraCodecs.JSON` + `FileToIdConverter.json("vs_dimension_parameters")`, preserving upstream parser/priority/logging/`dimensionMap` semantics;
-- `VSEntityHandlerDataLoader.kt` three `ResourceLocation -> Identifier` vocabulary sites;
-- `VSEntityHandlerDataLoader.kt` Minecraft 26.2 typed `SimpleJsonResourceReloadListener<JsonElement>` constructor/generic migration using `ExtraCodecs.JSON` + `FileToIdConverter.json("vs_entities")`, preserving the upstream raw-JSON/apply/handler-pairing semantics;
-- `VSGamePackets.kt` two `ResourceLocation -> Identifier` vocabulary sites, with local-control/lerp/networking semantics intentionally separate.
+Source/API clusters proven clean in exact-head runs include:
+- data-provider `ResourceLocation -> Identifier` and registry-holder identifier migrations;
+- `BlockStateInfoProvider`, `SimpleSoundInstanceOnShip`, `VSEntityManager`, `DimensionParametersResolver`, `MassDatapackResolver`, `VSEntityHandlerDataLoader`, and the isolated `VSGamePackets` resource-vocabulary sites;
+- `EntityData` non-null generic bounds and guarded Optional numeric/NBT reads;
+- Direction accessor migrations in the previously frozen vector/block/entity sites;
+- `TestThrusterBlock` neighborChanged signature; `RaycastUtils` floating-direction/nullability boundary;
+- Minecraft player and dynamic command permission migrations;
+- `TestHingeBlock` shape/ticker/onPaste/removal migrations;
+- `TestHingeBlockEntity` load reads plus exact `ValueInput`/`ValueOutput` flat persistence schema;
+- `ShipSavedData` load-time byte-array Optional unwraps only; its broader SavedData save/factory lifecycle remains deferred;
+- `CompatUtil` center/build-height/collision-context migrations;
+- `SeamlessChunksManager` packed chunk-key migration;
+- typed raw-JSON reload listeners for VSEntityHandlerDataLoader, DimensionParametersResolver, and MassDatapackResolver;
+- MassDatapackResolver registry-tag lookup through current `Registry.get(TagKey)` while preserving deferred tag semantics;
+- `EmptyRenderer` Identifier + render-state migration;
+- `ValkyrienSkiesMod` resource vocabulary plus exact `CreativeModeTab.Output` accessibility contract, with upstream creative-tab item population unchanged;
+- `VSKeyBindings` current `KeyMapping.Category` migration using registered `valkyrienskies:driving`, with new generated translation key bridged to the exact upstream localized category values while retaining the legacy translation entries.
 
-Representative remaining compiler areas from exact run `35423048671`: Create compat classpath/intermediary/API drift; separate `ShipSavedData` SavedData persistence migration; deferred `VSGameUtils` resource-key/Identifier plus build-height/chunk-position APIs; assembly/tick/ValueInput-ValueOutput/structure processor migrations; TestChair entity-create/`moveTo`; deferred nullable command/item messages; deferred keybinding category; ShipMountingEntity persistence/hurt; entity-handler rendering; VSGamePackets/EntityDragger local-control and VSGamePackets lerp API drift; chunk tickets/VSTicketType; Sable; relocation. `ValkyrienSkiesMod`, `TestHingeBlockEntity`, and `MassDatapackResolver` have no remaining compiler diagnostic in this run.
+Representative remaining compiler areas from exact run `35424232856`: Create compat classpath/intermediary/API drift; separate `ShipSavedData` SavedData persistence migration; deferred `VSGameUtils` resource-key/Identifier plus build-height/chunk-position APIs; assembly/tick/ValueInput-ValueOutput/structure processor migrations; TestChair entity-create/`moveTo`; deferred nullable command/item messages; ShipMountingEntity persistence/hurt; entity-handler rendering; VSGamePackets/EntityDragger local-control and VSGamePackets lerp API drift; chunk tickets/VSTicketType; Sable; relocation. `VSKeyBindings`, `ValkyrienSkiesMod`, `TestHingeBlockEntity`, and `MassDatapackResolver` have no remaining compiler diagnostic in this run.
 
-## Proof chain retained
+## Earlier proof chain retained
 
-- `ad922ded33ff46a3028fca1217559a60be54fad6`: `MinecraftPlayer.kt` permission predicates; P1 `35340545586`.
-- `6253d38ff84785921c95c175563a5b24800979ef`: Backend permission; P1 `35342297011`; artifact `10545204522`; SHA-256 `72de18f36f7538bf818ee59f090fea3d009e7c6f4265a9f7f5261517344b4c03`.
-- `b1a8d44abb54150a5b97e03677a37977702ed65e`: GetAir permission; P1 `35355388045`; artifact `10552130508`; SHA-256 `f921fc35d29e54d827fafbb5ca4c2d5664092a72579e3e394e15cede87e212b3`.
-- `7700e2194f96b79db0ffc67b6b754fecd29cc04f`: GetGravity permission; P1 `35357765377`; artifact `10552603034`; SHA-256 `dfa0c9eae9e1fc118784975bcf7adcbaa0d2ddca29a4f8318b290b1f30cea877`.
-- `bd796323fa1b49bd4844c0a4089edb1025ca89f9`: Dry permission; P1 `35359836381`; artifact `10554023210`; SHA-256 `54086e93046ff3e7f113d0dd80e622e7ee4b39a5ee63e5dfed836041dce35b8d`.
-- `18959ca9823cd790e51580bf9911d1757890acb0`: Rename permission; P1 `35361901965`; artifact `10555046879`; SHA-256 `b7c5ee49f8049a48e81b6879a519da0724787cbdbac6012aa07c7517ab9e57be`.
-- `915d88e3c64ecc49bb502c8fe849b5744d99cea4`: Scale permission; P1 `35364622301`; artifact `10554444674`; SHA-256 `a663d408b9fc0f08ed96545827b1c4e9030d83a77c79e3590798fd5f17870763`.
-- `d919b45d6f35c9917c13e69c3faf8011e0057057`: Splitting permission; P1 `35366811861`; artifact `10557430465`; SHA-256 `af0a83997d92d431f31c215ba985d502fc7b35edc1ac8c7fc6f5585e84ea4d8b`.
-- `e1fa31795ba5901fdde0c1238e434faf06be2f49`: Static permission; P1 `35370436174`; artifact `10558762061`; SHA-256 `958012e1dd3cdf1a8bae2d40f423061487c7e9a4b57cd0094e7ad90ebd7328a0`.
-- `c75047ae1f38b92fc39a56911a967ce914952c5c`: Teleport permission; P1 `35372443583`; artifact `10559450323`; SHA-256 `5319fc6386f0a87c23893e84c26aeb871c6453ad5c3fa7374134a4cf35024faf`.
-- `6a2901ccbb359d867209195c58dc652b0a39e594`: Delete permission; P1 `35375165938`; artifact `10559548159`; SHA-256 `d1ed6dd29874c3dc4c45d1e55d4042315697856e69de18b393f9e97c214666b3`.
-- `3d93c0041a59c0b78adfa9e2ff313cdbbe5f74aa`: GetShip permission; P1 `35377209937`; artifact `10560773482`; SHA-256 `8697b7badb3f739a29be29be14e2b0e0373ac7b98057a7e47245d565b535ad34`.
-- `6762f2022756506b282f176f4ea4a5d6b40b8ea7`: Remass permission; P0 `35379217178`; P1 `35379217305`; artifact `10561352586`; SHA-256 `4885fb7979234c4e32621cd21bfc83f21d14f6b8128c7c5b76b59338de396dd9`.
-- `f86f606e2f51e42513f4ae558bb740164d3d9f23`: EntityDragger Direction; P0 `35381321480`; P1 `35381321453`; artifact `10563195663`; SHA-256 `619e4759fee46606f2a93e94e8b42cbd463b27110e46e8590ae98e861fe70ffa`.
-- `369d042ee7d86c109825ae00b637c1230a70e7e5`: TestChair Direction; P0 `35383401723`; P1 `35383401868`; job `105724661254`; artifact `10562768230`; SHA-256 `4f3ad14af6cf671d9c5f43a3e356dbd4c03dbd866f549ff6b8937d30c7cc5bc4`.
-- `5a6f41ee258d704fdb91fa9b115854c19623a7eb`: EmptyRenderer Identifier; P0 `35384633799`; P1 `35384633761`; job `105728547942`; artifact `10563931126`; SHA-256 `ec45c981a8589ae3a93a3e0955cff789172c487472598bd4a5803294d98475ae`.
-- `4a1ea3c136ab6640c51405129e5286896e00b483`: ValkyrienSkiesMod Identifier; P0 `35388500261`; P1 `35388500277`; job `105741071163`; artifact `10564054948`; SHA-256 `2d6ebab805f74338db600dd94870753c5f11f2d75bf502827aad0c8056091685`.
-- `01e86b1dba7f483a6f8363f22e72100a61b887a8`: TestHinge getShape; P0 `35392499266`; P1 `35392499337`; job `105753820631`; artifact `10567085228`; SHA-256 `b0022b364c646cf3c65df478a98132b09877b5758768ac9d04abe9721b067f56`.
-- `a4bb9db1749b0cd79e23e2f90cbfbad95202f46d`: TestHinge getTicker bound; P0 `35395323531`; P1 `35395323604`; job `105762731288`; artifact `10567955398`; SHA-256 `53b4e9a70dfac7122d5f2fe9b040fa2b3097e69f0ad8b7d3fb284e4b678b99d2`.
-- `4e3dbdd2d26b1861f93f5ac651c3f8cf615ffde6`: TestHinge onPaste getLong; P0 `35396104505`; job `105765179878`; P1 `35396104498`; job `105765179621`; artifact `10567986686`; SHA-256 `4f06b192a022770df0687a244ae0db2da049c2a227dcd117202404ac440e8425`.
-- `2152734918d4e4938af5aad17476f35f1ae361cf`: TestHingeBlockEntity getLong; P0 `35396770555`; job `105767287832`; P1 `35396770532`; job `105767287715`; artifact `10568142768`; SHA-256 `c677210fb53c9b716521063eb6e48d567559bb76b4154dc88d24a38aad3505d9`.
-- `58e978bf8841e8bbb26e4658e9b7b566d4800e14`: TestHinge removal hook; P0 `35398688368`; job `105773330399`; P1 `35398688325`; job `105773336393`; artifact `10570252019`; SHA-256 `9ec5ff7f63122b365dfa8460e176dfbcd4be0d86235fa35b9fe803e9959a2f58`.
-- `262f6140ea3f94239d47541d46c694b8b076444e`: ShipSavedData byte-array Optional; P0 `35400474206`; job `105778970673`; P1 `35400474672`; job `105778971617`; artifact `10571260073`; SHA-256 `9c118a71c2a9c207110fd7e6fe85bef7f11f56ee12aa1d5fac72e6d38f9e404d`.
-- `108dd78c09e76a147020c637b80ba915d7716935`: CompatUtil BlockPos center; P0 `35402468337`; job `105785129691`; P1 `35402468328`; job `105785129719`; artifact `10571277244`; SHA-256 `2bf8a56926f2363d766119988c6eec2f8c03743806b03e77efb769fa1daa32a9`.
-- `b544a504d4b9fe82b0bddfde113f6b386e295f71`: CompatUtil build-height semantics; P0 `35405820754`; job `105795255194`; P1 `35405820745`; job `105795253518`; artifact `10572194074`; SHA-256 `ecbbfd86b28720dcd1b397ad57807eb3f3a6aec026b7099983be704b4db5d53b`.
-- `d2cd775048bb9620bde6b3f524451cea8bf1dab6`: CompatUtil explicit empty collision-context; P0 `35406397283`; job `105796934724`; P1 `35406397269`; job `105796934449`; artifact `10572521917`; SHA-256 `6ec56046e2163a36044250441a823ac6d56fbbd7e6874279ca92a958d2a88238`.
-- `869322d6d1dc040e9b72782844c1662fb9cc8fea`: EmptyRenderer render-state; P0 `35407775818`; job `105800997900`; P1 `35407775628`; job `105800997361`; artifact `10572987722`; SHA-256 `c246e0e9438526069582f39474d11b1c4728063bcf84e155e7019203fc7b3960`.
-- `75a434c728f1ca020b550882967085ccc53d5c3b`: SeamlessChunksManager ChunkPos packed-key API; P0 `35409275352`; job `105805422622`; P1 `35409275363`; job `105805423593`; artifact `10574055235`; SHA-256 `cb032a68942404c798debc540ad7b387c1f06ac41d6854f570aa43e70894a9b6`.
-- `563cbcba7bb1c92ca27820ef785d11bb88872524`: MassDatapackResolver dummy BlockGetter minY; P0 `35410678210`; job `105809557245`; P1 `35410678254`; job `105809557590`; artifact `10573811879`; SHA-256 `ef0e33b2db1cff60f1e1d14658cbb9d50523309a227806cf3f09776fd23df3f2`.
-- `a40316e93a61594018fd6f8f9d4b913d7fb2eb80`: MassDatapackResolver ResourceLocation-to-Identifier vocabulary; P0 `35411562202`; job `105812049740`; P1 `35411562107`; job `105812049438`; artifact `10574698116`; SHA-256 `41dc8482808a7de1a46bf4f680c00560ae085a267118e3a9dddec1f5997d2506`.
-- `19d15fccf7345fc80f91800356a105d3595db87c`: DimensionParametersResolver ResourceLocation-to-Identifier vocabulary; P0 `35413012083`; job `105816180721`; P1 `35413012178`; job `105816181236`; artifact `10574836065`; SHA-256 `ca585a823377e4752017103a7acbe30be1078035c084dd28a758496659f14b95`.
-- `4a657f4625f69b26b9ccef9f7235cee271325d98`: VSEntityHandlerDataLoader ResourceLocation-to-Identifier vocabulary; P0 `35414238420`; job `105819598472`; P1 `35414238535`; job `105819599047`; artifact `10575555973`; SHA-256 `b980ea48f7b71f3ec9d79e119ff83d567fbaf16973871cb547570ae23bc83159`.
-- `9d82234aa769a6a0eece07f52e7d5ace2d334aab`: VSGamePackets ResourceLocation-to-Identifier vocabulary; P0 `35415473227`; job `105823166889`; P1 `35415473246`; job `105823166851`; artifact `10575144592`; SHA-256 `0aae19b487b1088166b7ea1e8e72e4cb30ad3101c8c6e88c5620c797d9dd8ab1`.
-- `2af9d9ba1d48f8a0baf825398d3d441b1219f19d`: VSEntityHandlerDataLoader typed reload-listener boundary; P0 `35417874772`; job `105829899174`; P1 `35417874723`; job `105829899066`; artifact `10575914762`; SHA-256 `51518277e80d405539aba99f690b27bfe4883be95d929b489b9d97a98cc8e7f3`.
-- `ac739bbf0c1598087a6ae9b158117c4764ce3079`: DimensionParametersResolver typed reload-listener constructor/generic/apply boundary; P0 `35418630206`; job `105831997380`; P1 `35418630221`; job `105831997436`; artifact `10576109658`; SHA-256 `58f0e1a82a74ebc096c610a8d98dd51efc56c1e9248a79e446517cdb7f30ea97`.
-- `27e181c70184b2aac38eeb1a646905d93ba45023`: MassDatapackResolver typed reload-listener constructor/generic/apply boundary; P0 `35419426729`; job `105834163091`; P1 `35419426780`; job `105834163164`; artifact `10577550502`; SHA-256 `cf373d90a2b42bc5bc92866fe39d97a43ce6ae6e7deb4fd3f2f37d307719fd57`.
-- `ea2084954eb4edd2bd9922aa1f59342b76709809`: MassDatapackResolver registry-tag lookup `getTag(TagKey) -> get(TagKey)` with deferred tag semantics preserved; P0 `35420504812`; job `105837166152`; P1 `35420504781`; job `105837162566`; artifact `10577252400`; SHA-256 `d0dab3e4652c4d00f62f1c9aeccaae98c8a1401e8651e86bd9de7aa12d2f28ac`.
-- `4641ae31765f0d067923cc1ef54b9a26abe99a19`: TestHingeBlockEntity `ValueInput` / `ValueOutput` persistence boundary preserving the flat key schema and hinge joint-load semantics; P0 `35421661792`; job `105840387680`; P1 `35421661791`; job `105840387789`; artifact `10577638892`; SHA-256 `a6b44f7d7248a9364dc31f1ddc9231ffa45212a895f10db752be4b432deae47a`.
-- `5c8a80eca1b996c4b89d5a394d7cfb9115d3f070`: `ValkyrienSkiesMod` `CreativeModeTab.Output` accessibility via one common access-widener line mirroring Fabric 26.2's explicit transitive-access contract, with creative-tab source behavior unchanged; P0 `35423048611`; job `105844091418`; P1 `35423048671`; job `105844092374`; artifact `10578021452`; SHA-256 `f5691678a8ebdd7967c193846b906b8114fa4bacd9068836f061d83a9bb0cd1b`.
+The following exact-head proofs remain frozen and must not be mechanically redone: `ad922ded33ff46a3028fca1217559a60be54fad6` MinecraftPlayer permissions; `6253d38ff84785921c95c175563a5b24800979ef` Backend permission; `b1a8d44abb54150a5b97e03677a37977702ed65e` GetAir; `7700e2194f96b79db0ffc67b6b754fecd29cc04f` GetGravity; `bd796323fa1b49bd4844c0a4089edb1025ca89f9` Dry; `18959ca9823cd790e51580bf9911d1757890acb0` Rename; `915d88e3c64ecc49bb502c8fe849b5744d99cea4` Scale; `d919b45d6f35c9917c13e69c3faf8011e0057057` Splitting; `e1fa31795ba5901fdde0c1238e434faf06be2f49` Static; `c75047ae1f38b92fc39a56911a967ce914952c5c` Teleport; `6a2901ccbb359d867209195c58dc652b0a39e594` Delete; `3d93c0041a59c0b78adfa9e2ff313cdbbe5f74aa` GetShip; `6762f2022756506b282f176f4ea4a5d6b40b8ea7` Remass; `f86f606e2f51e42513f4ae558bb740164d3d9f23` EntityDragger Direction; `369d042ee7d86c109825ae00b637c1230a70e7e5` TestChair Direction; `5a6f41ee258d704fdb91fa9b115854c19623a7eb` EmptyRenderer Identifier; `4a1ea3c136ab6640c51405129e5286896e00b483` ValkyrienSkiesMod Identifier; `01e86b1dba7f483a6f8363f22e72100a61b887a8` TestHinge shape; `a4bb9db1749b0cd79e23e2f90cbfbad95202f46d` TestHinge ticker bound; `4e3dbdd2d26b1861f93f5ac651c3f8cf615ffde6` TestHinge onPaste Optional; `2152734918d4e4938af5aad17476f35f1ae361cf` TestHingeBlockEntity Optional; `58e978bf8841e8bbb26e4658e9b7b566d4800e14` TestHinge removal hook; `262f6140ea3f94239d47541d46c694b8b076444e` ShipSavedData byte-array Optional; `108dd78c09e76a147020c637b80ba915d7716935` CompatUtil center; `b544a504d4b9fe82b0bddfde113f6b386e295f71` CompatUtil build height; `d2cd775048bb9620bde6b3f524451cea8bf1dab6` CompatUtil collision context; `869322d6d1dc040e9b72782844c1662fb9cc8fea` EmptyRenderer render state; and the detailed recent proof hashes listed above.
 
 ## Deferred / boundary locks
 
 Do not collapse these broader boundaries into compile-only edits:
 - `ShipSavedData.save`: Minecraft 26.2 SavedData persistence is broader than a signature-only edit and must reconcile SavedDataType/codec/factory semantics.
 - `VSGameUtils.kt`: resource-key migration crosses `ResourceKeyAccessor` and `MixinLevel`; do not apply a partial one-file ResourceLocation replacement. Build-height and chunk-position API drift is also present.
-- `VSKeyBindings.kt`: `KeyMapping.Category` migration changes category translation-key behavior; do not silently drop `category.valkyrienskies.driving`.
+- `VSKeyBindings.kt` is now frozen green independently: current category `Identifier` is `valkyrienskies:driving`, vanilla derives `key.category.valkyrienskies.driving`, and the overlay bridges that generated key to the exact existing localized values while retaining `category.valkyrienskies.driving`. Do not remove the bridge or change default key/input behavior without separate evidence.
 - Nullable ship slug/name command/item messages: do not invent fallback values merely to satisfy Kotlin vararg nullability.
 - Typed `SimpleJsonResourceReloadListener<T>` migration is frozen green independently for `VSEntityHandlerDataLoader`, `DimensionParametersResolver`, and `MassDatapackResolver`.
-- `MassDatapackResolver` registry-tag lookup is also frozen green independently: the 26.2 `Registry.get(TagKey)` path is proven while preserving upstream deferred `tagsAreLoaded`, Optional/HolderSet, missing-tag, priority/application, and registration semantics.
-- `TestHingeBlockEntity` persistence is frozen green independently: this proves only that block entity's exact flat-key `ValueInput` / `ValueOutput` boundary. It does **not** authorize mechanical migration of `ShipSavedData`, `ShipMountingEntity`, `AssemblyUtil`, `ShipAssembler`, or `RelocationUtil`; those have separate lifecycle/factory/component/entity semantics and must be inspected independently.
-- `ValkyrienSkiesMod` creative-tab access is frozen green independently: it mirrors the explicit Fabric 26.2 `CreativeModeTab$Output` transitive-access contract only. Do not broadly widen unrelated Minecraft classes or rewrite the upstream creative-tab item population into a Fabric event path without separate evidence.
+- `MassDatapackResolver` registry-tag lookup is frozen green independently: the 26.2 `Registry.get(TagKey)` path is proven while preserving upstream deferred `tagsAreLoaded`, Optional/HolderSet, missing-tag, priority/application, and registration semantics.
+- `TestHingeBlockEntity` persistence proves only that block entity's exact flat-key `ValueInput`/`ValueOutput` boundary. It does **not** authorize mechanical migration of `ShipSavedData`, `ShipMountingEntity`, `AssemblyUtil`, `ShipAssembler`, or `RelocationUtil`.
+- `ValkyrienSkiesMod` creative-tab access mirrors the explicit Fabric 26.2 `CreativeModeTab$Output` transitive-access contract only. Do not broadly widen unrelated Minecraft classes or rewrite upstream creative-tab population without separate evidence.
 - `VSGamePackets.kt` / `EntityDragger.kt` local-control and lerp API drift is authority-sensitive; do not replace removed vanilla APIs with synthetic carry, custom authority, teleport chase, or invented client-control semantics.
 
 ## Sable contract
@@ -173,7 +135,7 @@ Forbidden final substitutes: custom VS2-style reference frames, synthetic carry 
 ## Milestones
 
 ### P0 — Upstream import + provenance
-Frozen green. Exact upstream identity/pin/license/provenance is established and repeatedly re-confirmed. Latest proven implementation HEAD `5c8a80eca1b996c4b89d5a394d7cfb9115d3f070` has exact-head P0 run `35423048611` / job `105844091418` success.
+Frozen green. Exact upstream identity/pin/license/provenance is established and repeatedly re-confirmed. Latest proven implementation HEAD `2c763500338955135d0700b273594a87dab9d982` has exact-head P0 run `35424232816` / job `105847304720` success.
 
 ### P1 — Standalone VS2 26.2 compile/boot
 Port actual VS2 until common/Fabric compile, standalone client/server boot, and core/native initialization are proven without Create/SNR/Copycats hiding failures.
@@ -207,21 +169,24 @@ Do not reintroduce without new direct evidence:
 - retired project gameplay patches;
 - fixture/input mutations solely to manufacture green;
 - compile-only `VSKeyBindings` category replacement that changes/drops existing translation behavior;
+- assuming every legacy keybinding-category locale entry has a following JSON entry/comma — disproven by exact fail-closed probe `e108526cbd728454c175c76bffc610d4e074da49`;
+- using a whitespace regex or whole-file newline normalization for the keybinding localization bridge — disproven by probes `fcc65187d79c4b546883875da3597345db1e01cd` and `e9a3efd58acb2af9539628eb2875e6cb829c3cec`;
+- emitting source CRLF on newly touched category lines under the repository's `git diff --check` gate — disproven by `fb3c7e65a4c2089f6fa695114734d14836bde1d3`;
 - invented fallback values for nullable ship slug/name just to satisfy Kotlin vararg nullability;
 - partial `VSGameUtils` ResourceLocation replacement without reconciling the `ResourceKeyAccessor`/`MixinLevel` boundary;
 - treating `ShipSavedData.save` as a signature-only `ValueOutput` migration without reconciling the Minecraft 26.2 SavedDataType/codec/factory persistence path;
 - substituting CompatUtil old exclusive `maxBuildHeight` directly with current inclusive `getMaxY()`;
-- assuming legacy nullable `Map<Identifier?, JsonElement?>` still overrides Minecraft 26.2 typed `SimpleJsonResourceReloadListener<JsonElement>.apply`; exact run `35418399392` disproved this and the proven DimensionParameters boundary uses `MutableMap<Identifier, JsonElement>`;
-- assuming `MassDatapackResolver.VSMassDataLoader.apply` can be ported by making only its `objects` map non-null while leaving `ResourceManager?` / `ProfilerFiller?`; exact probe `0fdf41ec2e506f45fba3b28fa1715a0438393a09`, P1 `35419191192`, disproved this. The proven 26.2 boundary requires all three apply arguments non-null;
+- assuming legacy nullable `Map<Identifier?, JsonElement?>` still overrides Minecraft 26.2 typed `SimpleJsonResourceReloadListener<JsonElement>.apply`;
+- assuming `MassDatapackResolver.VSMassDataLoader.apply` can be ported by making only its `objects` map non-null while leaving `ResourceManager?` / `ProfilerFiller?`;
 - mechanically copying the proven `TestHingeBlockEntity` Value I/O shape into broader persistence/component/entity paths without first proving their Minecraft 26.2 lifecycle and codec/component semantics;
 - treating the proven `CreativeModeTab.Output` access line as authorization for broad access widening or replacing upstream creative-tab source behavior with event-driven population without independent evidence;
 - mechanically replacing removed `isControlledByLocalInstance` / `lerpTo` calls without proving the current Minecraft 26.2 authority/interpolation boundary and preserving upstream VS2 semantics.
 
 ## next_safe_action
 
-1. Preserve exact `ValkyrienSkiesMod` CreativeModeTab.Output access proof HEAD `5c8a80eca1b996c4b89d5a394d7cfb9115d3f070`, P0 `35423048611` / job `105844091418`, P1 `35423048671` / job `105844092374`, artifact `10578021452`, ZIP SHA-256 `f5691678a8ebdd7967c193846b906b8114fa4bacd9068836f061d83a9bb0cd1b`.
+1. Preserve exact `VSKeyBindings` category proof HEAD `2c763500338955135d0700b273594a87dab9d982`, P0 `35424232816` / job `105847304720`, P1 `35424232856` / job `105847304996`, artifact `10578617703`, ZIP SHA-256 `c9e0d1f2f1e18390794ee14f41493e133d2d174c4e0fa58463c2381983013bb1`.
 2. Reconcile actual HEAD after this proof-ledger commit and require its exact-head P0 provenance run to settle successfully before any new source mutation.
-3. After provenance settles, inspect only the newest exact-head compiler evidence plus the exact Minecraft 26.2 API boundary for **one** isolated remaining compiler cluster. The CreativeModeTab access-widener pattern is evidence for that one explicit Fabric access contract only; do not mechanically widen unrelated APIs. Preserve the independent `ShipSavedData`, `VSGameUtils`, `VSKeyBindings`, nullable-message, ShipMountingEntity, assembly/relocation, rendering, authority/local-control/lerp, ticketing, Sable, and Create-compat boundaries.
+3. After provenance settles, inspect only the newest exact-head compiler evidence plus the exact Minecraft 26.2 API boundary for **one** isolated remaining compiler cluster. Do not mechanically select from the locked broad persistence, VSGameUtils/mixin, authority/local-control/lerp, nullable-message, assembly/relocation, rendering, ticketing, Sable, or Create-compat boundaries.
 4. Select and document exactly one next root hypothesis only after that API-boundary inspection. Preserve all frozen proofs, deferred boundaries, and failed-hypothesis locks.
 5. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet. No video is authorized during compile/API-port work.
 
