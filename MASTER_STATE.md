@@ -22,23 +22,22 @@ GitHub code is the implementation source of truth. This file is the durable cont
 
 The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are applied by explicit fail-closed overlay scripts so every adaptation stays traceable to upstream VS2 source.
 
-## Current reconciliation — VSKeyBindings KeyMapping.Category migration proven
+## Current reconciliation — TestChair entity creation / positioning proven
 
-- Current proven implementation HEAD: `2c763500338955135d0700b273594a87dab9d982` (`P1: normalize touched keybinding locale lines`).
-- Exact-head P0 provenance run `35424232816`, job `105847304720`, completed `success` and re-confirmed the pinned upstream VS2 identity.
-- Exact-head P1 standalone compile run `35424232856`, job `105847304996`, completed `failure` only because independent remaining Minecraft 26.2 source/API errors remain.
-- All traceable overlays applied successfully; explicit `git diff --check` / port-delta validation and Gradle runtime steps succeeded; compilation reached the real `:common:compileKotlin` boundary.
-- The isolated Minecraft 26.2 keybinding adaptation changes only the category representation required by current vanilla: one shared category is registered as `KeyMapping.Category.register(Identifier.fromNamespaceAndPath("valkyrienskies", "driving"))`; the existing `shipDown` and `shipCruise` key mappings retain their names, default keys, registration flow, and shared category semantics.
-- Minecraft 26.2 derives the category translation key as `key.category.valkyrienskies.driving`. To preserve the upstream VS2 user-visible category text, `apply_p1_vskeybindings_category_26_2.py` keeps the legacy `category.valkyrienskies.driving` entry and adds `key.category.valkyrienskies.driving` with the **exact same localized value** in every upstream locale that carried the legacy entry: `ar_sa`, `en_pt`, `en_us`, `es_es`, `fi_fi`, `fr_fr`, `hi_in`, `ja_jp`, `ko_kr`, `pl_pl`, `ru_ru`, `sv_se`, `tr_tr`, `zh_cn`.
-- Locale mutation is fail-closed. Untouched locale bytes are preserved; only the two touched category lines are emitted with clean LF endings where needed so Git's whitespace checker does not reject CRLF on newly changed lines. The JSON is re-parsed and exact old/new translation-value equality is asserted before the overlay succeeds.
-- Exact run `35424232856` contains **no compiler diagnostic for `VSKeyBindings.kt`**. The prior `String` versus `KeyMapping.Category` type-mismatch diagnostic is cleared with no replacement diagnostic in that file.
-- Diagnostic artifact: `p1-compile-log-2c763500338955135d0700b273594a87dab9d982`, artifact ID `10578617703`, size `6291` bytes, ZIP SHA-256 `c9e0d1f2f1e18390794ee14f41493e133d2d174c4e0fa58463c2381983013bb1`.
-- Failed partial probes within this same hypothesis are retained as negative evidence: `e108526cbd728454c175c76bffc610d4e074da49` incorrectly assumed every legacy locale entry had a following JSON entry/comma; `fcc65187d79c4b546883875da3597345db1e01cd` used a whitespace regex that could span line boundaries; `e9a3efd58acb2af9539628eb2875e6cb829c3cec` used text I/O that normalized unrelated CRLF; `fb3c7e65a4c2089f6fa695114734d14836bde1d3` byte-preserved files but still emitted CRLF on touched lines, which `git diff --check` rejected as trailing whitespace. None reached a false compiler proof.
-- No networking, entity dragging/reference-space behavior, local-control authority, interpolation, ship lifecycle, collision, physics, player/camera behavior, rendering, persistence, or unrelated gameplay semantics were changed by this proof.
+- Current proven implementation HEAD: `169e0007dcbeb2263701e6b41e40757de6d62ff2` (`P1: wire TestChair entity-creation proof`).
+- Exact-head P0 provenance run `35424938143`, job `105849132808`, completed `success` and re-confirmed the pinned upstream VS2 identity.
+- Exact-head P1 standalone compile run `35424938174`, job `105849132961`, completed `failure` only because independent remaining Minecraft 26.2 source/API errors remain.
+- All traceable overlays applied successfully, including the prior frozen TestChair Direction accessor adaptation and isolated `apply_p1_testchair_entity_creation_26_2.py`; explicit `git diff --check` / port-delta validation and Gradle runtime steps succeeded; compilation reached the real `:common:compileKotlin` boundary.
+- Exact Minecraft 26.2 API inspection established that the old one-argument `EntityType.create(Level)` call is replaced by the current lightweight `EntityType.create(Level, EntitySpawnReason)` path, while the old `Entity.moveTo(...)` API is renamed to `Entity.snapTo(...)`.
+- The isolated adaptation preserves the real upstream chair flow: the client-side early return is unchanged; the existing real VS2 `SHIP_MOUNTING_ENTITY_TYPE` is still created rather than replaced; `EntitySpawnReason.TRIGGERED` records the block-interaction-driven creation cause; the exact seat position offset `(x + .5, y + .15, z + .5)` is unchanged; `snapTo(...)` receives those exact coordinates; `lookAt(...)`, `isController = true`, `level.addFreshEntity(seatEntity)`, and `player.startRiding(seatEntity)` are unchanged.
+- The adaptation deliberately does **not** switch to `EntityType.spawn()`, does not add per-tick movement/teleporting, and does not alter VS2 mounting, riding, reference-space, player, camera, collision, physics, networking, or authority semantics.
+- Exact run `35424938174` contains **no compiler diagnostic for `TestChairBlock.kt`**. The prior missing `EntityType.create` spawn parameters / `Level` versus `ServerLevel` candidate mismatch and removed `moveTo` diagnostic are cleared with no replacement diagnostic in that file.
+- Diagnostic artifact: `p1-compile-log-169e0007dcbeb2263701e6b41e40757de6d62ff2`, artifact ID `10578643862`, size `6194` bytes, ZIP SHA-256 `d9e90d3e6ec99f1203285e429f69be9ba6a5c82aae7e209196f93dcb88e938d1`.
 - No code from retired `apm23/VS2-Create_Interactive` has been imported or reused as implementation source.
 
 ### Immediately prior frozen proofs
 
+- `2c763500338955135d0700b273594a87dab9d982`: `VSKeyBindings` current `KeyMapping.Category` migration plus localized translation bridge preserving the legacy category text/default keys/input behavior; P0 `35424232816` / job `105847304720`; P1 `35424232856` / job `105847304996`; artifact `10578617703`; SHA-256 `c9e0d1f2f1e18390794ee14f41493e133d2d174c4e0fa58463c2381983013bb1`. Failed partial probes `e108526cbd728454c175c76bffc610d4e074da49`, `fcc65187d79c4b546883875da3597345db1e01cd`, `e9a3efd58acb2af9539628eb2875e6cb829c3cec`, and `fb3c7e65a4c2089f6fa695114734d14836bde1d3` remain retained as negative evidence and must not be replayed.
 - `5c8a80eca1b996c4b89d5a394d7cfb9115d3f070`: `ValkyrienSkiesMod` `CreativeModeTab.Output` accessibility via one common access-widener line mirroring Fabric 26.2's explicit transitive-access contract, with creative-tab source behavior unchanged; P0 `35423048611` / job `105844091418`; P1 `35423048671` / job `105844092374`; artifact `10578021452`; SHA-256 `f5691678a8ebdd7967c193846b906b8114fa4bacd9068836f061d83a9bb0cd1b`.
 - `4641ae31765f0d067923cc1ef54b9a26abe99a19`: TestHingeBlockEntity `ValueInput` / `ValueOutput` persistence boundary preserving the flat key schema and hinge joint-load semantics; P0 `35421661792` / job `105840387680`; P1 `35421661791` / job `105840387789`; artifact `10577638892`; SHA-256 `a6b44f7d7248a9364dc31f1ddc9231ffa45212a895f10db752be4b432deae47a`.
 - `ea2084954eb4edd2bd9922aa1f59342b76709809`: MassDatapackResolver registry-tag lookup `getTag(TagKey) -> get(TagKey)` with deferred tag semantics preserved; P0 `35420504812` / job `105837166152`; P1 `35420504781` / job `105837162566`; artifact `10577252400`; SHA-256 `d0dab3e4652c4d00f62f1c9aeccaae98c8a1401e8651e86bd9de7aa12d2f28ac`.
@@ -67,9 +66,9 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
-- active_proof_head: `2c763500338955135d0700b273594a87dab9d982; VSKeyBindings KeyMapping.Category + localized translation bridge proof complete and frozen`
-- active_proof_run: `P0 35424232816 / job 105847304720 success; P1 35424232856 / job 105847304996 failure with all VSKeyBindings diagnostics cleared`
-- active_hypothesis: `none selected yet; inspect the exact Minecraft 26.2 API boundary for one isolated remaining compiler cluster before source mutation. Preserve the ShipSavedData lifecycle/factory boundary, ShipMountingEntity entity persistence/hurt boundary, assembly/relocation component semantics, authority-sensitive VSGamePackets/EntityDragger local-control and lerp boundary, VSGameUtils resource/mixin boundary, nullable message semantics, rendering, ticketing, Sable, Create-compat classpath boundary, and all other deferred locks. Do not reinterpret the proven keybinding translation bridge as authorization to drop legacy localization or change input behavior.`
+- active_proof_head: `169e0007dcbeb2263701e6b41e40757de6d62ff2; TestChair entity creation / positioning proof complete and frozen`
+- active_proof_run: `P0 35424938143 / job 105849132808 success; P1 35424938174 / job 105849132961 failure with all TestChairBlock diagnostics cleared`
+- active_hypothesis: `none selected yet; inspect the exact Minecraft 26.2 API boundary for one isolated remaining compiler cluster before source mutation. Preserve the ShipSavedData lifecycle/factory boundary, ShipMountingEntity entity persistence/hurt boundary, assembly/relocation component semantics, authority-sensitive VSGamePackets/EntityDragger local-control and lerp boundary, VSGameUtils resource/mixin boundary, nullable message semantics, rendering, ticketing, Sable, Create-compat classpath boundary, and all other deferred locks. The TestChair proof covers only the chair's existing entity create/place flow and does not authorize changes to ShipMountingEntity internals or moving-space semantics.`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 
@@ -99,9 +98,10 @@ Source/API clusters proven clean in exact-head runs include:
 - MassDatapackResolver registry-tag lookup through current `Registry.get(TagKey)` while preserving deferred tag semantics;
 - `EmptyRenderer` Identifier + render-state migration;
 - `ValkyrienSkiesMod` resource vocabulary plus exact `CreativeModeTab.Output` accessibility contract, with upstream creative-tab item population unchanged;
-- `VSKeyBindings` current `KeyMapping.Category` migration using registered `valkyrienskies:driving`, with new generated translation key bridged to the exact upstream localized category values while retaining the legacy translation entries.
+- `VSKeyBindings` current `KeyMapping.Category` migration using registered `valkyrienskies:driving`, with new generated translation key bridged to the exact upstream localized category values while retaining the legacy translation entries;
+- `TestChairBlock` Minecraft 26.2 entity-create/position boundary: existing `SHIP_MOUNTING_ENTITY_TYPE.create(level)` becomes `create(level, EntitySpawnReason.TRIGGERED)` and removed `moveTo(...)` becomes `snapTo(...)`, while the original seat offset, facing/lookAt, controller flag, addFreshEntity, and startRiding flow remain unchanged; exact run `35424938174` has no remaining diagnostic for this file.
 
-Representative remaining compiler areas from exact run `35424232856`: Create compat classpath/intermediary/API drift; separate `ShipSavedData` SavedData persistence migration; deferred `VSGameUtils` resource-key/Identifier plus build-height/chunk-position APIs; assembly/tick/ValueInput-ValueOutput/structure processor migrations; TestChair entity-create/`moveTo`; deferred nullable command/item messages; ShipMountingEntity persistence/hurt; entity-handler rendering; VSGamePackets/EntityDragger local-control and VSGamePackets lerp API drift; chunk tickets/VSTicketType; Sable; relocation. `VSKeyBindings`, `ValkyrienSkiesMod`, `TestHingeBlockEntity`, and `MassDatapackResolver` have no remaining compiler diagnostic in this run.
+Representative remaining compiler areas from exact run `35424938174`: Create compat classpath/intermediary/API drift; separate `ShipSavedData` SavedData persistence migration; deferred `VSGameUtils` resource-key/Identifier plus build-height/chunk-position APIs; assembly/tick/ValueInput-ValueOutput/structure processor migrations; deferred nullable command/item messages; ShipMountingEntity persistence/hurt; entity-handler rendering; VSGamePackets/EntityDragger local-control and VSGamePackets lerp API drift; chunk tickets/VSTicketType; Sable; relocation. `TestChairBlock`, `VSKeyBindings`, `ValkyrienSkiesMod`, `TestHingeBlockEntity`, and `MassDatapackResolver` have no remaining compiler diagnostic in this run.
 
 ## Earlier proof chain retained
 
@@ -112,7 +112,8 @@ The following exact-head proofs remain frozen and must not be mechanically redon
 Do not collapse these broader boundaries into compile-only edits:
 - `ShipSavedData.save`: Minecraft 26.2 SavedData persistence is broader than a signature-only edit and must reconcile SavedDataType/codec/factory semantics.
 - `VSGameUtils.kt`: resource-key migration crosses `ResourceKeyAccessor` and `MixinLevel`; do not apply a partial one-file ResourceLocation replacement. Build-height and chunk-position API drift is also present.
-- `VSKeyBindings.kt` is now frozen green independently: current category `Identifier` is `valkyrienskies:driving`, vanilla derives `key.category.valkyrienskies.driving`, and the overlay bridges that generated key to the exact existing localized values while retaining `category.valkyrienskies.driving`. Do not remove the bridge or change default key/input behavior without separate evidence.
+- `VSKeyBindings.kt` is frozen green independently: current category `Identifier` is `valkyrienskies:driving`, vanilla derives `key.category.valkyrienskies.driving`, and the overlay bridges that generated key to the exact existing localized values while retaining `category.valkyrienskies.driving`. Do not remove the bridge or change default key/input behavior without separate evidence.
+- `TestChairBlock` entity creation/positioning is frozen green independently: this proves only the existing chair flow's Minecraft 26.2 `EntityType.create(Level, EntitySpawnReason)` and `Entity.snapTo(...)` boundary. It does **not** prove or authorize changes to `ShipMountingEntity` persistence, `hurtServer`, passenger positioning, entity dragging/reference-space behavior, player/camera authority, or any synthetic carrying/teleport behavior.
 - Nullable ship slug/name command/item messages: do not invent fallback values merely to satisfy Kotlin vararg nullability.
 - Typed `SimpleJsonResourceReloadListener<T>` migration is frozen green independently for `VSEntityHandlerDataLoader`, `DimensionParametersResolver`, and `MassDatapackResolver`.
 - `MassDatapackResolver` registry-tag lookup is frozen green independently: the 26.2 `Registry.get(TagKey)` path is proven while preserving upstream deferred `tagsAreLoaded`, Optional/HolderSet, missing-tag, priority/application, and registration semantics.
@@ -135,7 +136,7 @@ Forbidden final substitutes: custom VS2-style reference frames, synthetic carry 
 ## Milestones
 
 ### P0 — Upstream import + provenance
-Frozen green. Exact upstream identity/pin/license/provenance is established and repeatedly re-confirmed. Latest proven implementation HEAD `2c763500338955135d0700b273594a87dab9d982` has exact-head P0 run `35424232816` / job `105847304720` success.
+Frozen green. Exact upstream identity/pin/license/provenance is established and repeatedly re-confirmed. Latest proven implementation HEAD `169e0007dcbeb2263701e6b41e40757de6d62ff2` has exact-head P0 run `35424938143` / job `105849132808` success.
 
 ### P1 — Standalone VS2 26.2 compile/boot
 Port actual VS2 until common/Fabric compile, standalone client/server boot, and core/native initialization are proven without Create/SNR/Copycats hiding failures.
@@ -180,13 +181,14 @@ Do not reintroduce without new direct evidence:
 - assuming `MassDatapackResolver.VSMassDataLoader.apply` can be ported by making only its `objects` map non-null while leaving `ResourceManager?` / `ProfilerFiller?`;
 - mechanically copying the proven `TestHingeBlockEntity` Value I/O shape into broader persistence/component/entity paths without first proving their Minecraft 26.2 lifecycle and codec/component semantics;
 - treating the proven `CreativeModeTab.Output` access line as authorization for broad access widening or replacing upstream creative-tab source behavior with event-driven population without independent evidence;
+- reinterpreting the proven TestChair `snapTo` placement as permission for per-tick entity teleport/reanchor chase or as proof of `ShipMountingEntity`/entity-dragging semantics;
 - mechanically replacing removed `isControlledByLocalInstance` / `lerpTo` calls without proving the current Minecraft 26.2 authority/interpolation boundary and preserving upstream VS2 semantics.
 
 ## next_safe_action
 
-1. Preserve exact `VSKeyBindings` category proof HEAD `2c763500338955135d0700b273594a87dab9d982`, P0 `35424232816` / job `105847304720`, P1 `35424232856` / job `105847304996`, artifact `10578617703`, ZIP SHA-256 `c9e0d1f2f1e18390794ee14f41493e133d2d174c4e0fa58463c2381983013bb1`.
+1. Preserve exact `TestChairBlock` entity creation/positioning proof HEAD `169e0007dcbeb2263701e6b41e40757de6d62ff2`, P0 `35424938143` / job `105849132808`, P1 `35424938174` / job `105849132961`, artifact `10578643862`, ZIP SHA-256 `d9e90d3e6ec99f1203285e429f69be9ba6a5c82aae7e209196f93dcb88e938d1`.
 2. Reconcile actual HEAD after this proof-ledger commit and require its exact-head P0 provenance run to settle successfully before any new source mutation.
-3. After provenance settles, inspect only the newest exact-head compiler evidence plus the exact Minecraft 26.2 API boundary for **one** isolated remaining compiler cluster. Do not mechanically select from the locked broad persistence, VSGameUtils/mixin, authority/local-control/lerp, nullable-message, assembly/relocation, rendering, ticketing, Sable, or Create-compat boundaries.
+3. After provenance settles, inspect only the newest exact-head compiler evidence plus the exact Minecraft 26.2 API boundary for **one** isolated remaining compiler cluster. Do not mechanically select from the locked ShipSavedData persistence, ShipMountingEntity persistence/hurt, VSGameUtils/mixin, authority/local-control/lerp, nullable-message, assembly/relocation, rendering, ticketing, Sable, or Create-compat boundaries.
 4. Select and document exactly one next root hypothesis only after that API-boundary inspection. Preserve all frozen proofs, deferred boundaries, and failed-hypothesis locks.
 5. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet. No video is authorized during compile/API-port work.
 
