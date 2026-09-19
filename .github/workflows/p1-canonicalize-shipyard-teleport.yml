@@ -1,4 +1,4 @@
-name: P1 canonicalize shipyard teleport overlays
+name: P1 canonicalize frozen proof overlays
 
 on:
   push:
@@ -17,7 +17,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Canonicalize proven teleport unit fail-closed
+      - name: Canonicalize frozen proof overlays fail-closed
         shell: bash
         run: |
           set -euo pipefail
@@ -33,63 +33,108 @@ jobs:
 
           compile_path = Path('.github/workflows/p1-compile.yml')
           proof_path = Path('.github/workflows/p1-shipyard-teleport-player-api-proof.yml')
-          retired_path = Path('.github/workflows/p1-shipyard-teleport-api-proof.yml')
+          self_path = Path('.github/workflows/p1-canonicalize-shipyard-teleport.yml')
 
+          frozen = (
+              'apply_p1_entityhandler_renderstate_26_2.py',
+              'apply_p1_sable_companion_compileonly_26_2.py',
+              'apply_p1_deployer_scroll_option_exclusion_26_2.py',
+              'apply_p1_entity_authority_interpolation_26_2.py',
+              'apply_p1_entity_renderer_submit_26_2.py',
+              'apply_p1_distance_manager_ticket_storage_26_2.py',
+          )
           compile_text = compile_path.read_text(encoding='utf-8')
-          if 'apply_p1_shipyard_teleport_api_26_2.py upstream-vs2' in compile_text or 'apply_p1_shipyard_teleport_player_api_26_2.py upstream-vs2' in compile_text:
-              raise SystemExit('fail-closed: teleport overlays already present in canonical P1 chain')
+          present = [name for name in frozen if name in compile_text]
+          if present:
+              raise SystemExit(f'fail-closed: frozen proof overlays already canonicalized: {present}')
+          if compile_text.count('python3 scripts/apply_p1_shipyard_teleport_api_26_2.py upstream-vs2') != 1:
+              raise SystemExit('fail-closed: canonical teleport anchor missing')
+          if compile_text.count('python3 scripts/apply_p1_shipyard_teleport_player_api_26_2.py upstream-vs2') != 1:
+              raise SystemExit('fail-closed: canonical ServerPlayer teleport anchor missing')
 
-          replace_once(
-              compile_path,
-              "      - 'scripts/apply_p1_relocationutil_blockentity_value_input_26_2.py'\n      - '.github/workflows/p1-compile.yml'",
-              "      - 'scripts/apply_p1_relocationutil_blockentity_value_input_26_2.py'\n      - 'scripts/apply_p1_shipyard_teleport_api_26_2.py'\n      - 'scripts/apply_p1_shipyard_teleport_player_api_26_2.py'\n      - '.github/workflows/p1-compile.yml'",
-              'canonical push-path insertion',
-          )
-          replace_once(
-              compile_path,
-              "      - name: Apply traceable P1 RelocationUtil block-entity ValueInput overlay\n        run: python3 scripts/apply_p1_relocationutil_blockentity_value_input_26_2.py upstream-vs2\n\n      - name: Show and validate port delta",
-              "      - name: Apply traceable P1 RelocationUtil block-entity ValueInput overlay\n        run: python3 scripts/apply_p1_relocationutil_blockentity_value_input_26_2.py upstream-vs2\n\n      - name: Apply traceable P1 shipyard teleport API overlay\n        run: python3 scripts/apply_p1_shipyard_teleport_api_26_2.py upstream-vs2\n\n      - name: Apply traceable P1 shipyard teleport ServerPlayer API overlay\n        run: python3 scripts/apply_p1_shipyard_teleport_player_api_26_2.py upstream-vs2\n\n      - name: Show and validate port delta",
-              'canonical overlay-step insertion',
-          )
-          replace_once(
-              compile_path,
-              "          git -C upstream-vs2 diff -- common/src/main/kotlin/org/valkyrienskies/mod/util/RelocationUtil.kt\n",
-              "          git -C upstream-vs2 diff -- common/src/main/kotlin/org/valkyrienskies/mod/util/RelocationUtil.kt\n          git -C upstream-vs2 diff -- common/src/main/java/org/valkyrienskies/mod/mixin/feature/shipyard_entities/MixinEntity.java common/src/main/java/org/valkyrienskies/mod/mixin/server/command/level/MixinServerPlayer.java common/src/main/java/org/valkyrienskies/mod/mixin/server/network/MixinServerGamePacketListenerImpl.java\n",
-              'canonical teleport delta validation insertion',
-          )
+          old_paths = """      - 'scripts/apply_p1_relocationutil_blockentity_value_input_26_2.py'
+      - 'scripts/apply_p1_shipyard_teleport_api_26_2.py'
+      - 'scripts/apply_p1_shipyard_teleport_player_api_26_2.py'
+"""
+          new_paths = """      - 'scripts/apply_p1_relocationutil_blockentity_value_input_26_2.py'
+      - 'scripts/apply_p1_entityhandler_renderstate_26_2.py'
+      - 'scripts/apply_p1_sable_companion_compileonly_26_2.py'
+      - 'scripts/apply_p1_deployer_scroll_option_exclusion_26_2.py'
+      - 'scripts/apply_p1_entity_authority_interpolation_26_2.py'
+      - 'scripts/apply_p1_entity_renderer_submit_26_2.py'
+      - 'scripts/apply_p1_distance_manager_ticket_storage_26_2.py'
+      - 'scripts/apply_p1_shipyard_teleport_api_26_2.py'
+      - 'scripts/apply_p1_shipyard_teleport_player_api_26_2.py'
+"""
+          replace_once(compile_path, old_paths, new_paths, 'canonical frozen-overlay push paths')
 
-          old_proof = """          if any('shipyard_teleport' in c for c in commands):\n              raise SystemExit('fail-closed: teleport overlay unexpectedly canonicalized before proof')\n          for command in commands:\n              print('+', command)\n              subprocess.run(shlex.split(command), check=True)\n"""
-          new_proof = """          teleport = [c for c in commands if 'shipyard_teleport' in c]\n          if len(teleport) not in (0, 2):\n              raise SystemExit(f'fail-closed: expected zero or two canonical teleport overlays, found {teleport}')\n          for command in commands:\n              if 'shipyard_teleport' in command:\n                  continue\n              print('+', command)\n              subprocess.run(shlex.split(command), check=True)\n"""
-          replace_once(proof_path, old_proof, new_proof, 'proof canonical-overlay exclusion update')
+          old_steps = """      - name: Apply traceable P1 RelocationUtil block-entity ValueInput overlay
+        run: python3 scripts/apply_p1_relocationutil_blockentity_value_input_26_2.py upstream-vs2
 
-          if not retired_path.is_file():
-              raise SystemExit('fail-closed: superseded basename proof workflow missing')
-          retired_path.unlink()
+      - name: Apply traceable P1 shipyard teleport API overlay
+"""
+          new_steps = """      - name: Apply traceable P1 RelocationUtil block-entity ValueInput overlay
+        run: python3 scripts/apply_p1_relocationutil_blockentity_value_input_26_2.py upstream-vs2
+
+      - name: Apply frozen P1 entity-handler render-state overlay
+        run: python3 scripts/apply_p1_entityhandler_renderstate_26_2.py upstream-vs2
+
+      - name: Apply frozen P1 Sable compile-boundary overlay
+        run: python3 scripts/apply_p1_sable_companion_compileonly_26_2.py upstream-vs2
+
+      - name: Apply frozen P1 optional Create deployer exclusion overlay
+        run: python3 scripts/apply_p1_deployer_scroll_option_exclusion_26_2.py upstream-vs2
+
+      - name: Apply frozen P1 entity authority/interpolation overlay
+        run: python3 scripts/apply_p1_entity_authority_interpolation_26_2.py upstream-vs2
+
+      - name: Apply frozen P1 entity renderer submit overlay
+        run: python3 scripts/apply_p1_entity_renderer_submit_26_2.py upstream-vs2
+
+      - name: Apply frozen P1 DistanceManager TicketStorage overlay
+        run: python3 scripts/apply_p1_distance_manager_ticket_storage_26_2.py upstream-vs2
+
+      - name: Apply traceable P1 shipyard teleport API overlay
+"""
+          replace_once(compile_path, old_steps, new_steps, 'canonical frozen-overlay steps')
+
+          old_reapply = """      - name: Reapply frozen proof overlays
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/apply_p1_entityhandler_renderstate_26_2.py upstream-vs2
+          python3 scripts/apply_p1_sable_companion_compileonly_26_2.py upstream-vs2
+          python3 scripts/apply_p1_deployer_scroll_option_exclusion_26_2.py upstream-vs2
+          python3 scripts/apply_p1_entity_authority_interpolation_26_2.py upstream-vs2
+          python3 scripts/apply_p1_entity_renderer_submit_26_2.py upstream-vs2
+          python3 scripts/apply_p1_distance_manager_ticket_storage_26_2.py upstream-vs2
+
+"""
+          replace_once(proof_path, old_reapply, '', 'teleport proof duplicate frozen-overlay replay')
 
           final_compile = compile_path.read_text(encoding='utf-8')
-          if final_compile.count('python3 scripts/apply_p1_shipyard_teleport_api_26_2.py upstream-vs2') != 1:
-              raise SystemExit('fail-closed: primary teleport overlay canonical count mismatch')
-          if final_compile.count('python3 scripts/apply_p1_shipyard_teleport_player_api_26_2.py upstream-vs2') != 1:
-              raise SystemExit('fail-closed: ServerPlayer teleport overlay canonical count mismatch')
-          for target in (
-              'common/src/main/java/org/valkyrienskies/mod/mixin/feature/shipyard_entities/MixinEntity.java',
-              'common/src/main/java/org/valkyrienskies/mod/mixin/server/command/level/MixinServerPlayer.java',
-              'common/src/main/java/org/valkyrienskies/mod/mixin/server/network/MixinServerGamePacketListenerImpl.java',
-          ):
-              if final_compile.count(target) != 1:
-                  raise SystemExit(f'fail-closed: canonical delta path count mismatch for {target}')
+          for name in frozen:
+              command = f'python3 scripts/{name} upstream-vs2'
+              if final_compile.count(command) != 1:
+                  raise SystemExit(f'fail-closed: canonical count mismatch for {command}')
+          if 'Reapply frozen proof overlays' in proof_path.read_text(encoding='utf-8'):
+              raise SystemExit('fail-closed: duplicate frozen-overlay proof step still present')
+
+          if not self_path.is_file():
+              raise SystemExit('fail-closed: temporary canonicalizer missing')
+          self_path.unlink()
           PY
 
           git diff --check
-          git diff -- .github/workflows/p1-compile.yml .github/workflows/p1-shipyard-teleport-player-api-proof.yml .github/workflows/p1-shipyard-teleport-api-proof.yml
+          git diff -- .github/workflows/p1-compile.yml .github/workflows/p1-shipyard-teleport-player-api-proof.yml .github/workflows/p1-canonicalize-shipyard-teleport.yml
 
-      - name: Commit canonicalization
+      - name: Commit canonical repair
         shell: bash
         run: |
           set -euo pipefail
           git config user.name 'apm23'
           git config user.email '80390905+apm23@users.noreply.github.com'
           git add .github/workflows/p1-compile.yml .github/workflows/p1-shipyard-teleport-player-api-proof.yml
-          git add -u .github/workflows/p1-shipyard-teleport-api-proof.yml
-          git commit -m 'ci: canonicalize green shipyard teleport overlays'
+          git add -u .github/workflows/p1-canonicalize-shipyard-teleport.yml
+          git commit -m 'ci: canonicalize frozen P1 proof overlays'
           git push origin HEAD:main
