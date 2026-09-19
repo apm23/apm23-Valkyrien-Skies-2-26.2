@@ -1,0 +1,155 @@
+name: P1 POIManager ChunkPos containing proof
+
+on:
+  push:
+    paths:
+      - 'scripts/apply_p1_poimanager_chunkpos_containing_26_2.py'
+      - '.github/workflows/p1-poimanager-chunkpos-containing-proof.yml'
+      - '.github/workflows/p1-compile.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  poimanager-chunkpos-containing-proof:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact upstream baseline
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Verify pinned upstream
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C upstream-vs2 rev-parse HEAD)" = "f39132148e717d325933b4ce6e9e9fb13d929390"
+
+      - name: Replay canonical frozen P1 overlays excluding POIManager unit
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import shlex
+          import subprocess
+
+          workflow = Path('.github/workflows/p1-compile.yml').read_text(encoding='utf-8')
+          commands = re.findall(
+              r'^\s*run:\s+(python3 scripts/apply_p1_[^\n]+ upstream-vs2)\s*$',
+              workflow,
+              flags=re.MULTILINE,
+          )
+          if len(commands) < 70:
+              raise SystemExit(f'fail-closed: expected canonical overlay chain, found only {len(commands)} commands')
+          candidate = [c for c in commands if 'apply_p1_poimanager_chunkpos_containing_26_2.py' in c]
+          if len(candidate) > 1:
+              raise SystemExit(f'fail-closed: duplicate canonical POIManager overlays: {candidate}')
+          for command in commands:
+              if 'apply_p1_poimanager_chunkpos_containing_26_2.py' in command:
+                  continue
+              print('+', command)
+              subprocess.run(shlex.split(command), check=True)
+          PY
+
+      - name: Apply isolated POIManager ChunkPos containing overlay
+        run: python3 scripts/apply_p1_poimanager_chunkpos_containing_26_2.py upstream-vs2
+
+      - name: Validate isolated POIManager semantic unit
+        shell: bash
+        run: |
+          set -euo pipefail
+          target=upstream-vs2/common/src/main/java/org/valkyrienskies/mod/mixin/feature/poi/MixinPOIManager.java
+          git -C upstream-vs2 diff --check
+          git -C upstream-vs2 diff -- common/src/main/java/org/valkyrienskies/mod/mixin/feature/poi/MixinPOIManager.java
+          test "$(grep -Fc 'ChunkPos.rangeClosed(ChunkPos.containing(blockPos), j)' "$target")" -eq 1
+          ! grep -Fq 'ChunkPos.rangeClosed(new ChunkPos(blockPos), j)' "$target"
+          test "$(grep -Fc 'int j = Math.floorDiv(i, 16) + 1;' "$target")" -eq 1
+          test "$(grep -Fc 'POIChunkSearcher.INSTANCE.shipChunkBounds(ship.getActiveChunksSet())' "$target")" -eq 1
+          test "$(grep -Fc 'this.getInChunk(predicate, chunkPos, occupancy)' "$target")" -eq 1
+          test "$(grep -Fc 'VSGameUtilsKt.toWorldCoordinates(valkyrienskies$sLevel' "$target")" -eq 1
+
+      - name: Configure exhaustive javac diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > p1-poimanager-chunkpos-containing-proof.init.gradle <<'GRADLE'
+          allprojects {
+              tasks.withType(org.gradle.api.tasks.compile.JavaCompile).configureEach {
+                  options.compilerArgs += ['-Xmaxerrs', '10000']
+              }
+          }
+          GRADLE
+
+      - name: Compile standalone sources and preserve unrelated failure
+        shell: bash
+        working-directory: upstream-vs2
+        run: |
+          set -uo pipefail
+          set +e
+          ./gradlew -I ../p1-poimanager-chunkpos-containing-proof.init.gradle \
+            :common:compileJava :common:compileKotlin :fabric:compileJava :fabric:compileKotlin \
+            --stacktrace --no-daemon 2>&1 | tee ../p1-poimanager-chunkpos-containing-proof.log
+          status=${PIPESTATUS[0]}
+          set -e
+          printf '%s\n' "$status" > ../p1-poimanager-chunkpos-containing-gradle-status.txt
+          echo "GRADLE_EXIT_STATUS=$status"
+          exit 0
+
+      - name: Prove exact POIManager file is compiler-clean
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          log = Path('p1-poimanager-chunkpos-containing-proof.log').read_text(encoding='utf-8', errors='replace')
+          status = int(Path('p1-poimanager-chunkpos-containing-gradle-status.txt').read_text(encoding='utf-8').strip())
+          if ':common:compileJava' not in log:
+              raise SystemExit('fail-closed: common Java compile task was never reached')
+          if status == 0:
+              print('FULL_STANDALONE_COMPILE_GREEN')
+          elif 'error:' not in log or 'Compilation failed' not in log:
+              raise SystemExit('fail-closed: Gradle failed without a normal javac compilation frontier')
+          if re.search(r'only showing the first\s+\d+\s+errors', log, flags=re.IGNORECASE):
+              raise SystemExit('fail-closed: javac diagnostics were still capped')
+
+          target = '/common/src/main/java/org/valkyrienskies/mod/mixin/feature/poi/MixinPOIManager.java:'
+          lines = log.splitlines()
+          target_errors = []
+          for index, line in enumerate(lines):
+              if 'error:' not in line or target not in line:
+                  continue
+              target_errors.append('\n'.join(lines[max(0, index - 2):index + 5]))
+          if target_errors:
+              raise SystemExit(
+                  'fail-closed: POIManager ChunkPos containing unit still has compiler diagnostics:\n'
+                  + '\n---\n'.join(target_errors)
+              )
+
+          unrelated = [line for line in lines if 'error:' in line]
+          print(
+              'POIMANAGER_CHUNKPOS_CONTAINING_CLUSTER_COMPILER_CLEAN '
+              f'unrelated_error_diagnostics={len(unrelated)} gradle_status={status}'
+          )
+          PY
+
+      - name: Upload POIManager proof diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-poimanager-chunkpos-containing-proof-${{ github.sha }}
+          path: |
+            p1-poimanager-chunkpos-containing-proof.log
+            p1-poimanager-chunkpos-containing-gradle-status.txt
+          if-no-files-found: warn
