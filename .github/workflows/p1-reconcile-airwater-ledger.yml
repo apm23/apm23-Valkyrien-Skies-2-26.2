@@ -1,0 +1,179 @@
+name: P1 reconcile AirAndWaterRandomPos ledger
+
+on:
+  push:
+    paths:
+      - '.github/workflows/p1-reconcile-airwater-ledger.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-ledger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact repository state
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: false
+
+      - name: Produce reconciled MASTER_STATE
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('MASTER_STATE.md')
+          text = path.read_text(encoding='utf-8')
+
+          def replace_between(text, start, end, replacement):
+              if text.count(start) != 1 or text.count(end) != 1:
+                  raise SystemExit(f'fail-closed marker mismatch: {start!r}={text.count(start)} {end!r}={text.count(end)}')
+              before, rest = text.split(start, 1)
+              _, after = rest.split(end, 1)
+              return before + replacement + end + after
+
+          current_start = '## Current reconciliation —'
+          poi_marker = '### POIManager ChunkPos construction boundary — frozen\n'
+          current = '''## Current reconciliation — canonical P1 chain through AirAndWaterRandomPos max-build boundary
+
+Current proven canonical source boundary before this ledger-only reconciliation commit:
+- canonical implementation HEAD: `960582c42b407e9c4dbc1943f1d2cc3d8c3dbfe6`
+- canonical P1 chain contains **80 ordered fail-closed overlays**.
+- exact-head P0 provenance run `35472794096`: `success`.
+- exact-head AirAndWaterRandomPos proof run `35472793999`: `success`.
+- exact-head canonical standalone compile run `35472794011`: compiler-frontier failure only; every overlay/apply/delta-validation step before compilation was green.
+- compile artifact: `p1-compile-log-960582c42b407e9c4dbc1943f1d2cc3d8c3dbfe6`, ID `10593271100`, size `21778` bytes, SHA-256 `568f6f3df75b7032cd829c5d4e7d811c176c2c021a1c3eb87d6d175e592e56fb`.
+- compiler log contains **300 `error:` diagnostics across 37 normalized source files**; no javac cap marker was observed.
+- `MixinAirAndWaterRandomPos.java` is absent from that frontier. Compared with the previous POI artifact, it disappeared and `feature/tick_ship_chunks/MixinChunkMap.java` became newly visible.
+
+### AirAndWaterRandomPos max-build boundary — frozen
+
+Pinned upstream target:
+`common/src/main/java/org/valkyrienskies/mod/mixin/feature/ai/path_retargeting/MixinAirAndWaterRandomPos.java`.
+
+Minimal 26.2 bridge:
+- `pathfinderMob.level().getMaxBuildHeight()` -> `pathfinderMob.level().getMinY() + pathfinderMob.level().getHeight()` only as the existing exclusive upper-build-height argument to `RandomPos.moveUpOutOfSolid(...)`.
+- This reuses the already-frozen CompatUtil build-height mapping in `scripts/apply_p1_compatutil_buildheight_26_2.py`.
+- Existing real VS2/vanilla authorities remain unchanged: loaded-ship intersection, `ship.getWorldToShip().transformPosition(...)`, `BlockPos.containing(...)`, `GoalUtils.isRestricted(...)`, `GoalUtils.hasMalus(...)`, the existing `moveUpOutOfSolid` callback, and `cir.setReturnValue(blockPosInShip)` / break behavior.
+- No AI policy, pathfinding implementation, ship transform, movement/collision/camera authority, or custom reference frame was introduced.
+
+Evidence:
+- fail-closed overlay commit `ce05d19f2a270146dd17c36d0cd691d315d51ce5`.
+- isolated proof workflow HEAD `149d1cfee44748749a8f2f07531aa04b5faf9a63`.
+- isolated P0 `35471647834`: success.
+- isolated AirAndWaterRandomPos proof `35471647847`: success.
+- staging helper HEAD `593db47ed2305a95e4932f8bbcf3d432e3b69bc8`.
+- staging helper run `35472674502`: success; it only produced and validated the canonical `p1-compile.yml` as an artifact and did not attempt Actions self-push.
+- helper artifact `10593280871`, artifact SHA-256 `649ac5344c09786e1df3b3ed3b430da9eb053f014820bd19fb875f6087896a16`; validated `canonical-p1-compile.yml` SHA-256 `f36e88a9f9e28603f1d7c2b1a6407324a4e7345cebdf0d8bd4cb620b1b51701e`.
+- canonical commit `960582c42b407e9c4dbc1943f1d2cc3d8c3dbfe6` was fast-forwarded through the GitHub connector and removed the temporary helper in the same atomic tree.
+- exact canonical P0 `35472794096`: success.
+- exact canonical AirAndWaterRandomPos proof `35472793999`: success.
+- exact canonical compile `35472794011`: frontier-only failure; artifact `10593271100`; 300 diagnostics / 37 normalized source files; target absent.
+
+'''
+          text = replace_between(text, current_start, poi_marker, current)
+
+          frontier_start = '## Remaining Java compile frontier\n'
+          target_marker = '## Target runtime baseline\n'
+          frontier = '''## Remaining Java compile frontier
+
+Canonical artifact `10593271100` at `960582c42b407e9c4dbc1943f1d2cc3d8c3dbfe6` contains **300 `error:` diagnostics across 37 normalized source files** with no javac cap marker observed. This is evidence only and never permission to batch-fix categories.
+
+Compared with prior POI artifact `10592549176`:
+- removed from frontier: `feature/ai/path_retargeting/MixinAirAndWaterRandomPos.java`;
+- newly visible: `feature/tick_ship_chunks/MixinChunkMap.java`.
+
+Current broad categories include:
+1. AI/entity nested-goal and mapping/API drift.
+2. client/render/HUD/debug-render lifecycle drift.
+3. entity/player/teleport-reconnect and collision API drift outside already-frozen authority-sensitive units.
+4. chunk/worldgen/server storage/API drift.
+5. optional compatibility/dependency residue, including old mapped Create/Copycat and Sable surfaces that are not standalone-P1 runtime authority.
+
+Current smallest observed units include:
+- `feature/tick_ship_chunks/MixinChunkMap.java`: direct `ChunkPos.x/z` field access is private in 26.2.
+- `MixinBlockGetter.java`: `Direction.getNearest(double,double,double)` descriptor drift.
+- `LavaFluidMixin.java`: `randomTick` now expects `ServerLevel`.
+- `MixinLivingEntity.java`: removed local-authority method; authority-sensitive, not preferred for a blind mechanical patch.
+- `MixinDebugScreenOverlay.java`: removed `BlockPos.getCenter()`.
+- `StructureTemplateMixin.java`: block-entity save ValueOutput API drift.
+- `feature/world_weather/MixinLevelRenderer.java`: removed `BlockPos.getCenter()`.
+- `world/chunk/MixinLevelChunk.java`: `ChunkSerializer` mapping/API drift.
+- `compat/create/AirFlowClipContext.java`: old mapped Create/Copycat dependency residue; not preferred for standalone P1.
+
+### Next candidate — tick-ship-chunks ChunkPos accessors, proof first
+
+Pinned target:
+`common/src/main/java/org/valkyrienskies/mod/mixin/feature/tick_ship_chunks/MixinChunkMap.java`.
+
+The pinned file contains six coordinate reads through public-style `chunkPos.x/z` fields across two existing VS2 hooks: the ship-aware Euclidean-distance calculation used for random ticking, and the shipyard spawning-distance override. Minecraft 26.2 makes those fields private and exposes record-style `x()/z()` accessors.
+
+There is already a frozen direct local precedent in `scripts/apply_p1_naturalspawner_chunkpos_accessors_26_2.py`, which maps real VS2 `ChunkPos` coordinate reads from `.x/.z` to `.x()/.z()` without changing spawn policy. Therefore this is the smallest evidence-backed next candidate.
+
+No patch has been applied to this target yet. Inspect/prove only the coordinate-access vocabulary change. Preserve `VSGameUtilsKt.squaredDistanceBetweenInclShips(...)`, `VSGameUtilsKt.isChunkInShipyard(...)`, loaded-ship lookup, dimension lookup, return values, random-tick behavior, and spawning semantics exactly.
+
+'''
+          text = replace_between(text, frontier_start, target_marker, frontier)
+
+          old_state = '''- project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
+- active_blocker: `MINECRAFT_26_2_JAVA_API_MIXIN_DRIFT`
+- active_proof_head: `73197278b8ee26ced0dc267d84ea9eb825d02e98; canonical P1 chain through POIManager ChunkPos containing`
+- active_proof_run: `P0 35471264991 success; POI exact proof 35471264941 success; canonical compile 35471264985 frontier-only failure; artifact 10592549176; 300 diagnostics / 37 files; no javac cap marker`
+- active_hypothesis: `next smallest evidence-backed unit is MixinAirAndWaterRandomPos max-build accessor; reuse frozen exclusive-max boundary level.getMinY()+level.getHeight() only after this ledger HEAD passes P0`
+'''
+          new_state = '''- project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
+- active_blocker: `MINECRAFT_26_2_JAVA_API_MIXIN_DRIFT`
+- active_proof_head: `960582c42b407e9c4dbc1943f1d2cc3d8c3dbfe6; canonical P1 chain through AirAndWaterRandomPos max-build boundary`
+- active_proof_run: `P0 35472794096 success; AirAndWaterRandomPos exact proof 35472793999 success; canonical compile 35472794011 frontier-only failure; artifact 10593271100; 300 diagnostics / 37 normalized source files; target absent`
+- active_hypothesis: `next smallest evidence-backed unit is feature/tick_ship_chunks/MixinChunkMap ChunkPos x/z access; reuse frozen NaturalSpawner .x/.z -> .x()/.z() mapping only after this ledger HEAD passes P0`
+'''
+          if text.count(old_state) != 1:
+              raise SystemExit(f'fail-closed project-state anchor count {text.count(old_state)}')
+          text = text.replace(old_state, new_state, 1)
+
+          next_start = '## next_safe_action\n'
+          video_marker = '## Video and milestone gate\n'
+          next_action = '''## next_safe_action
+
+1. This ledger reconciliation commit is documentation-only, not source proof. Require exact-head P0 provenance success before another source/workflow mutation.
+2. Preserve every frozen boundary above and all frozen/negative evidence in Git history.
+3. Use artifact `10593271100` as the current canonical 300-diagnostic / 37-normalized-file frontier unless HEAD/compiler state changes.
+4. Inspect/prove only pinned `feature/tick_ship_chunks/MixinChunkMap.java` `ChunkPos` coordinate accessors.
+5. If still bounded and unambiguous, create one fail-closed overlay changing only the six pinned `.x/.z` coordinate reads to `.x()/.z()` and an exact-file exhaustive compiler proof.
+6. Preserve the existing ship-aware squared-distance calculation, shipyard check, loaded-ship lookup, dimension lookup, return-value behavior, random ticking, and spawning semantics exactly.
+7. Do not combine this with `MixinBlockGetter`, LavaFluid, collision authority, render/HUD, StructureTemplate, world/chunk serializer drift, Create/Copycat, Sable, or any other cluster.
+8. Remain standalone P1. Do not use Create/SNR/Copycats to hide real VS2 failures. Do not record ordinary compile/debug video.
+
+'''
+          text = replace_between(text, next_start, video_marker, next_action)
+
+          required = [
+              '960582c42b407e9c4dbc1943f1d2cc3d8c3dbfe6',
+              '35472793999',
+              '35472794011',
+              '10593271100',
+              'feature/tick_ship_chunks/MixinChunkMap.java',
+              'six pinned `.x/.z` coordinate reads',
+          ]
+          for token in required:
+              if token not in text:
+                  raise SystemExit(f'fail-closed missing reconciled ledger token: {token}')
+
+          path.write_text(text, encoding='utf-8')
+          PY
+          git diff --check -- MASTER_STATE.md
+          git diff -- MASTER_STATE.md
+          test "$(git diff --name-only | wc -l)" -eq 1
+          test "$(git diff --name-only)" = 'MASTER_STATE.md'
+          cp MASTER_STATE.md reconciled-MASTER_STATE.md
+
+      - name: Upload reconciled ledger
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-airwater-ledger-${{ github.sha }}
+          path: reconciled-MASTER_STATE.md
+          if-no-files-found: error
