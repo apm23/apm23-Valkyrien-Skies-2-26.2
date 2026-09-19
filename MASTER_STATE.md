@@ -34,6 +34,7 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 - The only remaining `DimensionParametersResolver.kt` diagnostic in this run is the separate Minecraft 26.2 typed reload-listener boundary: `SimpleJsonResourceReloadListener` requires one type argument. That is outside this isolated proof.
 - Therefore the isolated `DimensionParametersResolver.kt` `ResourceLocation -> Identifier` migration is proven clean and frozen independently from later compiler clusters.
 - Diagnostic artifact: `p1-compile-log-19d15fccf7345fc80f91800356a105d3595db87c`, artifact ID `10574836065`, size `7195` bytes, ZIP SHA-256 `ca585a823377e4752017103a7acbe30be1078035c084dd28a758496659f14b95`.
+- Continuity-ledger freeze HEAD `1156e5a7271a114dab9b0af0bd834f4eea9bff9c` (`ledger: freeze DimensionParametersResolver Identifier proof`) has exact-head P0 run `35414078124`, job `105819152815`, completed `success`. No P1 run is expected from this ledger-only commit because `MASTER_STATE.md` is not a P1 trigger.
 - Prior `MassDatapackResolver.kt` Identifier-vocabulary proof remains frozen at HEAD `a40316e93a61594018fd6f8f9d4b913d7fb2eb80`, P0 `35411562202` / job `105812049740`, P1 `35411562107` / job `105812049438`, artifact `10574698116`, ZIP SHA-256 `41dc8482808a7de1a46bf4f680c00560ae085a267118e3a9dddec1f5997d2506`.
 - Prior `MassDatapackResolver` dummy-`BlockGetter` minY proof remains frozen at HEAD `563cbcba7bb1c92ca27820ef785d11bb88872524`, P0 `35410678210` / job `105809557245`, P1 `35410678254` / job `105809557590`, artifact `10573811879`, ZIP SHA-256 `ef0e33b2db1cff60f1e1d14658cbb9d50523309a227806cf3f09776fd23df3f2`.
 - Prior `SeamlessChunksManager` ChunkPos packed-key proof remains frozen at HEAD `75a434c728f1ca020b550882967085ccc53d5c3b`, P0 `35409275352` / job `105805422622`, P1 `35409275363` / job `105805423593`, artifact `10574055235`, ZIP SHA-256 `cb032a68942404c798debc540ad7b387c1f06ac41d6854f570aa43e70894a9b6`.
@@ -60,7 +61,7 @@ The upstream baseline remains byte-for-byte pinned. Minecraft 26.2 changes are a
 - active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
 - active_proof_head: `19d15fccf7345fc80f91800356a105d3595db87c; DimensionParametersResolver ResourceLocation-to-Identifier proof complete and frozen`
 - active_proof_run: `P0 35413012083 / job 105816180721 success; P1 35413012178 / job 105816181236 failure with targeted Identifier diagnostics cleared`
-- active_hypothesis: `none selected yet; inspect the exact Minecraft 26.2 API boundary for one isolated remaining compiler cluster before editing source`
+- active_hypothesis: `Pinned VSEntityHandlerDataLoader.kt contains exactly three ResourceLocation vocabulary occurrences: the import, the reload-listener input-map key, and the handler-id parser. Minecraft 26.2 reload maps use Identifier keys, and the already-proven VSEntityManager.getHandler boundary accepts Identifier. Replace only those three vocabulary occurrences with Identifier while deliberately leaving SimpleJsonResourceReloadListener generic/constructor/apply semantics, BuiltInRegistries.ENTITY_TYPE.getOptional behavior, JSON extraction, handler pairing, error handling, and unrelated files unchanged.`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 
@@ -151,7 +152,7 @@ Forbidden final substitutes: custom VS2-style reference frames, synthetic carry 
 ## Milestones
 
 ### P0 — Upstream import + provenance
-Frozen green. Exact upstream identity/pin/license/provenance is established and repeatedly re-confirmed. Latest proven implementation HEAD `19d15fccf7345fc80f91800356a105d3595db87c` has exact-head P0 run `35413012083` / job `105816180721` success.
+Frozen green. Exact upstream identity/pin/license/provenance is established and repeatedly re-confirmed. Latest proven implementation HEAD `19d15fccf7345fc80f91800356a105d3595db87c` has exact-head P0 run `35413012083` / job `105816180721` success; ledger freeze HEAD `1156e5a7271a114dab9b0af0bd834f4eea9bff9c` also has P0 `35414078124` / job `105819152815` success.
 
 ### P1 — Standalone VS2 26.2 compile/boot
 Port actual VS2 until common/Fabric compile, standalone client/server boot, and core/native initialization are proven without Create/SNR/Copycats hiding failures.
@@ -192,11 +193,12 @@ Do not reintroduce without new direct evidence:
 
 ## next_safe_action
 
-1. Preserve exact `DimensionParametersResolver.kt` Identifier-vocabulary proof HEAD `19d15fccf7345fc80f91800356a105d3595db87c`, P0 `35413012083` / job `105816180721`, P1 `35413012178` / job `105816181236`, artifact `10574836065`, ZIP SHA-256 `ca585a823377e4752017103a7acbe30be1078035c084dd28a758496659f14b95`.
-2. Reconcile actual HEAD after this proof-ledger commit and allow the automatically triggered exact-head P0 provenance workflow to settle before any new source patch.
-3. After P0 settles, inspect only the newest exact-head compiler evidence plus the current Minecraft 26.2 API boundary for one isolated remaining cluster. `VSEntityHandlerDataLoader.kt` is a visible candidate from the log, but do not assume its `ResourceLocation` migration is independent until its pinned source and reload-listener boundary are inspected.
-4. Select and document exactly one next root hypothesis only after that evidence inspection. Preserve all frozen proofs and all deferred/failed-hypothesis locks.
-5. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet. No video is authorized during compile/API-port work.
+1. Preserve exact `DimensionParametersResolver.kt` Identifier-vocabulary proof HEAD `19d15fccf7345fc80f91800356a105d3595db87c`, P0 `35413012083` / job `105816180721`, P1 `35413012178` / job `105816181236`, artifact `10574836065`, ZIP SHA-256 `ca585a823377e4752017103a7acbe30be1078035c084dd28a758496659f14b95`, plus continuity-ledger P0 `35414078124` / job `105819152815` success.
+2. Add one fail-closed overlay for pinned `VSEntityHandlerDataLoader.kt` that replaces exactly its three `ResourceLocation` vocabulary occurrences with `Identifier`. Fail closed if the pinned count differs or `Identifier` is already present before this overlay.
+3. Wire only that overlay into P1 after all currently frozen overlays and add `VSEntityHandlerDataLoader.kt` to the explicit port-delta display. Do not alter `SimpleJsonResourceReloadListener` generic/constructor/apply semantics, `BuiltInRegistries.ENTITY_TYPE.getOptional`, JSON extraction, handler pairing, logging/error behavior, Create/SNR/Copycats, persistence, rendering, physics, or unrelated files.
+4. Proof target: all unresolved `ResourceLocation` diagnostics in `VSEntityHandlerDataLoader.kt` disappear. Its independent typed reload-listener/generic/registry-access diagnostics and cascades may remain, and the overall compile may remain red.
+5. After proof completes, record exact HEAD, P0/P1 run/job/artifact/hash and targeted diagnostic result before selecting another cluster.
+6. Stay in standalone P1. Do not integrate Create/SNR/Copycats yet. No video is authorized during compile/API-port work.
 
 ## Video validation
 
