@@ -1,0 +1,230 @@
+name: P1 teleport API inspection
+
+on:
+  push:
+    paths:
+      - '.github/workflows/p1-teleport-api-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-teleport-api:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact upstream baseline
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Verify pinned teleport source unit
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C upstream-vs2 rev-parse HEAD)" = "f39132148e717d325933b4ce6e9e9fb13d929390"
+          files=(
+            common/src/main/java/org/valkyrienskies/mod/mixin/feature/shipyard_entities/MixinEntity.java
+            common/src/main/java/org/valkyrienskies/mod/mixin/server/command/level/MixinServerPlayer.java
+            common/src/main/java/org/valkyrienskies/mod/mixin/server/network/MixinServerGamePacketListenerImpl.java
+          )
+          : > p1-teleport-pinned-source.txt
+          for file in "${files[@]}"; do
+            test -f "upstream-vs2/$file"
+            echo "===== $file =====" >> p1-teleport-pinned-source.txt
+            cat "upstream-vs2/$file" >> p1-teleport-pinned-source.txt
+            echo >> p1-teleport-pinned-source.txt
+          done
+          grep -q 'net.minecraft.world.entity.RelativeMovement' p1-teleport-pinned-source.txt
+          grep -q 'teleportTo(ServerLevel' p1-teleport-pinned-source.txt
+          grep -q 'method = "teleport(DDDFFLjava/util/Set;)V"' p1-teleport-pinned-source.txt
+
+      - name: Replay canonical frozen P1 overlays in canonical order
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import shlex
+          import subprocess
+
+          workflow = Path('.github/workflows/p1-compile.yml').read_text(encoding='utf-8')
+          commands = re.findall(
+              r'^\s*run:\s+(python3 scripts/apply_p1_[^\n]+ upstream-vs2)\s*$',
+              workflow,
+              flags=re.MULTILINE,
+          )
+          if len(commands) < 50:
+              raise SystemExit(f'fail-closed: expected canonical overlay chain, found only {len(commands)} commands')
+          print(f'Replaying {len(commands)} canonical overlay commands')
+          for command in commands:
+              print('+', command)
+              subprocess.run(shlex.split(command), check=True)
+          PY
+
+      - name: Reapply frozen proof overlays required by current compile context
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/apply_p1_entityhandler_renderstate_26_2.py upstream-vs2
+          python3 scripts/apply_p1_sable_companion_compileonly_26_2.py upstream-vs2
+          python3 scripts/apply_p1_deployer_scroll_option_exclusion_26_2.py upstream-vs2
+          python3 scripts/apply_p1_entity_authority_interpolation_26_2.py upstream-vs2
+          python3 scripts/apply_p1_entity_renderer_submit_26_2.py upstream-vs2
+          python3 scripts/apply_p1_distance_manager_ticket_storage_26_2.py upstream-vs2
+
+      - name: Resolve exact common compile classpath
+        shell: bash
+        working-directory: upstream-vs2
+        run: |
+          set -euo pipefail
+          cat > ../p1-teleport-classpath.init.gradle <<'GRADLE'
+          gradle.projectsEvaluated {
+              def commonProject = gradle.rootProject.findProject(':common')
+              if (commonProject == null) {
+                  throw new GradleException('fail-closed: :common project not found')
+              }
+              commonProject.tasks.register('vsPrintMainCompileClasspath') {
+                  doLast {
+                      def sourceSets = commonProject.extensions.findByName('sourceSets')
+                      if (sourceSets == null) {
+                          throw new GradleException('fail-closed: sourceSets extension not found on :common')
+                      }
+                      sourceSets.getByName('main').compileClasspath.files.each { file ->
+                          println('VS_CP_FILE=' + file.absolutePath)
+                      }
+                  }
+              }
+          }
+          GRADLE
+          ./gradlew -I ../p1-teleport-classpath.init.gradle :common:vsPrintMainCompileClasspath --no-daemon \
+            | tee ../p1-teleport-classpath.log
+          grep -q '^VS_CP_FILE=' ../p1-teleport-classpath.log
+
+      - name: Inspect exact Minecraft 26.2 teleport classes and descriptors
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' | tee p1-teleport-api-probe.log
+          from pathlib import Path
+          import subprocess
+          import zipfile
+
+          cp_log = Path('p1-teleport-classpath.log').read_text(encoding='utf-8', errors='replace')
+          jars = []
+          for line in cp_log.splitlines():
+              if line.startswith('VS_CP_FILE='):
+                  path = Path(line.split('=', 1)[1])
+                  if path.exists() and path.suffix == '.jar':
+                      jars.append(path)
+          if not jars:
+              raise SystemExit('fail-closed: no jar entries found on :common main compile classpath')
+
+          required = {
+              'net/minecraft/world/entity/Entity.class': 'net.minecraft.world.entity.Entity',
+              'net/minecraft/server/level/ServerPlayer.class': 'net.minecraft.server.level.ServerPlayer',
+              'net/minecraft/server/network/ServerGamePacketListenerImpl.class': 'net.minecraft.server.network.ServerGamePacketListenerImpl',
+              'net/minecraft/network/protocol/game/ClientboundPlayerPositionPacket.class': 'net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket',
+          }
+          found = {entry: [] for entry in required}
+          related_by_jar = {}
+          tokens = ('RelativeMovement', '/Relative.class', 'Teleport', 'PositionMoveRotation', 'PositionMove')
+
+          print('=== EXACT COMPILE CLASSPATH JARS CONTAINING TELEPORT TARGETS ===')
+          for jar in jars:
+              try:
+                  with zipfile.ZipFile(jar) as zf:
+                      names = set(zf.namelist())
+                      hits = [entry for entry in required if entry in names]
+                      related = sorted(
+                          name for name in names
+                          if name.startswith('net/minecraft/')
+                          and name.endswith('.class')
+                          and '$' not in name
+                          and any(token in name for token in tokens)
+                      )
+                      if hits or related:
+                          print(f'JAR {jar}')
+                      for entry in hits:
+                          found[entry].append(jar)
+                          print(f'  HAS {entry}')
+                      if related:
+                          related_by_jar[jar] = related
+                          for name in related:
+                              print(f'  RELATED {name}')
+              except zipfile.BadZipFile:
+                  pass
+
+          missing = [entry for entry, owners in found.items() if not owners]
+          if missing:
+              raise SystemExit('fail-closed: required mapped Minecraft classes missing from compile classpath: ' + ', '.join(missing))
+
+          for entry, class_name in required.items():
+              for jar in found[entry]:
+                  print(f'\n=== JAVAP {class_name} FROM {jar} ===')
+                  proc = subprocess.run(
+                      ['javap', '-classpath', str(jar), '-p', '-s', class_name],
+                      text=True,
+                      stdout=subprocess.PIPE,
+                      stderr=subprocess.STDOUT,
+                      check=False,
+                  )
+                  print(proc.stdout)
+                  if proc.returncode != 0:
+                      raise SystemExit(f'fail-closed: javap failed for {class_name} from {jar}')
+
+          seen = set()
+          for jar, related in related_by_jar.items():
+              for entry in related:
+                  class_name = entry[:-6].replace('/', '.')
+                  key = (str(jar), class_name)
+                  if key in seen:
+                      continue
+                  seen.add(key)
+                  print(f'\n=== JAVAP RELATED {class_name} FROM {jar} ===')
+                  proc = subprocess.run(
+                      ['javap', '-classpath', str(jar), '-p', '-s', class_name],
+                      text=True,
+                      stdout=subprocess.PIPE,
+                      stderr=subprocess.STDOUT,
+                      check=False,
+                  )
+                  print(proc.stdout)
+                  if proc.returncode != 0:
+                      raise SystemExit(f'fail-closed: javap failed for related class {class_name} from {jar}')
+
+          legacy = 'net/minecraft/world/entity/RelativeMovement.class'
+          legacy_hits = []
+          for jar in jars:
+              try:
+                  with zipfile.ZipFile(jar) as zf:
+                      if legacy in zf.namelist():
+                          legacy_hits.append(jar)
+              except zipfile.BadZipFile:
+                  pass
+          print('\n=== LEGACY RELATIVE MOVEMENT PRESENCE ===')
+          if legacy_hits:
+              for jar in legacy_hits:
+                  print('LEGACY_RELATIVE_MOVEMENT_PRESENT', jar)
+          else:
+              print('LEGACY_RELATIVE_MOVEMENT_ABSENT')
+          PY
+
+      - name: Upload exact teleport API inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-teleport-api-probe-${{ github.sha }}
+          path: |
+            p1-teleport-pinned-source.txt
+            p1-teleport-classpath.log
+            p1-teleport-api-probe.log
+          if-no-files-found: warn
