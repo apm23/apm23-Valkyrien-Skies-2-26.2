@@ -22,27 +22,29 @@ GitHub code is the implementation source of truth. This file is the durable cont
 
 The upstream baseline remains pinned. Minecraft 26.2 changes are applied by explicit fail-closed overlays so every adaptation remains traceable to upstream VS2 source.
 
-## Current reconciliation — ShipMountingEntity inherited damage / hurtServer boundary proven and frozen
+## Current reconciliation — ShipMountingEntity server-side self-removal / kill(ServerLevel) boundary proven and frozen
 
-- Current proven implementation HEAD: `36549552477a1dd9b24cc12c6e21c6849b2e8b54` (`p1: run ShipMountingEntity hurtServer proof`).
-- Exact-head P0 provenance run `35432663975`, job `105869895197`, completed `success`; the exact upstream gitlink remained `f39132148e717d325933b4ce6e9e9fb13d929390`.
-- Exact-head P1 standalone compile run `35432664106`, job `105869895568`, completed `failure` only because independent Minecraft 26.2 source/API clusters remain.
-- Every overlay step through this proof, `Show and validate port delta`, and Gradle runtime setup completed successfully; compilation reached the real `:common:compileKotlin` boundary.
-- Root cause proven for this isolated cluster: pinned upstream `ShipMountingEntity` does not override generic damage handling and therefore inherits the Minecraft 1.21.1 `Entity` behavior. That inherited behavior returns `false` for invulnerable damage; otherwise it marks/schedules the entity as hurt for velocity synchronization and still returns `false`. Minecraft 26.2 moved the server-side part of that contract into the abstract `hurtServer(ServerLevel, DamageSource, float)` hook while retaining the equivalent base invulnerability predicate as `isInvulnerableToBase(...)` and the equivalent hurt-sync marker as `markHurt()`.
-- `scripts/apply_p1_shipmountingentity_hurtserver_26_2.py` is fail-closed and targets exactly one pinned-upstream file:
+- Current proven implementation HEAD: `39e2abc40af3d785d4d6ca5f14ac7b28ef03334f` (`P1: adapt ShipMountingEntity kill ServerLevel`).
+- Exact-head P0 provenance run `35434315954`, job `105874293333`, completed `success`; the exact upstream gitlink remained `f39132148e717d325933b4ce6e9e9fb13d929390`.
+- Exact-head P1 standalone compile run `35434315959`, job `105874293420`, completed `failure` only because independent Minecraft 26.2 source/API clusters remain.
+- Every overlay step through this proof, including `Apply traceable P1 ShipMountingEntity kill ServerLevel overlay`, `Show and validate port delta`, and Gradle runtime setup completed successfully; compilation reached the real `:common:compileKotlin` boundary.
+- Root cause proven for this isolated cluster: pinned upstream `ShipMountingEntity.tick()` already performs self-removal only inside `!level().isClientSide && passengers.isEmpty()`, but Minecraft 26.2 changed the inherited Entity self-removal call from zero-argument `kill()` to `kill(ServerLevel level)`.
+- Exact Minecraft 26.2 API inspection confirmed `Entity.kill(ServerLevel)` as the current server-side contract. The minimal adaptation therefore passes the same already-server-only entity level through that existing upstream branch as `kill(level() as ServerLevel)`.
+- `scripts/apply_p1_shipmountingentity_kill_level_26_2.py` is fail-closed and targets exactly one pinned-upstream file:
   - `common/src/main/kotlin/org/valkyrienskies/mod/common/entity/ShipMountingEntity.kt`
-- The overlay adds only the current `ServerLevel` / `DamageSource` imports and the exact inherited-behavior bridge: base invulnerability check -> `false`; otherwise `markHurt()` -> `false`. It asserts exactly one inserted `hurtServer`, one `isInvulnerableToBase(source)`, and one `markHurt()` call.
-- No mounting/controller state, ship/reference-space behavior, entity movement, constructor/level semantics, persistence payload, networking, authority, rendering, chunk-ticket policy, or gameplay damage system is changed by this proof.
-- Exact run `35432664106` contains **no compiler diagnostic for `hurtServer`, `isInvulnerableToBase`, `markHurt`, or the added imports/signature**. The only remaining diagnostic in `ShipMountingEntity.kt` is the independent constructor/level requirement at line 45 (`No value passed for parameter 'level'`).
-- Diagnostic artifact: `p1-compile-log-36549552477a1dd9b24cc12c6e21c6849b2e8b54`, artifact ID `10581685492`, size `5736` bytes, ZIP SHA-256 `ac252f8e89dcc39c07e7d63ea509261d463425cdd68e36a865defff43aa36748`.
-- Scope reconciliation from the prior ledger checkpoint `ce6ba2d6e430126b4a83152514e9a2edfea7236b` to the proven implementation HEAD changed only the new fail-closed hurtServer overlay and its P1 workflow wiring; the pinned `upstream-vs2` gitlink was untouched.
+- The overlay requires the previously frozen `ServerLevel` import, matches exactly one pinned upstream server-only kill block, replaces exactly one `kill()` with `kill(level() as ServerLevel)`, and rejects any remaining legacy zero-argument call in that target block.
+- No mounting/controller state, ship/reference-space behavior, entity movement, passenger handling, removal timing, persistence, networking, damage semantics, rendering, chunk-ticket policy, gameplay authority, or camera logic is changed by this proof.
+- Exact run `35434315959` contains **no compiler diagnostic for `ShipMountingEntity.kt`** and the prior independent diagnostic `No value passed for parameter 'level'` is cleared. This proves only this isolated server-level kill boundary; it does not make the overall P1 compile green.
+- Diagnostic artifact: `p1-compile-log-39e2abc40af3d785d4d6ca5f14ac7b28ef03334f`, artifact ID `10581682906`, size `5711` bytes, ZIP SHA-256 `8af4a4710cfe7d2ab1b9bcf5ffd0be3f97055609a612c8690f0c4ccde63c5b66`.
+- Scope reconciliation from ledger checkpoint `7eec7c5f30ddf34f32763239bda48c8431cfd978` to the proven implementation HEAD changed only the new fail-closed kill-level overlay and its P1 workflow wiring; the pinned `upstream-vs2` gitlink was untouched.
 - `ShipSavedData` remains deliberately deferred: Minecraft 26.2 moves `SavedData` persistence from an overrideable `save(...)` method to `SavedDataType<T>` + `Codec<T>`, while pinned upstream `MixinMinecraftServer` owns acquisition and the real VS2 pipeline. That boundary must migrate together while preserving the four existing Jackson byte-array payloads and single persistence authority.
 - No code from retired `apm23/VS2-Create_Interactive` has been imported or reused as implementation source.
 
 ## Frozen proof ancestry / negative evidence
 
-The immediately prior ledger checkpoint is `ce6ba2d6e430126b4a83152514e9a2edfea7236b` (`ledger: freeze ShipMountingEntity Value I/O proof`). Its historical proof records and failed probes remain frozen evidence and must not be replayed merely because a later compiler error resembles them.
+The immediately prior implementation proof is `36549552477a1dd9b24cc12c6e21c6849b2e8b54` (ShipMountingEntity inherited damage / `hurtServer` boundary). Its proof and all earlier historical proof records/failed probes remain frozen evidence and must not be replayed merely because a later compiler error resembles them.
 
+- `36549552477a1dd9b24cc12c6e21c6849b2e8b54`: ShipMountingEntity inherited damage / hurtServer proof; P0 `35432663975` / job `105869895197`; P1 `35432664106` / job `105869895568`; artifact `10581685492`; SHA-256 `ac252f8e89dcc39c07e7d63ea509261d463425cdd68e36a865defff43aa36748`.
 - `0a23528d781baf280bb553a8f9fa94c21f447af2`: ShipMountingEntity empty ValueInput/ValueOutput persistence proof; P0 `35431393828` / job `105866541183`; P1 `35431393814` / job `105866541088`; artifact `10580972918`; SHA-256 `d5945476e91ed5e11d3be78eb674926c02a3257b2c94aff4ad8855852f92a3df`.
 - `d258e69e46ce2f85c1ccb953dc97db7abd669841`: entity-handler projectile package proof; P0 `35430098076` / job `105863012876`; P1 `35430098141` / job `105863013026`; artifact `10580801201`; SHA-256 `fe1f4f2b5042f4c71d079648a8636b6292036293c199ade14b8f844341ac0086`.
 - `3d8d7255d36f26da902e0d43e1c830fa5015594e`: VSGameEvents RenderType package proof; P0 `35428910241` / job `105859745816`; P1 `35428910211` / job `105859745706`; artifact `10579819254`; SHA-256 `06a36ed3226f0a1f22e1e0a332eb3f6b44c44c537376cb1731ea1a9831d70fea`.
@@ -81,8 +83,8 @@ All other earlier frozen-green proofs recorded by prior ledgers remain frozen ev
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
-- active_proof_head: `36549552477a1dd9b24cc12c6e21c6849b2e8b54; ShipMountingEntity inherited damage / hurtServer boundary complete and frozen`
-- active_proof_run: `P0 35432663975 / job 105869895197 success; P1 35432664106 / job 105869895568 failure with ShipMountingEntity hurtServer diagnostics cleared; only the independent constructor/level diagnostic remains in that class`
+- active_proof_head: `39e2abc40af3d785d4d6ca5f14ac7b28ef03334f; ShipMountingEntity server-side self-removal / kill(ServerLevel) boundary complete and frozen`
+- active_proof_run: `P0 35434315954 / job 105874293333 success; P1 35434315959 / job 105874293420 failure with all ShipMountingEntity diagnostics cleared; independent compiler clusters remain`
 - active_hypothesis: `none selected; choose the next isolated cluster only after exact Minecraft 26.2 API inspection`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
@@ -121,23 +123,23 @@ Source/API clusters already proven clean include:
 - `VSGameEvents` RenderType package migrated to Minecraft 26.2 `net.minecraft.client.renderer.rendertype.RenderType` while preserving the two upstream event payloads and existing renderer emitter architecture;
 - `AbstractShipyardEntityHandler` and `WorldEntityHandler` projectile imports migrated to the Minecraft 26.2 `projectile.arrow` / `projectile.hurtingprojectile` subpackages while preserving the original VS2 projectile branch behavior unchanged;
 - `ShipMountingEntity` empty entity-persistence hooks migrated from `CompoundTag` to Minecraft 26.2 `ValueInput` / `ValueOutput`, preserving the intentionally empty upstream behavior and vanilla entity persistence lifecycle;
-- `ShipMountingEntity` inherited generic damage behavior bridged to Minecraft 26.2 `hurtServer(...)` using the current base invulnerability predicate and `markHurt()` while preserving the upstream inherited always-false result and without adding new damage authority.
+- `ShipMountingEntity` inherited generic damage behavior bridged to Minecraft 26.2 `hurtServer(...)` using the current base invulnerability predicate and `markHurt()` while preserving the upstream inherited always-false result and without adding new damage authority;
+- `ShipMountingEntity` server-only empty-passenger self-removal migrated from upstream `kill()` to Minecraft 26.2 `kill(level() as ServerLevel)` while preserving the existing branch, timing, and authority.
 
-## Remaining compiler areas from exact run `35432664106`
+## Remaining compiler areas from exact run `35434315959`
 
-These remain unresolved and independent from the frozen ShipMountingEntity hurtServer proof:
+These remain unresolved and independent from the frozen ShipMountingEntity proofs:
 
 - Create compatibility intermediary/classpath/API drift in `DeployerScrollOptionSlot.kt`; this must not be used to pull P3/Create architecture into P1.
 - `ShipSavedData` broader persistence lifecycle/factory boundary. Exact Minecraft 26.2 API inspection shows this now requires `SavedDataType<T>` + `Codec<T>` and the corresponding `MixinMinecraftServer` storage registration to migrate together while preserving the existing VS2 byte-array payloads and pipeline ownership.
 - `AssemblyUtil` and `ShipAssembler`: block update flags, scheduled ticks, ValueInput/ValueOutput component persistence, shipyard allocation, structure processor API, chunk tickets, and related semantics.
-- `ShipMountingEntity`: constructor/level boundary only. Its empty ValueInput/ValueOutput persistence hooks and `hurtServer` contract are **not** remaining compiler areas.
 - rendering/entity-handler drift: `MultiBufferSource` renderer-buffer API rework, current `EntityRenderer` generic/API boundary, and `getRenderOffset`. Projectile class relocation is **not** a remaining compiler area.
 - `VSGamePackets` / `EntityDragger`: removed/changed local-control and interpolation APIs (`isControlledByLocalInstance`, `lerpTo`) are authority-sensitive and remain locked pending exact semantics.
 - chunk-ticket APIs in `ChunkManagement` / `VSTicketType` and ShipAssembler.
 - Sable dependency boundary.
 - `RelocationUtil`: ValueInput/ValueOutput/component loading, loot-key nullability, update flags, and related relocation semantics.
 
-`VSGameUtils.kt`, `VSGameEvents.kt`, the `AbstractArrow` / `AbstractHurtingProjectile` package sites, both empty `ShipMountingEntity` persistence-hook signatures, and the `ShipMountingEntity.hurtServer(...)` boundary are **not** remaining compiler areas after their frozen proofs.
+`VSGameUtils.kt`, `VSGameEvents.kt`, the `AbstractArrow` / `AbstractHurtingProjectile` package sites, all three proven `ShipMountingEntity` adaptation boundaries (empty persistence hooks, `hurtServer(...)`, and server-side `kill(ServerLevel)`) are **not** remaining compiler areas after their frozen proofs.
 
 ## Locked / deferred lessons
 
@@ -149,7 +151,8 @@ These remain unresolved and independent from the frozen ShipMountingEntity hurtS
 - Frozen VSGameEvents RenderType proof authorizes only the event payload package migration. It does **not** authorize renderer/entity-handler rewrites, render-state/generic changes, pass reordering, alternate buffer ownership, or any replacement rendering pipeline.
 - Frozen entity-handler projectile proof authorizes only the `AbstractArrow` / `AbstractHurtingProjectile` package relocation. It does **not** authorize movement, velocity, rotation, dragging, renderer, interpolation, or authority changes.
 - Frozen ShipMountingEntity persistence proof authorizes only the two intentionally empty entity-persistence hook signatures (`CompoundTag` to `ValueInput` / `ValueOutput`). It does not authorize constructor/level changes, movement/reference-space behavior, or any new persisted payload.
-- Frozen ShipMountingEntity hurtServer proof authorizes only the exact Minecraft 26.2 bridge for the generic inherited 1.21.1 Entity damage contract: base invulnerability check, `markHurt()` for the same hurt/velocity-sync marking, and `false` return. It does **not** authorize new damage/destruction behavior, mounting/controller changes, constructor/level changes, movement/reference-space behavior, networking authority, or camera logic.
+- Frozen ShipMountingEntity hurtServer proof authorizes only the exact Minecraft 26.2 bridge for the generic inherited 1.21.1 Entity damage contract: base invulnerability check, `markHurt()` for the same hurt/velocity-sync marking, and `false` return. It does **not** authorize new damage/destruction behavior, mounting/controller changes, movement/reference-space behavior, networking authority, or camera logic.
+- Frozen ShipMountingEntity kill(ServerLevel) proof authorizes only passing the existing server-side entity level to Minecraft 26.2 `Entity.kill(ServerLevel)` inside the already-existing empty-passenger branch. It does **not** authorize new removal timing, passenger handling, constructor/level redesign, mounting/controller behavior, movement/reference-space changes, networking authority, or camera logic.
 - Exact Minecraft 26.2 API evidence shows `MultiBufferSource` is not a simple package rename. Do not mechanically import-rewrite or fabricate an equivalent; inspect current renderer-buffer semantics before adaptation.
 - `ShipSavedData` broader persistence lifecycle is a semantic boundary: Minecraft 26.2 uses `SavedDataType<T>` + `Codec<T>` rather than the old overrideable `save(...)` path. Migrate `ShipSavedData` together with its `MixinMinecraftServer` storage registration, preserve the exact four existing Jackson byte-array payloads and real VS2 pipeline ownership, and do not introduce a second persistence authority.
 - TestChair proof authorizes only its existing chair create/place flow; it does not authorize ShipMountingEntity internals or moving-space changes.
@@ -190,9 +193,9 @@ Forbidden as final architecture: custom VS2-style replacement frames, synthetic 
 
 ## next_safe_action
 
-1. Preserve the frozen `36549552477a1dd9b24cc12c6e21c6849b2e8b54` ShipMountingEntity hurtServer proof, `0a23528d781baf280bb553a8f9fa94c21f447af2` ShipMountingEntity Value I/O proof, `d258e69e46ce2f85c1ccb953dc97db7abd669841` entity-handler projectile package proof, `3d8d7255d36f26da902e0d43e1c830fa5015594e` VSGameEvents RenderType proof, `24802fb75610a3ceb1614fda1a78cab1fab7cfe5` VSGameUtils build-height/chunk-key proof, `a5e219c7036937ce0ef4b5dfe5032bd82c764ee9` ResourceKey/Identifier proof, `ee7e9c56be55fd95114d0f7e194be69185db4385` nullable-translation proof, and all earlier frozen-green proofs. Do not edit those sites unless direct regression evidence appears.
+1. Preserve the frozen `39e2abc40af3d785d4d6ca5f14ac7b28ef03334f` ShipMountingEntity kill(ServerLevel) proof, `36549552477a1dd9b24cc12c6e21c6849b2e8b54` ShipMountingEntity hurtServer proof, `0a23528d781baf280bb553a8f9fa94c21f447af2` ShipMountingEntity Value I/O proof, `d258e69e46ce2f85c1ccb953dc97db7abd669841` entity-handler projectile package proof, `3d8d7255d36f26da902e0d43e1c830fa5015594e` VSGameEvents RenderType proof, `24802fb75610a3ceb1614fda1a78cab1fab7cfe5` VSGameUtils build-height/chunk-key proof, `a5e219c7036937ce0ef4b5dfe5032bd82c764ee9` ResourceKey/Identifier proof, `ee7e9c56be55fd95114d0f7e194be69185db4385` nullable-translation proof, and all earlier frozen-green proofs. Do not edit those sites unless direct regression evidence appears.
 2. After this ledger-only commit, require exact-head P0 provenance success before any further source mutation.
-3. Then inspect only the newest compiler evidence plus the exact Minecraft 26.2 API for **one** remaining isolated cluster. Do not mechanically patch ShipSavedData, ShipMountingEntity constructor/level, renderer-buffer / `EntityRenderer` / `getRenderOffset`, assembly/relocation, authority-sensitive entity/networking, ticketing, Sable, or Create-compat boundaries without semantic proof.
+3. Then inspect only the newest compiler evidence from exact run `35434315959` plus the exact Minecraft 26.2 API for **one** remaining isolated cluster. Do not mechanically patch ShipSavedData, renderer-buffer / `EntityRenderer` / `getRenderOffset`, assembly/relocation, authority-sensitive entity/networking, ticketing, Sable, or Create-compat boundaries without semantic proof.
 4. Choose exactly one root hypothesis only after API inspection, then use the smallest fail-closed traceable overlay and prove that cluster separately.
 5. Remain in standalone P1. Do not use Create/SNR/Copycats to hide standalone VS2 failures. Do not record ordinary compile/debug/hypothesis-test video.
 
