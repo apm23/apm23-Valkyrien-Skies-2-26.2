@@ -22,41 +22,55 @@ GitHub code is the implementation source of truth. This file is the durable cont
 
 The upstream baseline remains pinned. Minecraft 26.2 changes are applied by explicit fail-closed overlays so every adaptation remains traceable to upstream VS2 source.
 
-## Current reconciliation — canonical P1 chain through WaterFluid accessor
+## Current reconciliation — canonical P1 chain through POIManager ChunkPos construction
 
 Current proven canonical source boundary before this ledger-only reconciliation commit:
-- canonical implementation HEAD: `224fb040c4e1f3ae9015d712fcac9d26447024bf`
-- canonical P1 chain contains 78 ordered fail-closed overlays.
-- exact-head P0 provenance run `35470783272`: `success`.
-- exact-head WaterFluid proof run `35470783283`: `success`.
-- exact-head canonical standalone compile run `35470783276`: compiler frontier failure only; every overlay/apply/delta-validation step before compilation was green.
-- compile artifact: `p1-compile-log-224fb040c4e1f3ae9015d712fcac9d26447024bf`, ID `10592822987`, size `22193` bytes, SHA-256 `4c85123a2c56c0beafa0ae0d42a5ec1877a7a2adb73aa540db4ebdf30e6d391f`.
-- exhaustive uncapped compiler frontier: **300 `error:` diagnostics across 38 source files**.
-- `MixinWaterFluid.java` is absent from that frontier.
+- canonical implementation HEAD: `73197278b8ee26ced0dc267d84ea9eb825d02e98`
+- canonical P1 chain contains **79 ordered fail-closed overlays**.
+- exact-head P0 provenance run `35471264991`: `success`.
+- exact-head POIManager proof run `35471264941`: `success`.
+- exact-head canonical standalone compile run `35471264985`: compiler-frontier failure only; every overlay/apply/delta-validation step before compilation was green.
+- compile artifact: `p1-compile-log-73197278b8ee26ced0dc267d84ea9eb825d02e98`, ID `10592549176`, size `22090` bytes, SHA-256 `1d9ab6e6c707cccace39a6a01ff9c5f527001170be222f03a84ff3cc67fdc9b1`.
+- exhaustive uncapped compiler frontier: **300 `error:` diagnostics across 37 source files**; no javac cap marker.
+- `MixinPOIManager.java` is absent from that frontier.
 
-### WaterFluid Level client accessor boundary — frozen
+### POIManager ChunkPos construction boundary — frozen
 
 Pinned upstream target:
-`common/src/main/java/org/valkyrienskies/mod/mixin/feature/submarines/MixinWaterFluid.java`.
+`common/src/main/java/org/valkyrienskies/mod/mixin/feature/poi/MixinPOIManager.java`.
 
 Minimal 26.2 bridge:
-- `level.isClientSide` -> `level.isClientSide()` only at the existing `ValkyrienSkies.isConnectivityEnabled(...)` call.
-- Existing VS2 authorities remain unchanged: `isBlockInShipyard`, `getShipsIntersecting`, `ship.getWorldToShip().transformPosition`, `isPositionMaybeSealed`, and the original `ci.cancel()` behavior.
-- No fluid simulation replacement, synthetic ship-space logic, physics/collision movement authority, or custom connectivity system was introduced.
+- `ChunkPos.rangeClosed(new ChunkPos(blockPos), j)` -> `ChunkPos.rangeClosed(ChunkPos.containing(blockPos), j)`.
+- This reuses the already-frozen ShipAssembler BlockPos→ChunkPos mapping precedent from `02e356638690d0413a105d409aaae4bcfd6e160c`.
+- Existing POI authorities/semantics remain unchanged: `Math.floorDiv(i, 16) + 1` radius, AABB range, loaded-ship intersection, `POIChunkSearcher.shipChunkBounds(ship.getActiveChunksSet())`, `getInChunk(...)`, and world-coordinate conversion.
+- No POI policy, AI behavior, ship transform, ticket lifecycle, movement/collision/camera authority, or custom reference frame was introduced.
 
 Evidence:
-- fail-closed script commit `377eddea6c20c828762aa7ed40e2c8f273f0a17c`.
-- isolated proof workflow HEAD `e28b1695a2f374b0fb62debdd5171e42c0d94a15`.
-- isolated P0 `35470549956`: success.
-- isolated WaterFluid proof `35470549962`: success.
-- canonicalizer staging HEAD `693e74978f3a79571bbaeb601ef551122f96307a`.
-- canonicalizer run `35470758884`: transformation, `git diff --check`, and local validated commit creation succeeded; only Actions transport failed because the GitHub App may not update workflow files without `workflows` permission.
-- validated canonical commit `224fb040c4e1f3ae9015d712fcac9d26447024bf` was fast-forwarded through the GitHub connector.
-- exact canonical WaterFluid proof `35470783283`: success.
+- fail-closed overlay commit `49e25966f7195a2689417b65d47ec14f96b2acb8`.
+- isolated proof workflow HEAD `2cfae46b189661f5bbaece68283bc927d61f4b2a`.
+- isolated P0 `35471091468`: success.
+- isolated POI proof `35471091469`: success.
+- canonicalizer staging HEAD `c57429b56409c9b3fa5eecb8d135970632620d0a`.
+- canonicalizer run `35471245342`: transformation, `git diff --check`, and local validated commit creation succeeded; only Actions transport failed because the GitHub App cannot update workflow files without `workflows` permission.
+- validated canonical commit `73197278b8ee26ced0dc267d84ea9eb825d02e98` was fast-forwarded through the GitHub connector.
+- exact canonical P0 `35471264991`: success.
+- exact canonical POI proof `35471264941`: success.
+- exact canonical compile `35471264985`: frontier-only failure; artifact `10592549176`; 300 diagnostics / 37 files.
 
-The Actions self-push workflow-permission failure is a **locked transport negative**. Do not retry Actions self-push as the transport mechanism for workflow-file changes; a validated local commit may be fast-forwarded through the connector after exact diff verification.
+The Actions self-push workflow-permission failure is a **locked transport negative**. Do not retry Actions self-push as the actual transport mechanism for workflow-file changes; a locally validated exact commit may be fast-forwarded through the connector after diff verification.
 
 ## Recently frozen canonical P1 boundaries
+
+### WaterFluid Level client accessor — frozen
+
+Target: `common/src/main/java/org/valkyrienskies/mod/mixin/feature/submarines/MixinWaterFluid.java`.
+
+- only bridge: `level.isClientSide` -> `level.isClientSide()` inside existing `ValkyrienSkies.isConnectivityEnabled(...)`.
+- VS2 authorities preserved: `isBlockInShipyard`, `getShipsIntersecting`, `ship.getWorldToShip().transformPosition`, `isPositionMaybeSealed`, and original `ci.cancel()`.
+- script commit `377eddea6c20c828762aa7ed40e2c8f273f0a17c`.
+- isolated proof HEAD `e28b1695a2f374b0fb62debdd5171e42c0d94a15`; P0 `35470549956`; proof `35470549962`: success.
+- canonical commit `224fb040c4e1f3ae9015d712fcac9d26447024bf`; P0 `35470783272`; exact proof `35470783283`: success.
+- canonical compile `35470783276`; artifact `10592822987`, SHA-256 `4c85123a2c56c0beafa0ae0d42a5ec1877a7a2adb73aa540db4ebdf30e6d391f`; frontier 300 / 38 files.
 
 ### Shipyard teleport API adaptation — frozen
 
@@ -65,14 +79,14 @@ The authority-sensitive teleport unit was inspected against Minecraft 26.2 befor
 - current `PositionMoveRotation`/vanilla teleport authority is used; no manual packet/awaiting-teleport/`absMoveTo` replacement was introduced.
 - real VS2 `ServerShip.getShipToWorld().transformPosition` remains the ship-to-world transform authority.
 - transformed X/Y/Z are absolute, so only relative X/Y/Z flags are removed; delta movement, yaw, and pitch semantics are preserved.
-- the current ServerPlayer teleport boolean is used consistently; dismount teleport remains `false`.
+- ServerPlayer teleport boolean semantics are preserved; dismount teleport remains `false`.
 
 Exact target files proven compiler-clean:
 - `org/valkyrienskies/mod/mixin/feature/shipyard_entities/MixinEntity.java`
 - `org/valkyrienskies/mod/mixin/server/command/level/MixinServerPlayer.java`
 - `org/valkyrienskies/mod/mixin/server/network/MixinServerGamePacketListenerImpl.java`
 
-Canonical exact-head proof run `35467615790`: success. P0 run `35467615792`: success.
+Canonical exact-head proof `35467615790`: success. P0 `35467615792`: success.
 
 ### Canonical proof-overlay chain repair — frozen
 
@@ -84,56 +98,51 @@ Commit `8e40e5dc0885768727f16b96d5968080a7bd0ffb` canonicalized six already-prov
 - entity renderer submit
 - DistanceManager/TicketStorage
 
-It also removed the redundant targeted-proof reapply block. Canonical compile run `35467615786` produced artifact ID `10591658320` and established the then-current exhaustive frontier at 300 diagnostics / 42 files.
+Canonical compile `35467615786` produced artifact `10591658320` and established the then-current exhaustive frontier at 300 diagnostics / 42 files.
 
 ### NaturalSpawner ChunkPos accessor — frozen
 
-- minimal mapping only: `chunk.getPos().x/z` -> `chunk.getPos().x()/z()`.
-- shipyard spawn policy and `VSGameConfig.SERVER.getAllowMobSpawns()` remain unchanged.
-- isolated proof run `35467860056`: success; P0 `35467860082`: success.
-- now replayed by the canonical P1 chain.
+- `chunk.getPos().x/z` -> `chunk.getPos().x()/z()` only.
+- shipyard spawn policy and `VSGameConfig.SERVER.getAllowMobSpawns()` unchanged.
+- isolated proof `35467860056`: success; P0 `35467860082`: success.
 
 ### Particle-collision Level client accessor — frozen
 
 - target `feature/particle_collision/MixinEntity.java`.
-- minimal mapping only: `level.isClientSide` -> `level.isClientSide()`.
+- `level.isClientSide` -> `level.isClientSide()` only.
 - no VS2 particle/collision/reference-space authority change.
-- targeted proof passed before canonicalization and exact-head canonical proof remained green.
-- now replayed by the canonical P1 chain.
 
 ### EntitySectionStorage Level client accessor — frozen
 
 - target `feature/shipyard_entities/MixinEntitySectionStorage.java`.
-- minimal mapping only: `level.isClientSide` -> `level.isClientSide()` at the existing client ship-load listener branch.
+- `level.isClientSide` -> `level.isClientSide()` only at existing client ship-load listener branch.
 - canonical commit `f90a3c1979dd957a34d5a0ebebfe00ab5c6fc133`.
-- P0 `35470148414`: success.
-- exact target proof `35470148397`: success.
-- canonical compile `35470148413`; artifact ID `10592178068`, SHA-256 `9264730d7997684cf9152e17b82943053a69e86b31c3e8dd7fd0e0e686578a15`; frontier reduced to 300 diagnostics / 39 files.
+- P0 `35470148414`: success; exact proof `35470148397`: success.
+- canonical compile `35470148413`; artifact `10592178068`, SHA-256 `9264730d7997684cf9152e17b82943053a69e86b31c3e8dd7fd0e0e686578a15`; frontier 300 / 39 files.
 
 ## Frozen DistanceManager / TicketStorage read boundary
 
 - implementation `8a338f95103227ed6a5acb35804d573bbae0d96c`.
 - bounded proof/classifier HEAD `ca07a2fff0fd922cbbd578a0531d3377313827de`.
-- P0 `35463018487`: success.
-- proof `35463018541`: success.
+- P0 `35463018487`: success; proof `35463018541`: success.
 - artifact `10590562117`, SHA-256 `269700efd41b44176ebce58c282a22a8a6af64b69fe39c532607548663ced2ee`.
-- `DistanceManagerAccessor` exposes current `TicketStorage`; existing membership reads use `TicketStorage.getTickets(long).isEmpty()` and current packed chunk-key vocabulary.
-- This is a read-only compatibility boundary and does not replace or modify the frozen real ship-ticket lifecycle.
+- `DistanceManagerAccessor` exposes current `TicketStorage`; membership reads use `TicketStorage.getTickets(long).isEmpty()` and current packed chunk-key vocabulary.
+- read-only compatibility only; it does not replace or modify the frozen real ship-ticket lifecycle.
 
 ## Other frozen proofs
 
 ### Frozen entity renderer submit lifecycle
 - implementation `a87512437f40a3bfa1325d78f8e2588587ec7cc8`; proof HEAD `58d8554ba623896d486b91f18771df9bdcd6f2b3`; proof `35458380245`: success.
-- Real VS2 render authorities (`ClientShip`, `ShipMountedToData`, `VSEntityManager`, ship transforms) remain authoritative.
+- real VS2 render authorities (`ClientShip`, `ShipMountedToData`, `VSEntityManager`, ship transforms) remain authoritative.
 
 ### Frozen entity local-authority / interpolation
 - implementation `b7e583af13598b6ddcc583380872f578b8a40bb8`; proof HEAD `9f2719be070e79b91b7f47ceddaec61d7f5cff40`; proof `35455551701`.
-- frozen bridge: `isControlledByLocalInstance` -> `isLocalInstanceAuthoritative()` at the exact existing sites; old non-living `lerpTo(..., 3)` -> current vanilla `moveOrInterpolateTo(...)`.
-- existing `IEntityDraggingInformationProvider`, dragging information, ship transforms, and interpolation step authority remain intact.
+- `isControlledByLocalInstance` -> `isLocalInstanceAuthoritative()` at exact existing sites; old non-living `lerpTo(..., 3)` -> vanilla `moveOrInterpolateTo(...)`.
+- existing dragging information, ship transforms, and interpolation authority remain intact.
 
 ### Optional Create deployer helper isolation
 - implementation `cd2434e69caf28e12560bf4444fc220a3023e40b`; proof `35454908850`: success.
-- exactly one unreferenced helper is excluded for standalone P1; this is not Create integration.
+- exactly one unreferenced helper excluded for standalone P1; this is not Create integration.
 
 ### Optional Sable Companion compile boundary
 - overlay `58bd44154c20f141969b758b8e35372d982ac358`; proof HEAD `c0c1efb790c31f90c8916121f7c4a06864a58b7f`; proof `35454031987`.
@@ -196,22 +205,44 @@ Locked negative evidence:
 
 ## Remaining Java compile frontier
 
-Canonical artifact `10592822987` at `224fb040c4e1f3ae9015d712fcac9d26447024bf` contains **300 uncapped diagnostics across 38 files**. This is evidence only and never permission to batch-fix categories.
+Canonical artifact `10592549176` at `73197278b8ee26ced0dc267d84ea9eb825d02e98` contains **300 uncapped diagnostics across 37 source files**. This is evidence only and never permission to batch-fix categories.
 
 Current broad categories include:
 1. AI/entity nested-goal and mapping/API drift.
 2. client/render/HUD/debug-render lifecycle drift.
-3. entity/player/teleport-reconnect and collision API drift outside the already-frozen shipyard teleport unit.
+3. entity/player/teleport-reconnect and collision API drift outside already-frozen authority-sensitive units.
 4. chunk/worldgen/server storage/API drift.
 5. optional compatibility/dependency residue, including old mapped Create/Copycat and Sable surfaces that are not standalone-P1 runtime authority.
 
-Smallest currently observed three-diagnostic units include `MixinPOIManager`, `MixinLevelChunk`, `MixinBlockGetter`, `MixinAirAndWaterRandomPos`, `LavaFluidMixin`, `MixinLivingEntity`, `StructureTemplateMixin`, debug/HUD/weather render helpers, and others. These must still be handled one semantic unit at a time.
+Current three-diagnostic units include:
+- `MixinAirAndWaterRandomPos.java`: removed `Level.getMaxBuildHeight()`.
+- `MixinBlockGetter.java`: `Direction.getNearest(double,double,double)` descriptor drift.
+- `LavaFluidMixin.java`: `randomTick` now expects `ServerLevel`.
+- `MixinLivingEntity.java`: removed local-authority method; authority-sensitive, not preferred for a blind mechanical patch.
+- `MixinDebugScreenOverlay.java`: removed `BlockPos.getCenter()`.
+- `StructureTemplateMixin.java`: block-entity save ValueOutput API drift.
+- `feature/world_weather/MixinLevelRenderer.java`: removed `BlockPos.getCenter()`.
+- `world/chunk/MixinLevelChunk.java`: `ChunkSerializer` mapping/API drift.
+- `compat/create/AirFlowClipContext.java`: old mapped Create/Copycat dependency residue; not preferred for standalone P1.
 
-### Next candidate — POI ChunkPos construction, inspection/proof first
+### Next candidate — AirAndWaterRandomPos max-build boundary, proof first
 
-`common/src/main/java/org/valkyrienskies/mod/mixin/feature/poi/MixinPOIManager.java` currently fails because Minecraft 26.2 no longer accepts `new ChunkPos(BlockPos)`. The compiler reports the current record constructor requires `(int,int)`.
+Pinned target:
+`common/src/main/java/org/valkyrienskies/mod/mixin/feature/ai/path_retargeting/MixinAirAndWaterRandomPos.java`.
 
-There is already a frozen local precedent at ShipAssembler (`02e356638690d0413a105d409aaae4bcfd6e160c`) mapping old BlockPos-based ChunkPos construction to current `ChunkPos.containing(...)`. This makes POI construction the smallest evidence-backed next candidate, but the source is **not yet patched**. Inspect the exact pinned source and prove only the constructor vocabulary change before canonicalization.
+Current compiler diagnostic is one source site repeated by the three compile tasks/log passes:
+`pathfinderMob.level().getMaxBuildHeight()` no longer exists in Minecraft 26.2 inside the existing `RandomPos.moveUpOutOfSolid(...)` call.
+
+Existing frozen precedent `scripts/apply_p1_compatutil_buildheight_26_2.py` already maps the old exclusive max-build boundary to `level.getMinY() + level.getHeight()` in real VS2 CompatUtil. The pinned AirAndWaterRandomPos source uses the value only as the same upper build-height argument; the surrounding VS2 logic is separate and must remain unchanged:
+- null return guard and `blockPos2` guard;
+- loaded-ship intersection;
+- `ship.getWorldToShip().transformPosition(...)`;
+- `BlockPos.containing(...)`;
+- `GoalUtils.isRestricted(...)` and `GoalUtils.hasMalus(...)`;
+- `RandomPos.moveUpOutOfSolid(...)` callback;
+- `cir.setReturnValue(blockPosInShip)` and break behavior.
+
+No patch has been applied to this target yet. Inspect/prove exactly one accessor-vocabulary replacement before canonicalization. Do not alter AI policy, pathfinding, ship transforms, movement/collision/camera authority, or any other file.
 
 ## Target runtime baseline
 
@@ -228,9 +259,9 @@ There is already a frozen local precedent at ShipAssembler (`02e356638690d0413a1
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_JAVA_API_MIXIN_DRIFT`
-- active_proof_head: `224fb040c4e1f3ae9015d712fcac9d26447024bf; canonical P1 chain through WaterFluid Level client accessor`
-- active_proof_run: `P0 35470783272 success; WaterFluid exact proof 35470783283 success; canonical compile 35470783276 frontier-only failure; artifact 10592822987; 300 diagnostics / 38 files; no javac cap marker`
-- active_hypothesis: `next smallest evidence-backed unit is MixinPOIManager BlockPos-to-ChunkPos construction; inspect/prove ChunkPos.containing mapping only after this ledger HEAD passes P0`
+- active_proof_head: `73197278b8ee26ced0dc267d84ea9eb825d02e98; canonical P1 chain through POIManager ChunkPos containing`
+- active_proof_run: `P0 35471264991 success; POI exact proof 35471264941 success; canonical compile 35471264985 frontier-only failure; artifact 10592549176; 300 diagnostics / 37 files; no javac cap marker`
+- active_hypothesis: `next smallest evidence-backed unit is MixinAirAndWaterRandomPos max-build accessor; reuse frozen exclusive-max boundary level.getMinY()+level.getHeight() only after this ledger HEAD passes P0`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 - video_status: `NOT_APPLICABLE_YET`
@@ -253,13 +284,13 @@ There is already a frozen local precedent at ShipAssembler (`02e356638690d0413a1
 
 ## next_safe_action
 
-1. This ledger reconciliation commit is documentation-only, not source proof. Require exact-head P0 provenance success before another source/workflow mutation.
+1. This ledger commit is documentation-only, not source proof. Require exact-head P0 provenance success before another source/workflow mutation.
 2. Preserve every frozen boundary above and all frozen/negative evidence in Git history.
-3. Re-read the latest canonical compile artifact only if HEAD/compiler state changed; otherwise use artifact `10592822987` as the current 300-diagnostic / 38-file frontier.
-4. Inspect pinned upstream `MixinPOIManager.java` and confirm the failing `new ChunkPos(blockPos)` site is exactly the same coordinate-conversion intent as the already-frozen ShipAssembler `ChunkPos.containing(...)` adaptation.
-5. If bounded and unambiguous, create one fail-closed overlay changing only that constructor vocabulary and an exact-file exhaustive compiler proof.
-6. Do not alter POI lookup/range semantics, ship transforms, AI behavior, ticket lifecycle, movement/collision/camera authority, or any unrelated file.
-7. Do not combine this with `MixinLevelChunk`, AI goals, render/HUD, Sable, Create/Copycat, or any other cluster.
+3. Use artifact `10592549176` as the current canonical 300-diagnostic / 37-file frontier unless HEAD/compiler state changes.
+4. Inspect/prove only the pinned `MixinAirAndWaterRandomPos.java` max-build accessor site.
+5. If still bounded and unambiguous, create one fail-closed overlay changing only `pathfinderMob.level().getMaxBuildHeight()` to the already-frozen 26.2 exclusive-max expression `pathfinderMob.level().getMinY() + pathfinderMob.level().getHeight()` and an exact-file exhaustive compiler proof.
+6. Preserve loaded-ship intersection, world-to-ship transform, restriction/malus checks, `moveUpOutOfSolid` callback, return/break behavior, and all AI/pathfinding semantics.
+7. Do not combine this with `MixinBlockGetter`, LavaFluid, collision authority, render/HUD, StructureTemplate, Create/Copycat, Sable, or any other cluster.
 8. Remain standalone P1. Do not use Create/SNR/Copycats to hide real VS2 failures. Do not record ordinary compile/debug video.
 
 ## Video and milestone gate
