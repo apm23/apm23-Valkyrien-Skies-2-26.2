@@ -79,8 +79,8 @@ jobs:
             common/src/main/java/org/valkyrienskies/mod/mixin/feature/shipyard_entities/VSEntityRenderStateContext.java \
             common/src/main/java/org/valkyrienskies/mod/mixin/accessors/client/render/EntityRendererCullingInvoker.java \
             common/src/main/resources/valkyrienskies-common.mixins.json
-          test "$(grep -Fc 'method = \"submit\"' upstream-vs2/common/src/main/java/org/valkyrienskies/mod/mixin/feature/shipyard_entities/MixinEntityRenderDispatcher.java)" -eq 1
-          test "$(grep -Fc 'method = \"extractEntity\"' upstream-vs2/common/src/main/java/org/valkyrienskies/mod/mixin/feature/shipyard_entities/MixinEntityRenderDispatcher.java)" -eq 1
+          test "$(grep -Fc 'method = "submit"' upstream-vs2/common/src/main/java/org/valkyrienskies/mod/mixin/feature/shipyard_entities/MixinEntityRenderDispatcher.java)" -eq 1
+          test "$(grep -Fc 'method = "extractEntity"' upstream-vs2/common/src/main/java/org/valkyrienskies/mod/mixin/feature/shipyard_entities/MixinEntityRenderDispatcher.java)" -eq 1
           test "$(grep -Fc 'VSEntityManager.INSTANCE.getHandler' upstream-vs2/common/src/main/java/org/valkyrienskies/mod/mixin/feature/shipyard_entities/MixinEntityRenderDispatcher.java)" -eq 2
           test "$(grep -Fc 'getShipMountedToData' upstream-vs2/common/src/main/java/org/valkyrienskies/mod/mixin/feature/shipyard_entities/MixinEntityRenderDispatcher.java)" -eq 1
           test "$(grep -Fc 'getRenderTransform' upstream-vs2/common/src/main/java/org/valkyrienskies/mod/mixin/feature/shipyard_entities/MixinEntityRenderDispatcher.java)" -ge 2
