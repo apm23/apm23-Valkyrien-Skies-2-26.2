@@ -1,0 +1,95 @@
+name: P1 canonicalize shipyard teleport overlays
+
+on:
+  push:
+    paths:
+      - '.github/workflows/p1-canonicalize-shipyard-teleport.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  canonicalize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout triggering HEAD
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Canonicalize proven teleport unit fail-closed
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: Path, old: str, new: str, label: str) -> None:
+              text = path.read_text(encoding='utf-8')
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'fail-closed: {label} expected once, found {count}')
+              path.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          compile_path = Path('.github/workflows/p1-compile.yml')
+          proof_path = Path('.github/workflows/p1-shipyard-teleport-player-api-proof.yml')
+          retired_path = Path('.github/workflows/p1-shipyard-teleport-api-proof.yml')
+
+          compile_text = compile_path.read_text(encoding='utf-8')
+          if 'apply_p1_shipyard_teleport_api_26_2.py upstream-vs2' in compile_text or 'apply_p1_shipyard_teleport_player_api_26_2.py upstream-vs2' in compile_text:
+              raise SystemExit('fail-closed: teleport overlays already present in canonical P1 chain')
+
+          replace_once(
+              compile_path,
+              "      - 'scripts/apply_p1_relocationutil_blockentity_value_input_26_2.py'\n      - '.github/workflows/p1-compile.yml'",
+              "      - 'scripts/apply_p1_relocationutil_blockentity_value_input_26_2.py'\n      - 'scripts/apply_p1_shipyard_teleport_api_26_2.py'\n      - 'scripts/apply_p1_shipyard_teleport_player_api_26_2.py'\n      - '.github/workflows/p1-compile.yml'",
+              'canonical push-path insertion',
+          )
+          replace_once(
+              compile_path,
+              "      - name: Apply traceable P1 RelocationUtil block-entity ValueInput overlay\n        run: python3 scripts/apply_p1_relocationutil_blockentity_value_input_26_2.py upstream-vs2\n\n      - name: Show and validate port delta",
+              "      - name: Apply traceable P1 RelocationUtil block-entity ValueInput overlay\n        run: python3 scripts/apply_p1_relocationutil_blockentity_value_input_26_2.py upstream-vs2\n\n      - name: Apply traceable P1 shipyard teleport API overlay\n        run: python3 scripts/apply_p1_shipyard_teleport_api_26_2.py upstream-vs2\n\n      - name: Apply traceable P1 shipyard teleport ServerPlayer API overlay\n        run: python3 scripts/apply_p1_shipyard_teleport_player_api_26_2.py upstream-vs2\n\n      - name: Show and validate port delta",
+              'canonical overlay-step insertion',
+          )
+          replace_once(
+              compile_path,
+              "          git -C upstream-vs2 diff -- common/src/main/kotlin/org/valkyrienskies/mod/util/RelocationUtil.kt\n",
+              "          git -C upstream-vs2 diff -- common/src/main/kotlin/org/valkyrienskies/mod/util/RelocationUtil.kt\n          git -C upstream-vs2 diff -- common/src/main/java/org/valkyrienskies/mod/mixin/feature/shipyard_entities/MixinEntity.java common/src/main/java/org/valkyrienskies/mod/mixin/server/command/level/MixinServerPlayer.java common/src/main/java/org/valkyrienskies/mod/mixin/server/network/MixinServerGamePacketListenerImpl.java\n",
+              'canonical teleport delta validation insertion',
+          )
+
+          old_proof = """          if any('shipyard_teleport' in c for c in commands):\n              raise SystemExit('fail-closed: teleport overlay unexpectedly canonicalized before proof')\n          for command in commands:\n              print('+', command)\n              subprocess.run(shlex.split(command), check=True)\n"""
+          new_proof = """          teleport = [c for c in commands if 'shipyard_teleport' in c]\n          if len(teleport) not in (0, 2):\n              raise SystemExit(f'fail-closed: expected zero or two canonical teleport overlays, found {teleport}')\n          for command in commands:\n              if 'shipyard_teleport' in command:\n                  continue\n              print('+', command)\n              subprocess.run(shlex.split(command), check=True)\n"""
+          replace_once(proof_path, old_proof, new_proof, 'proof canonical-overlay exclusion update')
+
+          if not retired_path.is_file():
+              raise SystemExit('fail-closed: superseded basename proof workflow missing')
+          retired_path.unlink()
+
+          final_compile = compile_path.read_text(encoding='utf-8')
+          if final_compile.count('python3 scripts/apply_p1_shipyard_teleport_api_26_2.py upstream-vs2') != 1:
+              raise SystemExit('fail-closed: primary teleport overlay canonical count mismatch')
+          if final_compile.count('python3 scripts/apply_p1_shipyard_teleport_player_api_26_2.py upstream-vs2') != 1:
+              raise SystemExit('fail-closed: ServerPlayer teleport overlay canonical count mismatch')
+          for target in (
+              'common/src/main/java/org/valkyrienskies/mod/mixin/feature/shipyard_entities/MixinEntity.java',
+              'common/src/main/java/org/valkyrienskies/mod/mixin/server/command/level/MixinServerPlayer.java',
+              'common/src/main/java/org/valkyrienskies/mod/mixin/server/network/MixinServerGamePacketListenerImpl.java',
+          ):
+              if final_compile.count(target) != 1:
+                  raise SystemExit(f'fail-closed: canonical delta path count mismatch for {target}')
+          PY
+
+          git diff --check
+          git diff -- .github/workflows/p1-compile.yml .github/workflows/p1-shipyard-teleport-player-api-proof.yml .github/workflows/p1-shipyard-teleport-api-proof.yml
+
+      - name: Commit canonicalization
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'apm23'
+          git config user.email '80390905+apm23@users.noreply.github.com'
+          git add .github/workflows/p1-compile.yml .github/workflows/p1-shipyard-teleport-player-api-proof.yml
+          git add -u .github/workflows/p1-shipyard-teleport-api-proof.yml
+          git commit -m 'ci: canonicalize green shipyard teleport overlays'
+          git push origin HEAD:main
