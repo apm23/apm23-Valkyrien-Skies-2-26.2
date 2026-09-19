@@ -45,6 +45,7 @@ on:
       - 'scripts/apply_p1_vsentityhandlerdataloader_reload_listener_26_2.py'
       - 'scripts/apply_p1_vsgamepackets_identifier_26_2.py'
       - 'scripts/apply_p1_vsgameutils_resourcekey_identifier_26_2.py'
+      - 'scripts/apply_p1_vsgameutils_height_chunkkey_26_2.py'
       - '.github/workflows/p1-compile.yml'
       - 'upstream-vs2'
       - 'BASELINE_LOCK.json'
@@ -194,6 +195,9 @@ jobs:
 
       - name: Apply traceable P1 VSGameUtils ResourceKey Identifier overlay
         run: python3 scripts/apply_p1_vsgameutils_resourcekey_identifier_26_2.py upstream-vs2
+
+      - name: Apply traceable P1 VSGameUtils build-height and chunk-key overlay
+        run: python3 scripts/apply_p1_vsgameutils_height_chunkkey_26_2.py upstream-vs2
 
       - name: Show and validate port delta
         shell: bash
