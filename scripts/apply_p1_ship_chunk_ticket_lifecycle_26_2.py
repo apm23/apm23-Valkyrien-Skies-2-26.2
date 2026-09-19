@@ -9,12 +9,12 @@ existing VS2 intent: keep exactly the requested shipyard chunk at FULL status,
 without turning it into a simulation/entity-ticking or disk-persisted ticket.
 
 This fail-closed overlay changes only the ticket API boundary shared by
-VSTicketType, ChunkManagement, and ShipAssembler.  It also replaces the Kotlin
-property assignment to ChunkAccess.isUnsaved with the explicit current
-setUnsaved(false) call at the existing ship-delete cleanup site.  It does not
-change ticket radius/lifetime intent, ship deletion checks, assembly ordering,
-ship lifecycle, transforms, physics, collision, entity dragging, rendering,
-networking/gameplay authority, or camera behavior.
+VSTicketType, ChunkManagement, and ShipAssembler.  At the existing ship-delete
+cleanup site, the removed writable isUnsaved property is bridged to current
+ChunkAccess.tryMarkSaved(), which clears the dirty marker if present.  It does
+not change ticket radius/lifetime intent, ship deletion checks, assembly
+ordering, ship lifecycle, transforms, physics, collision, entity dragging,
+rendering, networking/gameplay authority, or camera behavior.
 """
 from pathlib import Path
 import sys
@@ -49,7 +49,7 @@ chunk_add_new = "level.chunkSource.addTicketWithRadius(VSTicketType.SHIP_CHUNK, 
 chunk_remove_old = "level.chunkSource.removeRegionTicket(VSTicketType.SHIP_CHUNK, chunkPos, 0, chunkPos)"
 chunk_remove_new = "level.chunkSource.removeTicketWithRadius(VSTicketType.SHIP_CHUNK, chunkPos, 0)"
 chunk_dirty_old = "chunk?.isUnsaved = false"
-chunk_dirty_new = "chunk?.setUnsaved(false)"
+chunk_dirty_new = "chunk?.tryMarkSaved()"
 for old, expected, label in (
     (chunk_add_old, 1, "ChunkManagement addRegionTicket"),
     (chunk_remove_old, 1, "ChunkManagement removeRegionTicket"),
@@ -99,8 +99,8 @@ if ship.count("addTicketWithRadius(") != 1:
     raise SystemExit("ShipAssembler current radius-ticket add was not installed exactly once")
 if chunk.count("addTicketWithRadius(") != 1 or chunk.count("removeTicketWithRadius(") != 1:
     raise SystemExit("ChunkManagement current add/remove radius-ticket pair was not installed exactly once")
-if chunk.count("setUnsaved(false)") != 1:
-    raise SystemExit("ChunkManagement explicit clean mark was not installed exactly once")
+if chunk.count("tryMarkSaved()") != 1:
+    raise SystemExit("ChunkManagement current clean mark was not installed exactly once")
 if ticket.count("TicketType(0L, TicketType.FLAG_LOADING)") != 1:
     raise SystemExit("VSTicketType permanent load-only declaration was not installed exactly once")
 if "FLAG_SIMULATION" in ticket:
