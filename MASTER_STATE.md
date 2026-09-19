@@ -22,90 +22,150 @@ GitHub code is the implementation source of truth. This file is the durable cont
 
 The upstream baseline remains pinned. Minecraft 26.2 changes are applied by explicit fail-closed overlays so every adaptation remains traceable to upstream VS2 source.
 
-## Current reconciliation — optional Create deployer helper isolated from standalone P1
+## Current reconciliation — entity local-authority/interpolation boundary proven and frozen
 
-### Exact classification
+### Source semantic unit
 
-Pinned upstream file:
-`common/src/main/java/org/valkyrienskies/mod/compat/create/DeployerScrollOptionSlot.kt`
+Pinned upstream files inspected together:
+- `common/src/main/kotlin/org/valkyrienskies/mod/common/networking/VSGamePackets.kt`
+- `common/src/main/kotlin/org/valkyrienskies/mod/common/util/EntityDragger.kt`
 
-The exact pinned source tree proves this is a narrowly isolated optional Create compatibility helper for `DirectionalExtenderScrollOptionSlot`:
-- exact common Kotlin source contains no caller/reference to `DeployerScrollOptionSlot` outside the helper itself;
-- exact common Java source contains no caller/reference to that symbol outside the helper itself;
-- exact `valkyrienskies-common.mixins.json` contains no direct `mod_compat.create.*` registration and no `DeployerScrollOptionSlot` registration;
-- the helper is physically located under `common/src/main/java` even though its language is Kotlin;
-- standalone real-VS2 P1 has no proven dependency on this helper, while full Create integration is contractually deferred to P3 after standalone P2 is frozen green.
+Exact previous standalone Kotlin residue from corrected optional-Create probe `35454908850` was only:
+- `VSGamePackets.kt:78`: removed `Entity.isControlledByLocalInstance`;
+- `VSGamePackets.kt:132`: removed `Entity.lerpTo`;
+- `VSGamePackets.kt:142`: removed `Entity.isControlledByLocalInstance`;
+- `EntityDragger.kt:148`: removed `Entity.isControlledByLocalInstance`.
 
-Therefore the safe P1 action is to omit only this unreferenced helper from standalone compilation, not to port Create internals or begin the Create bridge early. The upstream source file remains present in the pinned submodule and must be revisited legitimately in P3.
+Pinned VS2 semantics at these sites are authority-sensitive and remain binding:
+- incoming entity ship-motion / mob-rotation corrections must not override a locally authoritative entity;
+- the existing real VS2 ship-relative -> world transforms remain unchanged;
+- `IEntityDraggingInformationProvider` / `draggingInformation` remains the VS2 dragging/interpolation state authority;
+- `entity.draggingInformation.lerpSteps = 3` remains unchanged;
+- `EntityDragger` retains the upstream split between remote non-player interpolation and the existing local/player drag behavior;
+- existing upstream `setPos`, `setDeltaMovement`, `push`, teleport-related code, and bounding-box writes are not replaced or augmented by this bridge.
 
-### Failed first exclusion hypothesis — locked negative evidence
+Exact Minecraft 26.2 API/source inspection established the minimal vanilla boundary:
+- public current local-instance authority predicate: `Entity.isLocalInstanceAuthoritative()`;
+- `isLocalClientAuthoritative()` exists but is protected and is not used as an external VS2 helper call;
+- current public entity movement/interpolation entry: `moveOrInterpolateTo(Vec3 position, float yRot, float xRot)`;
+- this keeps interpolation behavior inside current vanilla entity/interpolation handling rather than inventing a VS2-side teleport chase or synthetic carry system.
 
-- Initial overlay commit: `3e5bb792230abba0eeff4e7a0277ba3529341ade`.
-- First probe HEAD: `3bcbf90c75dc4d02448cfdb4590cc9c9674e0ed6`.
-- Exact-head P0: run `35454717378`, job `105927859141`, success.
-- Probe run: `35454717409`, job `105927859438`, completed `failure`.
-- Artifact: `p1-deployer-exclusion-probe-3bcbf90c75dc4d02448cfdb4590cc9c9674e0ed6`, ID `10588041201`, size `4402` bytes, ZIP SHA-256 `86f2e0472c36dee58c7c3434b8e0dbd0f18fa5cdcddc9c99c080aabf6b2c8ece`.
-- Failed hypothesis: adding the exact helper exclusion under `sourceSets.main.kotlin` would filter the `.kt` file.
-- Exact result: all `DeployerScrollOptionSlot.kt` diagnostics remained unchanged because the file is physically owned by the `src/main/java` source root.
+### Proven implementation
 
-**Lock:** do not replay the `kotlin { exclude "org/valkyrienskies/mod/compat/create/DeployerScrollOptionSlot.kt" }` hypothesis absent direct new source-layout evidence.
+- Fail-closed source overlay: `b7e583af13598b6ddcc583380872f578b8a40bb8` (`P1: add entity authority interpolation overlay`).
+- Exact proof harness HEAD: `9f2719be070e79b91b7f47ceddaec61d7f5cff40` (`ci: probe entity authority interpolation bridge`).
+- Exact-head P0: run `35455551709`, job `105930062007`, completed `success`; exact pinned upstream identity remained unchanged.
+- Authority probe: run `35455551701`, job `105930062029`, completed `failure` only after Kotlin became compiler-clean and `:common:compileJava` exposed the next independent Java API/mixin drift.
+- Diagnostic artifact: `p1-entity-authority-probe-9f2719be070e79b91b7f47ceddaec61d7f5cff40`, artifact ID `10588037512`, size `21648` bytes, ZIP SHA-256 `c6d6557bababe5543957c846ffcd85623897bec849bae4291d93bb50284992a8`.
+- Exact artifact log timeline: `:common:compileKotlin` runs successfully; `:common:compileJava` is then reached and fails with javac diagnostics.
+- Exact artifact log contains **zero** occurrences of `isControlledByLocalInstance` and zero unresolved `lerpTo` diagnostics.
 
-### Proven corrected P1 exclusion
+The bridge is exactly:
+- `entity.isControlledByLocalInstance` -> `entity.isLocalInstanceAuthoritative()` at the two packet sites and one dragging site;
+- the old non-living packet call `entity.lerpTo(worldPosition..., yaw, pitch, 3)` -> current vanilla `entity.moveOrInterpolateTo(Vec3(worldPosition...), yaw, pitch)`;
+- the existing VS2 `draggingInformation.lerpSteps = 3` remains intact.
 
-- Corrected implementation HEAD: `cd2434e69caf28e12560bf4444fc220a3023e40b` (`P1: exclude deployer helper from actual source root`).
-- Exact-head P0: run `35454908696`, job `105928361982`, completed `success`; exact upstream identity remained pinned.
-- Corrected probe: run `35454908850`, job `105928362519`, completed `failure` only because the independent authority-sensitive Kotlin cluster remains.
-- Artifact: `p1-deployer-exclusion-probe-cd2434e69caf28e12560bf4444fc220a3023e40b`, artifact ID `10588156201`, size `3978` bytes, ZIP SHA-256 `6d1516425d4c28755bffea02de77d8a5622f576fbf449b2573bfcc7aabfa45e6`.
-- Proven adaptation: exactly one source-set line is added under `sourceSets.main.java`:
-  `exclude "org/valkyrienskies/mod/compat/create/DeployerScrollOptionSlot.kt"`.
-- The fail-closed overlay verifies the helper still matches the pinned role, scans common Java/Kotlin for any caller before exclusion, rejects any matching direct runtime/mixin registration, and refuses broad `compat/create/**` exclusion.
-- Exact run `35454908850` contains **zero compiler diagnostic** for `DeployerScrollOptionSlot.kt`, its Create intermediary `class_*` signatures, `DirectionalExtenderScrollOptionSlot`, or the former Direction-normal error.
-- Exact remaining Kotlin diagnostics are only:
-  - `VSGamePackets.kt:78`: `isControlledByLocalInstance` unresolved;
-  - `VSGamePackets.kt:132`: `lerpTo` unresolved;
-  - `VSGamePackets.kt:142`: `isControlledByLocalInstance` unresolved;
-  - `EntityDragger.kt:148`: `isControlledByLocalInstance` unresolved.
+The overlay is fail-closed on exact call counts and semantic anchors. It also verifies that counts of the existing authority-sensitive operations `setPos(`, `setDeltaMovement(`, `.push(`, `teleport`, and `boundingBox =` are unchanged by this adaptation.
 
-### Proof boundary
+### Authority proof boundary
 
-This proof authorizes only the exact one-file standalone-P1 compile exclusion. It does **not** claim Create runtime compatibility, does not begin P3, does not remove or rewrite upstream Create compatibility source, and does not alter ship-space, physics, collision, networking, rendering, entity dragging, player/camera, or gameplay authority. No Create/SNR/Copycats dependency is allowed to mask standalone VS2 failures.
+This proof is **only** the current vanilla local-authority/interpolation API bridge into existing VS2 packet/entity-dragging architecture. It does not authorize:
+- per-tick teleport or `setPos` chase;
+- synthetic carry velocity/inertia;
+- fake gravity;
+- manual floor/wall/ceiling clamps;
+- camera forcing/counter-rotation;
+- duplicate movement authority;
+- replacing real VS2 entity-dragging/reference-space semantics.
 
-No video was recorded because this is compile/source-classification proof, not closure-ready runtime evidence.
+No video was recorded because this is compile/API proof, not closure-ready runtime evidence.
 
-## Immediately preceding frozen proof — optional Sable Companion compile boundary
+## Newly exposed Java compile frontier
 
-- Probe overlay: `58bd44154c20f141969b758b8e35372d982ac358`.
-- Exact proof HEAD: `c0c1efb790c31f90c8916121f7c4a06864a58b7f`.
-- P0: run `35454031928`, job `105926053661`, success.
-- Sable probe: run `35454031987`, job `105926053824`; failure only on then-independent Create and authority clusters.
-- Artifact `p1-sable-probe-c0c1efb790c31f90c8916121f7c4a06864a58b7f`, ID `10587876899`, size `4376`, SHA-256 `b672943267368cd4adb06cc686808a2c2c6c79680dae69febe1447721c494f09`.
-- `SableCompat.kt`, `dev.ryanhcode`, `SableCompanion`, `projectOutOfSubLevel`, and `isInPlotGrid` are absent from probe diagnostics.
-- Proven compile boundary uses only `compileOnly("dev.ryanhcode.sable-companion:sable-companion-common-1.21.1:1.6.0")`.
-- This is compile/API proof only. It is not permission to bundle or run a Minecraft-1.21.1 Sable/Companion runtime on 26.2, and no fake local companion/stub is allowed.
+With the Kotlin authority blocker removed, exact probe `35455551701` reaches `:common:compileJava` for the first time in this chain and javac stops after its 100-error diagnostic cap. This is a new evidence frontier; absence of diagnostics beyond the cap is not proof of compatibility.
+
+The first exact Java diagnostics reveal multiple **independent** semantic clusters. They must not be patched together:
+
+1. **Entity/render dispatcher lifecycle and renderer-state API**
+   - `MixinEntityRenderDispatcher.java`: `EntityRenderer<T>` now requires two type arguments and old `MultiBufferSource` references are unresolved;
+   - `MixinEntityRenderer.java`: old `MultiBufferSource`-based render hook surface is unresolved;
+   - `MixinBlockEntityRenderDispatcher.java`: `BlockEntityRenderer<E>` now requires two type arguments;
+   - other debug/pathfinding render mixins also contain old `MultiBufferSource` surfaces.
+   The earlier frozen Kotlin renderer-handler proof does **not** prove these Java mixin injection lifecycles.
+
+2. **Ticket / distance-manager API drift**
+   - `DistanceManagerAccessor.java`: `Ticket<?>` is invalid because current `Ticket` is non-generic.
+   This is separate from the already-frozen ship-ticket lifecycle overlay; do not edit the frozen ticket add/remove semantics merely because this accessor type drift exists.
+
+3. **Shipyard-entity teleport API drift**
+   - `MixinEntity.java`, `MixinServerPlayer.java`, and `MixinServerGamePacketListenerImpl.java` reference removed/relocated `RelativeMovement` and old teleport signatures.
+   This is authority-sensitive and must be inspected as a semantic unit before any edit.
+
+4. **AI/entity package and nested-goal drift**
+   - bee goal/entity mixins cannot resolve old `net.minecraft.world.entity.animal.Bee` / nested goal locations;
+   - villager behavior mixins also expose changed symbols.
+
+5. **Client/render/HUD/shader vocabulary and lifecycle drift**
+   - examples in the first 100 diagnostics include old `ResourceLocation`, `GuiGraphics`, `LightTexture`, `MultiBufferSource`, and shader `Uniform` surfaces.
+   These are not permission for blind package-name replacement; exact current lifecycle/signature evidence is required.
+
+6. **Chunk/worldgen/server storage/API drift**
+   - examples include `ChunkSerializer`, `GenerationStep.Carving`, `ChunkTaskPriorityQueueSorter`, `DimensionDataStorage`, and `BlockUtil` changes.
+
+7. **Optional compatibility/dependency residue**
+   - old Create 1.20.1 compile-only classfiles and ETF compile-only classfiles produce intermediary-class attachment failures in javac;
+   - Sable Java mixins still reference runtime Sable classes not supplied by the already-frozen lightweight Companion compile boundary.
+   These must not be used to pull Create/Sable runtime architecture into standalone P1.
+
+The list above is classification of the first capped javac output, not an exhaustive inventory of all remaining Java work.
+
+## Immediately preceding frozen proof — optional Create deployer helper isolated from standalone P1
+
+- Corrected implementation: `cd2434e69caf28e12560bf4444fc220a3023e40b`.
+- P0: `35454908696` / job `105928361982`, success.
+- Corrected probe: `35454908850` / job `105928362519`.
+- Artifact `10588156201`, SHA-256 `6d1516425d4c28755bffea02de77d8a5622f576fbf449b2573bfcc7aabfa45e6`.
+- Exactly one unreferenced helper is excluded under `sourceSets.main.java`: `org/valkyrienskies/mod/compat/create/DeployerScrollOptionSlot.kt`.
+- The upstream file remains present and must be revisited legitimately in P3.
+- This does not prove Create runtime compatibility or authorize P3.
+
+Failed hypothesis locked as negative evidence:
+- probe HEAD `3bcbf90c75dc4d02448cfdb4590cc9c9674e0ed6`, run `35454717409`, artifact `10588041201`, SHA-256 `86f2e0472c36dee58c7c3434b8e0dbd0f18fa5cdcddc9c99c080aabf6b2c8ece`;
+- putting the exact helper exclusion in `sourceSets.main.kotlin` does not filter a `.kt` file physically owned by `src/main/java`; do not replay absent direct new source-layout evidence.
+
+## Earlier frozen proof — optional Sable Companion compile boundary
+
+- Overlay `58bd44154c20f141969b758b8e35372d982ac358`.
+- Proof HEAD `c0c1efb790c31f90c8916121f7c4a06864a58b7f`.
+- P0 `35454031928` / job `105926053661`, success.
+- Probe `35454031987` / job `105926053824`.
+- Artifact `10587876899`, SHA-256 `b672943267368cd4adb06cc686808a2c2c6c79680dae69febe1447721c494f09`.
+- Proven compile-only boundary: `dev.ryanhcode.sable-companion:sable-companion-common-1.21.1:1.6.0`.
+- No claim exists that a Minecraft-1.21.1 Sable/Companion runtime works on 26.2; no fake local companion/stub is allowed.
 
 ## Earlier frozen proof — renderer handler render-state boundary
 
-- Source overlay: `6a13ff6d1f730678d9dd793f575887c08792b161`.
-- Exact proof HEAD: `6aa93ba02e830fa432f0b6e00185ea533227e967`.
-- P0: `35452733152` / job `105922599182`, success.
-- Renderer-state probe: `35452733162` / job `105922599245`; artifact `10587053238`, SHA-256 `ae32e69c0556e903e813e317b6cca848acc0a4554ca0014ef1231fe51b7accd2`.
-- Proven bridge: upstream real VS2 handler contract now uses `EntityRenderer<T,S>`, `S : EntityRenderState`, and `getRenderOffset(renderState)` while preserving upstream VS2 render-transform math and authority.
-- `MixinEntityRenderDispatcher` is explicitly **not** proven. The normal Java compile stage has not yet been reached because Kotlin blockers still stop first. Resume dispatcher work only from exact Java diagnostics or an equivalent isolated exact Java proof.
+- Overlay `6a13ff6d1f730678d9dd793f575887c08792b161`.
+- Proof HEAD `6aa93ba02e830fa432f0b6e00185ea533227e967`.
+- P0 `35452733152` / job `105922599182`, success.
+- Probe `35452733162` / job `105922599245`; artifact `10587053238`, SHA-256 `ae32e69c0556e903e813e317b6cca848acc0a4554ca0014ef1231fe51b7accd2`.
+- Frozen bridge: upstream real VS2 handler contract uses `EntityRenderer<T,S>`, `S : EntityRenderState`, and `getRenderOffset(renderState)` while preserving VS2 render-transform math and authority.
+- It explicitly did not prove Java dispatcher/mixin lifecycle. Exact Java diagnostics are now finally available from run `35455551701`.
 
 ## Earlier frozen proof — ShipSavedData persistence boundary
 
-- Proven implementation: `f2b3ec68e0d2146bb8b443da76a62a4766e01fce`.
+- Implementation `f2b3ec68e0d2146bb8b443da76a62a4766e01fce`.
 - P0 `35451366274` / job `105918982071`, success.
 - P1 `35451366140` / job `105918981784`; artifact `10586956459`, SHA-256 `7921227c49729f5b23f8d54d19204ee5b1965c38506b59ad6da9ba3e8b4b234f`.
-- Frozen semantics: overworld `SavedDataStorage` remains the single persistence authority; current `SavedDataType<ShipSavedData>` + `CompoundTag.CODEC.xmap(::load, ShipSavedData::saveToTag)` replaces only obsolete SavedData API boundaries.
-- Legacy 1.21.1 root-path `vs_ship_data.dat` automatic file-location migration is not proven and must not be guessed.
+- Overworld `SavedDataStorage` remains the single persistence authority; current `SavedDataType + Codec` replaces only obsolete API boundaries.
+- Legacy 1.21.1 root-path `vs_ship_data.dat` automatic migration is not proven and must not be guessed.
 
 ## Earlier frozen proof — real VS2 ship chunk-ticket lifecycle
 
-- Proven implementation: `65a42e782de192f27d5bf720691d6e08f395a719`.
+- Implementation `65a42e782de192f27d5bf720691d6e08f395a719`.
 - P0 `35450402081` / job `105916444806`, success.
 - P1 `35450402031` / job `105916444686`; artifact `10585479315`, SHA-256 `4443fd49b99f2fed5b44ee21529b543c503b4ff8494d6ca45b06572aaf9ceede`.
-- Frozen semantics: load-only `TicketType(0L, TicketType.FLAG_LOADING)`, radius-zero explicit add/remove lifecycle, distance-manager flush/order preserved, ship-alive removal guard preserved, and existing deletion clean-marker adapted to `tryMarkSaved()`.
+- Frozen semantics: load-only radius-zero explicit ticket add/remove lifecycle, distance-manager flush/order, ship-alive removal guard, and `tryMarkSaved()` deletion cleanup.
 
 ## Frozen proof ancestry / negative evidence
 
@@ -142,14 +202,12 @@ Key frozen implementation ancestry includes:
 - `ac739bbf0c1598087a6ae9b158117c4764ce3079`: DimensionParametersResolver typed reload listener.
 - `2af9d9ba1d48f8a0baf825398d3d441b1219f19d`: VSEntityHandlerDataLoader typed reload listener.
 - `9d82234aa769a6a0eece07f52e7d5ace2d334aab`: VSGamePackets Identifier vocabulary.
-- `4a657f4625f69b26b9ccef9f7235cee271325d98`, `19d15fccf7345fc80f91800356a105d3595db87c`, `a40316e93a61594018fd6f8f9d4b913d7fb2eb80`, `563cbcba7bb1c92ca27820ef785d11bb88872524`, `75a434c728f1ca020b550882967085ccc53d5c3b`: earlier identifier/reload/minY/chunk-key proofs.
 
 Locked negative evidence includes:
-- `3bcbf90c75dc4d02448cfdb4590cc9c9674e0ed6` / run `35454717409`: putting the exact `DeployerScrollOptionSlot.kt` exclusion in the Kotlin source-set block does not filter the file under `src/main/java`; do not replay.
+- `3bcbf90c75dc4d02448cfdb4590cc9c9674e0ed6` / run `35454717409`: wrong Kotlin-source-set exclusion for `DeployerScrollOptionSlot.kt`; do not replay.
 - `a72aaef8eca34a352ef949eeb57e6bbcda81171f`: `setUnsaved(false)` is invalid current API; do not replay absent direct new evidence.
 - VSKeyBindings failed probes `e108526cbd728454c175c76bffc610d4e074da49`, `fcc65187d79c4b546883875da3597345db1e01cd`, `e9a3efd58acb2af9539628eb2875e6cb829c3cec`, `fb3c7e65a4c2089f6fa695114734d14836bde1d3` remain negative evidence.
-- Do not interpret the Sable compile-only proof as permission to bundle/run its 1.21.1 runtime artifact on 26.2.
-- Any retired `apm23/VS2-Create_Interactive` workaround is historical warning evidence only and is forbidden as implementation source.
+- retired `apm23/VS2-Create_Interactive` workarounds remain historical warning evidence only and are forbidden as implementation source.
 
 ## Target runtime baseline
 
@@ -160,58 +218,45 @@ Locked negative evidence includes:
 - Create Fly `6.0.9-1`, SHA-256 `d9c6cb6116d5caa1174a289ecd7d3cdd463ccef6e8db1249ab0bcfcd8c935870`
 - Steam 'n' Rails embedded `SNR.FLY-STABLE-1.2.2+fabric-mc26.2`, SHA-256 `33c87d5a7da0d468d3b6c0e99f726b835c63b693e7447fdaeca5e1f204caab84`
 - Copycats embedded `3.0.7-createfly+mc.26.2-v1.14`, SHA-256 `1922db10a49dfab42c4c272fbaee41cdc149287cd08ca84148b497e598029858`
-- Exact bytes and metadata rules are locked by `BASELINE_LOCK.json`; filenames are not authoritative when embedded metadata/hash disagree.
+- `BASELINE_LOCK.json` is authoritative over filenames when metadata/hash disagree.
 
 ## Project state
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
-- active_blocker: `MINECRAFT_26_2_SOURCE_API_DRIFT`
-- active_proof_head: `cd2434e69caf28e12560bf4444fc220a3023e40b; exact one-file DeployerScrollOptionSlot standalone-P1 exclusion compiler-proven; Create integration remains deferred to P3`
-- active_proof_run: `P0 35454908696 / job 105928361982 success; corrected exclusion probe 35454908850 / job 105928362519 failure only on authority-sensitive VSGamePackets/EntityDragger Kotlin residue; Deployer/Create diagnostics absent`
-- active_hypothesis: `none selected; after this ledger-only HEAD passes exact-head P0, inspect VSGamePackets + EntityDragger together as one authority semantic unit against exact Minecraft 26.2 ownership/control/interpolation semantics`
+- active_blocker: `MINECRAFT_26_2_JAVA_API_MIXIN_DRIFT`
+- active_proof_head: `9f2719be070e79b91b7f47ceddaec61d7f5cff40; entity local-authority/interpolation API boundary compiler-clean; common Java frontier now reached`
+- active_proof_run: `P0 35455551709 / job 105930062007 success; authority probe 35455551701 / job 105930062029 reaches common compileJava; artifact 10588037512; old authority diagnostics absent`
+- active_hypothesis: `none selected after authority/interpolation freeze; after this ledger-only HEAD passes exact-head P0, choose exactly one newly exposed Java semantic cluster`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 - video_status: `NOT_APPLICABLE_YET`
 
-## Remaining compiler area from exact corrected probe `35454908850`
-
-The Kotlin compiler residue is now one authority-sensitive semantic cluster only:
-- `VSGamePackets.kt`: removed/changed `Entity.isControlledByLocalInstance` at two sites and removed/changed `lerpTo` at one site;
-- `EntityDragger.kt`: removed/changed `isControlledByLocalInstance` at one site.
-
-This cluster controls client/server entity ownership and interpolation and is therefore authority-sensitive. Never replace the missing APIs with guessed local-player ownership, `setPos`, per-tick teleport/chase, synthetic carry velocity/inertia, fake gravity, manual floor/wall/ceiling clamps, or camera forcing.
-
-Separately, `MixinEntityRenderDispatcher` remains an unresolved Java renderer-lifecycle continuation because normal `:common:compileJava` has still not been reached. Its absence from diagnostics is not proof of compatibility.
-
 ## Engineering locks
 
-- First-failure classification must stay factual: upstream/provenance, build, mappings/API, loader, mixin, VSCore/native, networking/serialization, storage, transforms, rendering, collision, entity/player/camera, Create bridge, SNR/Copycats, CI/harness, or final packaging.
-- Make one evidence-backed root change at a time.
-- Standalone real VS2 P1 must initialize before any Create bridge work.
-- P2/M1 requires real VS2 ship lifecycle, translation+rotation, ship-space, collision, standing/walking, jump-airborne-natural landing, floor/walls/ceiling, free camera, entity dragging/reference-space, rendering, and client/server sync. No floor-only or fake-carry success counts.
-- Frozen optional Create proof authorizes only the exact one-file standalone-P1 compile exclusion. It does not authorize broad Create exclusion, Create runtime adaptation, or P3 architecture.
-- Frozen Sable proof authorizes only compile-time use of the official Companion API artifact. It does not authorize runtime bundling of a 1.21.1 artifact on 26.2 or a fake local replacement.
-- Frozen renderer-handler proof authorizes only the exact `EntityRenderer<T,S>` / `EntityRenderState` contract bridge and render-offset lookup. It does not authorize a guessed dispatcher lifecycle, custom renderer/reference frame, or camera workaround.
-- Frozen ticket proof authorizes only the exact load-only radius-zero add/remove lifecycle and `tryMarkSaved()` cleanup. It does not authorize force-loading redesign.
-- Frozen ShipSavedData proof authorizes only the `SavedDataType + Codec` API bridge and matching server acquisition change. It does not authorize alternate storage authority, world-file migration guesses, payload redesign, or manual save management.
-- Authority-sensitive networking/entity dragging requires direct current API semantics before edits.
-- Do not use Create/SNR/Copycats as a P1 crutch.
-- Do not record ordinary compile/debug/hypothesis-test video.
-- `FINAL_READY` is forbidden from CI alone and requires exact-final-JAR real-user runtime acceptance.
+- First-failure classification stays factual: provenance, build/mappings/API/loader/mixin/VSCore-native/networking/storage/transforms/rendering/collision/entity-player-camera/Create/SNR-Copycats/CI/final packaging.
+- Make one evidence-backed root/semantic change at a time.
+- Standalone real VS2 P1 must initialize before Create integration.
+- Frozen authority bridge may not be expanded into a custom movement/carry system.
+- Frozen renderer-handler proof does not authorize guessed Java dispatcher injection targets.
+- Frozen Sable proof is compile-only and does not authorize bundling a 1.21.1 Sable runtime on 26.2.
+- Frozen Create helper exclusion is P1 compile isolation only, not P3.
+- Frozen ticket proof authorizes only its exact ticket lifecycle; `DistanceManagerAccessor` generic drift is a separate API issue.
+- Frozen ShipSavedData proof authorizes only its `SavedDataType + Codec` bridge and matching server acquisition change.
+- `FINAL_READY` is forbidden from CI alone.
+- Video is closure-only and must not be used for ordinary compile/debug hypothesis testing.
 
 ## next_safe_action
 
-1. Preserve corrected optional-Create implementation `cd2434e69caf28e12560bf4444fc220a3023e40b`, its exact proof run/artifact, and the failed Kotlin-sourceSet hypothesis as locked negative evidence. Preserve all earlier frozen-green/negative evidence.
+1. Preserve authority implementation `b7e583af13598b6ddcc583380872f578b8a40bb8`, proof HEAD `9f2719be070e79b91b7f47ceddaec61d7f5cff40`, and every prior frozen-green / negative-evidence boundary.
 2. This ledger-only freeze commit is **not** source proof. Require exact-head P0 provenance success for the resulting ledger HEAD before any further source mutation.
-3. After that gate, inspect pinned upstream `VSGamePackets.kt` and `EntityDragger.kt` together as **one authority semantic unit**, plus the exact Minecraft 26.2 entity ownership/client-control/interpolation APIs that replace the old `isControlledByLocalInstance` and `lerpTo` semantics.
-4. Before editing, map each old call to its upstream role: who owns movement authority, when a locally controlled entity should be excluded/included, and whether packet correction is interpolation or direct authoritative relocation. Do not infer semantics from method names alone.
-5. Any adaptation must connect changed 26.2 APIs into the existing upstream VS2 networking/entity-dragging architecture. Do **not** introduce `setPos`/teleport chase, guessed local-player checks, synthetic carry velocity/inertia, fake gravity, manual collision clamps, camera forcing, or duplicate authority.
-6. If this authority cluster becomes Kotlin-clean, use the newly reachable compiler stage to expose exact common-Java diagnostics. Only then resume `MixinEntityRenderDispatcher` from direct Java evidence unless another earlier standalone-P1 blocker appears first.
-7. Remain in standalone P1. Do not begin Create bridge/P3, do not use SNR/Copycats to hide failures, and do not record ordinary compile/debug video.
+3. After that gate, inspect exact artifact/log from authority probe `35455551701` and exact Minecraft 26.2 source/API for **one** newly exposed Java semantic cluster only. Do not patch multiple javac categories together merely because javac reported 100 errors.
+4. Preferred next bounded cluster: the Java entity-render dispatcher lifecycle centered on `MixinEntityRenderDispatcher.java` (and only files proven to be part of the same dispatcher/render-state semantic unit). Exact evidence now exists that `EntityRenderer` type parameters and the old `MultiBufferSource`/dispatcher lifecycle changed. Inspect current `EntityRenderDispatcher` extraction/submission lifecycle and exact mixin target descriptors before any edit. Do not guess package renames or preserve obsolete render callbacks by force.
+5. If exact inspection shows `MixinEntityRenderer.java` is inseparable from the same renderer-state lifecycle, handle it in the same explicitly bounded semantic unit; otherwise leave it for a later hypothesis.
+6. Do not combine renderer work with `DistanceManagerAccessor`, `RelativeMovement`/teleport, AI packages, chunk/worldgen, Sable, Create/ETF dependency cleanup, or other Java diagnostics.
+7. Remain standalone P1. Do not use Create/SNR/Copycats to hide real VS2 failures. Do not record ordinary compile/debug video.
 
-## Video and final gate
+## Video and milestone gate
 
-- Video is closure-only, never a debugging tool.
-- `M1_COMPLETE` is forbidden until the complete P2 real-VS2 runtime matrix is proven.
-- `FINAL_BUILD` / `FINAL_VERIFY` / `FINAL_READY` are not applicable during P1.
+- `M1_COMPLETE` is forbidden until full P2 real-VS2 runtime proof exists: real ship lifecycle, translation+rotation, ship-space, collision, standing/walking, jump-airborne-natural landing, floor/walls/ceiling, free stable camera/look, entity dragging/reference space, rendering, and client/server sync.
+- `FINAL_BUILD`, `FINAL_VERIFY`, and `FINAL_READY` are not applicable during P1.
 - `FINAL_READY` still requires exact-final-JAR real-user runtime acceptance.
