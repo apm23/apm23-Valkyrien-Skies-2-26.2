@@ -77,7 +77,7 @@ jobs:
           test "$(grep -Fc 'CompatUtil.INSTANCE.toSameSpaceAs(' "$target")" -eq 1
           test "$(grep -Fc 'CompatUtil.INSTANCE.getShipHeightmapHitAboveWorldHeight(' "$target")" -eq 1
           test "$(grep -Fc 'weatherSurfaceLookupPos.set(' "$target")" -eq 2
-          test "$(grep -Fc 'weatherSurfaceLookupPos.get();' "$target")" -eq 2
+          test "$(grep -Fc 'weatherSurfaceLookupPos.get();' "$target")" -eq 3
           test "$(grep -Fc 'CompatUtil.INSTANCE.getWorldHeightIncludingShips(' "$target")" -eq 1
 
       - name: Configure exhaustive javac diagnostics
