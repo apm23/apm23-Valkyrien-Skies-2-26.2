@@ -69,3 +69,12 @@ renderer_helper = Path(__file__).with_name("apply_p1_vanilla_renderer_26_2.py")
 if not renderer_helper.is_file():
     raise SystemExit(f"fail-closed: required vanilla renderer overlay helper missing: {renderer_helper}")
 subprocess.run([sys.executable, str(renderer_helper), str(root)], check=True)
+
+# Transport-only isolation for the two exact legacy Sable compatibility mixins. Upstream 2.4.12
+# declares legacy Sable core compile-only, and the locked standalone 26.2 P1 runtime does not
+# include it. The helper removes only those exact optional sources plus their one common mixin
+# registration; it supplies no stub or replacement runtime behavior.
+sable_helper = Path(__file__).with_name("apply_p1_legacy_sable_compileonly_isolation_26_2.py")
+if not sable_helper.is_file():
+    raise SystemExit(f"fail-closed: required legacy Sable isolation helper missing: {sable_helper}")
+subprocess.run([sys.executable, str(sable_helper), str(root)], check=True)
