@@ -190,4 +190,35 @@ replace_once(
     "",
 )
 
+# Exact-head run 35484450694 proved that the pinned optional Create Fabric 1.20.1 and
+# Entity Texture Features jars themselves are invalid on Minecraft 26.2's unobfuscated
+# compile classpath. EMF is the paired optional renderer-compat dependency from the same
+# pinned block. P1 is standalone VS2, so isolate only these optional compat surfaces here;
+# the upstream source remains untouched and Create integration is deferred to P3.
+replace_once(
+    "common/build.gradle",
+    '    compileOnly("curse.maven:entity-model-features-844662:5696901")\n',
+    "",
+)
+replace_once(
+    "common/build.gradle",
+    '    compileOnly("curse.maven:entity-texture-features-fabric-568563:5697084")\n',
+    "",
+)
+replace_once(
+    "common/build.gradle",
+    '''    compileOnly("com.simibubi.create:create-fabric:${create_fabric_version}")\n        { exclude group: 'com.github.AlphaMode', module: 'fakeconfigtoml' }\n''',
+    "",
+)
+replace_once(
+    "common/build.gradle",
+    '            exclude "org/valkyrienskies/mod/mixin/mod_compat/moonlight/**"\n',
+    '            exclude "org/valkyrienskies/mod/mixin/mod_compat/moonlight/**"\n            exclude "org/valkyrienskies/mod/compat/create/**"\n            exclude "org/valkyrienskies/mod/mixin/mod_compat/etf/**"\n',
+)
+replace_once(
+    "common/src/main/resources/valkyrienskies-common.mixins.json",
+    '    "mod_compat.etf.MixinBlockEntity",\n',
+    "",
+)
+
 print("P1_BUILD_BASELINE_APPLIED")
