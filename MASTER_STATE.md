@@ -26,41 +26,49 @@ Minecraft 26.2 changes are applied by explicit fail-closed overlays. Every core 
 
 ### Canonical implementation proof
 
-- canonical implementation/proof HEAD: `1860dc3863c2151320eb18f7ab9b161f5ae7f551` — `ci: chain LevelChunk blending data invariant overlay`.
-- semantic invariant helper: `1554f25f13258fd33e18fa8847f3bfb4bc6d6967` — `fix: guard LevelChunk blending data invariant on 26.2`.
-- exact-head P0 provenance run `35519773694`: **success**.
-- exact-head canonical P1 compile run `35519773646`: reached primary javac; compile-frontier failure only.
-- compile artifact `p1-compile-log-1860dc3863c2151320eb18f7ab9b161f5ae7f551`, ID `10607928437`, digest `sha256:404279544d035f211e688642b41e2a44b46b381592c3924e7801b49f374615ad`.
-- extracted `p1-compile.log`: **238067 bytes**, SHA-256 `3eac3e8b71d4ccd013e2e9f56d6b4b6953027bf253155f10e026116313fa6c24`.
-- authoritative first primary `:common:compileJava` pass: **51 errors across 7 Java source files**.
-- `MixinLevelChunk.java` is absent from that entire first primary error pass.
+- canonical implementation/proof HEAD: `dcf4a14e09c9c67ca7bf51ba3552027b2a7e80cf` — `ci: prove vanilla renderer section range frontier`.
+- exact-head P0 provenance run `35523910648`: **success**.
+- exact-head canonical P1 compile run `35523910705`: reached primary javac; compile-frontier failure only. All canonical overlays and delta validation completed successfully before javac.
+- compile artifact `p1-compile-log-dcf4a14e09c9c67ca7bf51ba3552027b2a7e80cf`, ID `10609192424`, digest `sha256:b1e3e41afbd070bdb1981ed3fd86eb0e48f2138cb3f1529fd856b449cb1823c7`.
+- extracted `p1-compile.log`: **229038 bytes**, SHA-256 `13cb3f9708773cb6ed2b3e98f34b2f557134b604faf5aa29be07abbf04be0668`.
+- authoritative first primary `:common:compileJava` pass: **47 errors across 5 Java source files**.
+- `MixinClientChunkCache.java`, `MixinLevelRendererVanilla.java`, `MixinLevelChunk.java`, and `LevelExtractorInvoker` are absent from the first primary error pass.
 - project state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`.
-- active blocker classification: `MINECRAFT_26_2_RENDERER_DIRTY_INVALIDATION_AUTHORITY`.
+- active blocker classification: `MINECRAFT_26_2_VIEWAREA_SHIP_RENDER_SECTION_LIFECYCLE`.
 - This is not P1 boot proof, not P2/M1 ship proof, and not runtime rendering proof.
 
-### Current primary Java frontier at `1860dc3863...`
+### Current primary Java frontier at `dcf4a14e...`
 
 1. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/immersive_portals/MixinMyBuiltChunkStorage.java` — 25
 2. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/vanilla_renderer/MixinViewAreaVanilla.java` — 14
-3. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/vanilla_renderer/MixinLevelRendererVanilla.java` — 3
-4. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/immersive_portals/MixinImmPtlChunkTracking.java` — 3
-5. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/optifine_vanilla/MixinLevelRenderer.java` — 3
-6. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/ftb_chunks/MixinClaimedChunkManagerImpl.java` — 2
-7. `common/src/main/java/org/valkyrienskies/mod/mixin/client/world/MixinClientChunkCache.java` — 1
+3. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/immersive_portals/MixinImmPtlChunkTracking.java` — 3
+4. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/optifine_vanilla/MixinLevelRenderer.java` — 3
+5. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/ftb_chunks/MixinClaimedChunkManagerImpl.java` — 2
 
-The first primary diagnostic is mandatory/core `MixinClientChunkCache.java:166`: the pinned VS2 ship-render section invalidation call `renderSection.setDirty(true)` no longer exists on Minecraft 26.2 `SectionRenderDispatcher.RenderSection`.
+Optional compat is not the next target merely because it appears first in javac ordering. Standalone P1 vanilla ship rendering remains mandatory; resolve `MixinViewAreaVanilla` in bounded units first.
 
-Optional compat is **not** the first target merely because it owns most remaining errors. Resolve the core `MixinClientChunkCache` renderer-authority boundary first.
+### Exact `MixinViewAreaVanilla` error decomposition
+
+The 14 current diagnostics are six distinct API/lifecycle classes and must not be flattened into one speculative patch:
+
+- 3 × `Level.getMinSection()` missing — ship-section array index vocabulary.
+- 5 × `ChunkPos.asLong(int,int)` missing — packed chunk-key vocabulary.
+- 1 × `Level.getMinBuildHeight()` missing — minimum build-height vocabulary.
+- 2 × `RenderSection.setDirty(boolean)` missing — dirty scheduling authority moved out of `RenderSection`.
+- 1 × `RenderSection(int,int,int,int)` constructor missing — 26.2 constructor is `(int,long)` and packed section-node semantics must be preserved.
+- 2 × `RenderSection.releaseBuffers()` missing — disposal/resource ownership changed and requires exact lifecycle evidence before replacement.
+
+Do not combine constructor, dirty scheduling, or disposal into a guessed renderer rewrite.
 
 ## Proven frontier progression — frozen at P1 compile/API scope
 
 1. `MixinServerLevel` chunk-key/build-height vocabulary: **86 -> 82**.
-2. optional legacy Sodium chunk-tracker bridge isolation: **82 -> 80**; standalone P1 vanilla renderer remains authority.
-3. `MixinEntity.entityInside` 26.2 effect collector adaptation: **80 -> 79**; upstream VS2 ship-space scan still feeds vanilla effect collection.
+2. optional legacy Sodium callbacks isolation: **82 -> 80**; standalone P1 vanilla renderer remains authority.
+3. `MixinEntity.entityInside` 26.2 effect collector adaptation: **80 -> 79**.
 4. `MixinLivingEntity` local-instance authority vocabulary: **79 -> 78**; dragging/interpolation authority unchanged.
-5. `MixinLocalPlayer` movement packet constructors: **78 -> 74**; VS2 packet/transform path retained.
+5. `MixinLocalPlayer` movement packet constructors: **78 -> 74**.
 6. `MixinClientChunkCache` packed keys + packet-heightmap API: **74 -> 66**.
-7. `MixinClientChunkCache` section-height range: **66 -> 64**; corrected guard at `8dea5dfb0e2df52fbf7440abfa6e69b88c94846b`.
+7. `MixinClientChunkCache` section-height range: **66 -> 64**; exclusive 1.21 max became inclusive 26.2 max without changing covered sections.
 8. `MixinMinecraftServer` shutdown SHIP_CHUNK ticket removal: **64 -> 63**, commit `fc887ec127899ba1437433ebf77ee6fc968c82ab`, proof `35510099480`.
 9. `MixinClientLevel` two-hand creative-barrier API: **63 -> 62**, proof head `486dbdaec5302f983d76bd871dea4e59eac67479`.
 10. `MixinClientLevel` base standing dimensions API: **62 -> 61**, proof `35511223209`; do not use scale-aware dimensions here.
@@ -68,83 +76,62 @@ Optional compat is **not** the first target merely because it owns most remainin
 12. `MixinClientPacketListener` packet-position `moveTo -> snapTo`: **60 -> 59**, proof `35512025153`; explicit VS2 mounting/network ordering preserved.
 13. `MixinLevelChunk` dirty-save marking: **59 -> 57**; direct `unsaved=true` became public `markUnsaved()` only. Proof `35514352664`.
 14. `MixinLevelChunk` empty-section construction: **57 -> 53**; registry context became `palettedContainerFactory()`. Proof `35515573624`.
-15. `MixinLevelChunk` serialized parse factory: **53 -> 52**; `SerializableChunkData.parse` second argument became `level.palettedContainerFactory()`. Proof `35516856204` at `b7104b6e1796fa498f1e7782ebfcc899e771b3fe`.
-16. `MixinLevelChunk` final `BlendingData` ownership: **52 -> 51** and `MixinLevelChunk` becomes compile-clean. Pinned VS2's illegal post-construction assignment is replaced only by a fail-closed invariant requiring both source deserialized and live destination shipyard `BlendingData` to be null. All other original VS2 live-copy state and authority remain unchanged. Exact proof: `1860dc3863c2151320eb18f7ab9b161f5ae7f551`, P0 `35519773694`, P1 `35519773646`, artifact `10607928437`.
+15. `MixinLevelChunk` serialized parse factory: **53 -> 52**; `SerializableChunkData.parse` context became `level.palettedContainerFactory()`. Proof `35516856204` at `b7104b6e1796fa498f1e7782ebfcc899e771b3fe`.
+16. `MixinLevelChunk` final `BlendingData` ownership: **52 -> 51** and `MixinLevelChunk` compile-clean. Exact proof `1860dc3863c2151320eb18f7ab9b161f5ae7f551`, P0 `35519773694`, P1 `35519773646`, artifact `10607928437`.
+17. `MixinClientChunkCache` vanilla renderer dirty scheduling: **51 -> 50**, **7 -> 6 files**. Pinned `RenderSection.setDirty(true)` is bridged into exact MC26.2 `Minecraft.levelExtractor -> LevelExtractor.setSectionDirty(x,y,z,boolean) -> SectionUpdateTracker` via one Mixin invoker, preserving boolean `true`, custom ship-section coordinates, renderer selection, relight, and `onChunkLoaded` ordering. Canonical proof HEAD `b2e308ff693ef88c091228002f8077b61f01d6d6`; P0 `35522623140`; P1 `35522623113`; artifact `10608463644`, digest `sha256:4add3cc94a2d63ae3de0904dea949ea7c5cb946a794e32a2ce3eb3a56de24a24`; extracted log 232091 bytes SHA-256 `acdebc9c70e3f887ffc80420b09e69f4a053c8808760c7628050403a60b06d35`.
+18. `MixinLevelRendererVanilla` ship-visible section bounds: **50 -> 47**, **6 -> 5 files**. Pinned `getMinSection()` / exclusive `getMaxSection()` loop becomes `getMinSectionY()` / inclusive `getMaxSectionY()` with `<=`, preserving identical section coverage and relative array index. Semantic helper commit `8546527f1da53344c630245084e5d18aca0cebd8`; canonical chain `f482f643b96ddbbfed611312b35cf3d5cef2211f`; exact proof HEAD `dcf4a14e09c9c67ca7bf51ba3552027b2a7e80cf`; P0 `35523910648`; P1 `35523910705`; artifact `10609192424`.
 
-Freeze all sixteen units above. Runtime semantics remain to be proven later by normal P1/P2 gates.
+Freeze all eighteen units above. Runtime semantics remain to be proven later by normal P1/P2 gates.
 
-## LevelChunk blending-data boundary — resolved invariant and locked negative evidence
+## Renderer authority evidence and locked boundaries
 
-Exact mapped 26.2 evidence established:
+- Initial dirty probe HEAD `8db9a7cbf8c909609b3078010d6866d6ef70ecd1`, run `35520170375`, artifact `10608013620`: exact 26.2 `RenderSection` has no dirty-related field/method. Therefore `setDirty(true) -> setDirty()` is a locked failed hypothesis.
+- Exact authority probe `35520379454` established dirty/update ownership moved into `LevelExtractor` / `SectionUpdateTracker`.
+- Corrected owner/signature probe HEAD `f35ef5b437f3f5accb31226390eb9518339b805c`, run `35522306388`, artifact `10609236384`, digest `sha256:0a1fe77a594684feccb041f19ae9dc26c1bb0899cff17af42b37c91850b4d0cb`: `Minecraft.levelExtractor` is the owner; private 4-arg dirty entrypoint preserves the upstream boolean; extraction consumes dirty state through `visibleSections`; `LevelRenderer` performs the 26.2 `ViewArea.getRenderSection(long)` lookup.
+- First renderer-dirty helper run failed only because its fail-closed guard expected two `!= VSRenderer.SODIUM` sites while pinned source legitimately has three; corrected count is frozen. No semantic workaround resulted from that harness failure.
+- Vanilla renderer bridge remains original VS2 authority: loaded ships, transformed ship AABB, `VSClientGameUtils.transformRenderWithShip`, custom ship `ViewArea` sections, and vanilla `visibleSections`. No custom renderer authority is permitted.
 
-- `ChunkAccess.blendingData` is `final` and constructor-owned.
-- `LevelChunk`/`ProtoChunk` receive `BlendingData` during construction; no mapped setter exists.
-- vanilla `LevelChunk(ServerLevel, ProtoChunk, ...)` forwards `ProtoChunk.getBlendingData()` at construction.
-- pinned VS2 `moveTerrainAcrossDimensions(...)` instead live-copies into an already-existing destination `LevelChunk`.
+## LevelChunk blending-data boundary — resolved invariant
 
-The bounded lifecycle investigation established that hot replacement is not a legitimate local one-line substitute:
+Exact mapped 26.2 evidence established `ChunkAccess.blendingData` is final and constructor-owned, with no setter. Live `LevelChunk` hot replacement is not a safe local substitute: `GenerationChunkHolder.replaceProtoChunk` is promotion-only and normal unload is asynchronous.
 
-- ownership probe HEAD `df2722ced726e73d5fe70b2290225d664860cfd8`, P0 `35517373180`, probe `35517373126`, artifact `10607406974`.
-- live-replacement probe HEAD `cd1b1c8988089adcece9a379a6aeec31df74a796`, run `35517757678`, artifact `10607197727`: no public safe live `LevelChunk` hot-swap path; `GenerationChunkHolder.replaceProtoChunk(...)` is promotion-only.
-- promotion probe HEAD `0ed859be21b7efe367051855b91950b1e9d8f2cb`, P0 `35518028363`, probe `35518028364`, artifact `10607157900`: `ChunkStatusTasks.full(...)` constructs the `LevelChunk` during ProtoChunk -> FULL promotion, then performs load/registration lifecycle.
-- unload/reload probe HEAD `5e976d7bac63a5c840f7fb3b668ad21ca32d6e43`, P0 `35518330927`, run `35518330932`, artifact `10607372557`, digest `sha256:2772a01e9d92ecb9cc58452ff7b696de90986ea0485987cb7ef66901a79ba2a9`: ticket drop moves holder to pending unload; actual save/unload occurs asynchronously only after `getSaveSyncFuture()` completion.
-- therefore synchronous `remove + immediate getChunk()` is not a valid vanilla reconstruction path.
+Evidence: ownership `df2722ced726e73d5fe70b2290225d664860cfd8` / `35517373126`; live replacement `cd1b1c8988089adcece9a379a6aeec31df74a796` / `35517757678`; promotion `0ed859be21b7efe367051855b91950b1e9d8f2cb` / `35518028364`; unload/reload `5e976d7bac63a5c840f7fb3b668ad21ca32d6e43` / `35518330932`.
 
-Why the final invariant is legitimate and smaller than a lifecycle rewrite:
-
-- normal VS2 shipyard chunks are created through empty ProtoChunk construction with `BlendingData=null`.
-- pinned upstream VS2 bypasses/cancels the relevant shipyard worldgen stages.
-- in 26.2 the field is final, so a normal live shipyard chunk cannot later acquire a different blending-data object.
-- helper `apply_p1_levelchunk_blendingdata_invariant_26_2.py` removes only the now-illegal null-to-null field assignment and throws if either source or destination ever carries non-null blending data. It does **not** silently drop non-null metadata.
-- this preserves pinned upstream's current live-copy design introduced by upstream portal work rather than reviving the older storage-write/unload design.
-
-Do not reopen with `@Mutable`, reflection, unsafe/accessor final writes, private-future mutation, duplicate storage, silent assignment deletion, stale destination metadata, or synchronous forced unload/reload.
-
-## Current renderer dirty-invalidation investigation
-
-- exact compile `35519773646` proves the first current error is `MixinClientChunkCache.java:166`, `RenderSection.setDirty(boolean)` missing.
-- initial exact-classpath probe HEAD `8db9a7cbf8c909609b3078010d6866d6ef70ecd1`, run `35520170375`, artifact `10608013620`, digest `sha256:7926c30c1acddad20b778b962c13cdf41f30945cb29f088f35974f282a13c95a`.
-- extracted first probe log: **36839 bytes**, SHA-256 `c0fe535e85e32b17bbdcfc72643469a00bc05d430ef35d91d068f55f3f9cdc2c`.
-- that probe deliberately failed after exact `javap` proved Minecraft 26.2 `SectionRenderDispatcher.RenderSection` has **no dirty-related field or method at all**. It still has section mesh, reset, compileAsync/compileSync, transparency and section-position lifecycle; dirty scheduling authority has moved elsewhere.
-- therefore `setDirty(true) -> setDirty()` is a locked failed/mechanical hypothesis and must not be attempted.
-- follow-up exact-classpath renderer-authority probe HEAD `ce63c58aacacf18ebc6138e6c11a708a46d552ec`, run `35520379454` is active as of this ledger reconciliation. It inspects exact mapped `ViewArea`, `LevelRenderer`, `LevelExtractor`, `SectionUpdateTracker`, and `RenderSection` candidates for the moved dirty/update authority.
-- exact-head P0 for that probe commit: run `35520379433` (check live conclusion before source mutation).
+The frozen helper removes only the now-illegal null-to-null assignment and throws if source or destination ever carries non-null blending data. Do not reopen with `@Mutable`, reflection, unsafe/accessor final writes, private future/map mutation, duplicate storage, silent metadata loss, or forced synchronous unload/reload.
 
 ## Frozen architecture-sensitive boundaries
 
 Do not reopen absent direct contradictory evidence:
 
-- real VS2 ship chunk-ticket lifecycle — original boundary `65a42e782de192f27d5bf720691d6e08f395a719`, proof `35450402031`; matching shutdown removal `fc887ec127899ba1437433ebf77ee6fc968c82ab`, proof `35510099480`. Radius/lifetime/type/order frozen.
-- DistanceManager / TicketStorage read bridge — `8a338f95103227ed6a5acb35804d573bbae0d96c`, proof head `ca07a2fff0fd922cbbd578a0531d3377313827de`, P0 `35463018487`, proof `35463018541`; **READ ONLY**.
+- real VS2 ship chunk-ticket lifecycle — `65a42e782de192f27d5bf720691d6e08f395a719`, proof `35450402031`; shutdown removal `fc887ec127899ba1437433ebf77ee6fc968c82ab`, proof `35510099480`.
+- DistanceManager / TicketStorage bridge — `8a338f95103227ed6a5acb35804d573bbae0d96c`, proof head `ca07a2fff0fd922cbbd578a0531d3377313827de`, proof `35463018541`; **READ ONLY**.
 - ShipSavedData persistence — `f2b3ec68e0d2146bb8b443da76a62a4766e01fce`, proof `35451366140`.
 - entity local authority / interpolation — `b7e583af13598b6ddcc583380872f578b8a40bb8`, proof `35455551701`; no synthetic carry.
 - entity renderer submit lifecycle — `a87512437f40a3bfa1325d78f8e2588587ec7cc8`, proof `35458380245`.
-- shipyard teleport API mapping — proof `35467615790`; real VS2 transforms remain authority, no per-tick chase.
-- vanilla renderer bridge — canonical `290e2bb6c1f6248437e4d189dfb4a01e82a31e33`; ship-aware distance, loaded-ship iteration, transformed ship AABB and `VSClientGameUtils.transformRenderWithShip` remain authority.
-- LevelRenderer / LevelExtractor split — `660d5320902a3ecba4f3219969aa77b0316cfa52`; existing `IVSCamera` is observation only.
+- shipyard teleport mapping — proof `35467615790`; real VS2 transforms remain authority, no per-tick chase.
+- LevelRenderer / LevelExtractor split — `660d5320902a3ecba4f3219969aa77b0316cfa52`; `IVSCamera` observation only.
 - optional Create deployer helper is P1 compile isolation only, never P3 integration.
-- `MixinClientLevel` hand + standing units frozen; no inventory scanning or scale-aware replacement.
-- `MixinClientPacketListener` creation/snap units frozen; no `setPos` chase, no alternate spawn reason, no packet-order redesign.
-- all `MixinLevelChunk` units listed above are frozen; retain live-copy/tick-container/block-entity/heightmap/light/save ordering.
+- all frozen ClientLevel, ClientPacketListener, ClientChunkCache, LevelChunk, and vanilla LevelRenderer units listed above retain their original VS2 authority/order.
 
 Forbidden final architecture remains: custom VS2-like reference frames, synthetic carry/inertia, fake gravity, manual wall/floor/ceiling clamps, per-tick teleport/setPos chase, camera counter-rotation/forcing, duplicate authority, floor-only fake success, or implementation reuse from retired `apm23/VS2-Create_Interactive`.
 
 ## Locked negative evidence
 
-- `3bcbf90c75dc4d02448cfdb4590cc9c9674e0ed6` / `35454717409`: wrong Kotlin source-set exclusion for `DeployerScrollOptionSlot`.
-- `a72aaef8eca34a352ef949eeb57e6bbcda81171f`: `setUnsaved(false)` invalid current API.
+- wrong Kotlin source-set exclusion for `DeployerScrollOptionSlot`: `3bcbf90c75dc4d02448cfdb4590cc9c9674e0ed6` / `35454717409`.
+- `setUnsaved(false)` is invalid current API: `a72aaef8eca34a352ef949eeb57e6bbcda81171f`.
 - VSKeyBindings failed probes: `e108526cbd728454c175c76bffc610d4e074da49`, `fcc65187d79c4b546883875da3597345db1e01cd`, `e9a3efd58acb2af9539628eb2875e6cb829c3cec`, `fb3c7e65a4c2089f6fa695114734d14836bde1d3`.
 - pathfinding `b3927e625acf40edbf517970ebc952a104a20c97` / `35493933563`: parser/assertion-only failure.
-- renderer proof `35497975815` / `35498155312`: broad substring `Uniform` falsely matched valid `DynamicUniforms`; never replay that guard.
+- renderer proof `35497975815` / `35498155312`: broad substring `Uniform` falsely matched valid `DynamicUniforms`; never replay.
 - ChunkMap retrigger `6ce41dfbef36b8c8021f48f52f0020e7b1131d5f`: wrongly targeted nonexistent `getById(arg.toLong())`; never replay.
-- LivingEntity authority and move-player first helpers had overly narrow occurrence guards; harness-only failures, later compile-green.
-- ClientChunkCache section-range first guard at `4f7a8461508a55d1c204eaf08343f6af01e32d14` expected one loop but source legitimately has two; corrected at `8dea5dfb0e2df52fbf7440abfa6e69b88c94846b`.
+- LivingEntity and move-player first helpers had overly narrow occurrence guards; harness-only, later corrected.
+- ClientChunkCache section-range first guard `4f7a8461508a55d1c204eaf08343f6af01e32d14` expected one loop while source legitimately has two; corrected at `8dea5dfb0e2df52fbf7440abfa6e69b88c94846b`.
 - ClientLevel hand transport `587c6b41d2a95815d26440ee753abc0f70faecb6` / `35510733124` invoked helper twice; later corrected without semantic change.
-- `player.getDimensions(Pose.STANDING)` is a locked failed standing-width hypothesis; retain proven `getDefaultDimensions(Pose.STANDING)` mapping.
-- LevelChunk dirty-mark and parse-factory first failures were helper-guard-only, not semantic failures; preserve their later corrected frozen units.
-- LevelChunk direct final-field mutation and synchronous hot replacement/unload are locked failed hypotheses as documented above.
-- renderer `RenderSection.setDirty(true) -> setDirty()` is locked failed: exact 26.2 RenderSection has no dirty member.
-- Actions self-push workflow edits without `workflows` permission remain a failed transport hypothesis.
+- `player.getDimensions(Pose.STANDING)` is a locked failed standing-width hypothesis; retain `getDefaultDimensions(Pose.STANDING)`.
+- LevelChunk dirty-mark/parse first failures were helper-guard-only; later corrected frozen units are authoritative.
+- direct final-field mutation and synchronous LevelChunk replacement/unload are locked failed hypotheses.
+- `RenderSection.setDirty(true) -> setDirty()` is locked failed; 26.2 `RenderSection` has no dirty member.
+- renderer-dirty helper two-site `!= VSRenderer.SODIUM` guard is locked failed; pinned source has three sites.
+- Actions self-push workflow edits without `workflows` permission remain failed transport.
 - retired `apm23/VS2-Create_Interactive` implementation is forbidden.
 
 ## Target runtime baseline
@@ -175,11 +162,11 @@ Create/SNR/Copycats are not authority for current standalone P1 work and must no
 ## next_safe_action
 
 1. Reconcile actual GitHub HEAD and read this file completely before acting.
-2. Preserve all sixteen frozen P1 units and all locked negative evidence.
-3. Treat `1860dc3863c2151320eb18f7ab9b161f5ae7f551` / P0 `35519773694` / canonical compile `35519773646` / artifact `10607928437` as the authoritative **51-error / 7-source-file** implementation proof until a later exact canonical compile changes it.
-4. Reconcile the active renderer-authority probe `35520379454` at HEAD `ce63c58aacacf18ebc6138e6c11a708a46d552ec` plus exact-head P0 `35520379433`. If still active, HOLD; do not stack source patches.
-5. If the probe completes, inspect its actual artifact/bytecode and identify the exact Minecraft 26.2 owner/method that replaces old per-`RenderSection` dirty scheduling. Preserve the pinned VS2 intent: invalidate the custom ship render sections around the newly loaded ship chunk after relight and before `level.onChunkLoaded(pos)`.
-6. Do **not** mechanically call `RenderSection.reset`, `compileAsync`, `compileSync`, or a guessed dirty method. Do not move renderer authority into a custom system. Use the current vanilla 26.2 invalidation owner only if exact ownership/access and section-coordinate semantics are proven.
-7. If a smallest legitimate mapping for the one mandatory `MixinClientChunkCache` site is proven, implement it as one fail-closed overlay, chain it canonically, then run exact-head P0 + canonical standalone P1 compile. Expected clean outcome is removal of that one core diagnostic; classify the new first primary error from the uploaded artifact instead of guessing.
-8. Optional compat (`Immersive Portals`, FTB Chunks, OptiFine) remains secondary while the mandatory core site is unresolved.
+2. Preserve all eighteen frozen P1 units and all locked negative evidence.
+3. Treat `dcf4a14e09c9c67ca7bf51ba3552027b2a7e80cf` / P0 `35523910648` / canonical compile `35523910705` / artifact `10609192424` as the authoritative **47-error / 5-source-file** implementation proof until a later exact canonical compile changes it.
+4. Continue the mandatory standalone vanilla renderer before optional FTB/OptiFine/Immersive-Portals work.
+5. In pinned `MixinViewAreaVanilla`, address only the first bounded class: the three ship-section array-index uses of removed `Level.getMinSection()`. Map them to exact MC26.2 `getMinSectionY()` with a fail-closed helper. This is an index-origin vocabulary change only; there is no max-bound loop in this unit and no renderer lifecycle/authority change.
+6. Do not touch the five `ChunkPos.asLong` sites, `getMinBuildHeight`, `RenderSection` constructor, two `setDirty` sites, or two `releaseBuffers` sites in the same patch. Those are separate units.
+7. Chain the one section-index helper canonically, run exact-head P0 + canonical P1 compile, and classify the uploaded first-primary artifact. Expected clean outcome is **47 -> 44** with `MixinViewAreaVanilla` **14 -> 11**; do not assume that result before artifact proof.
+8. After that proof, continue one failure class at a time. `ChunkPos.asLong -> ChunkPos.pack` and `getMinBuildHeight -> getMinY` may reuse already frozen 26.2 vocabulary evidence. Constructor/disposal must be probed for exact 26.2 ownership/lifecycle before source mutation. Dirty scheduling must continue using proven `LevelExtractor` authority rather than inventing `RenderSection` state.
 9. Remain P1. No Create/SNR/Copycats integration and no ordinary compile/debug video.
