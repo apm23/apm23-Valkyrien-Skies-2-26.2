@@ -115,3 +115,11 @@ if not render_chunk_camera_helper.is_file():
     raise SystemExit(f"fail-closed: required render-chunk sorting Camera overlay helper missing: {render_chunk_camera_helper}")
 subprocess.run([sys.executable, str(render_chunk_camera_helper), str(root)], check=True)
 print("P1_RENDER_CHUNK_SORTING_CAMERA_26_2_CHAINED")
+
+# Mechanical LevelHeightAccessor vocabulary adaptation in the shipyard noise-generation guard.
+# Preserve VS2ChunkAllocator shipyard authority and all generation cancellation semantics.
+noise_height_helper = Path(__file__).with_name("apply_p1_noisebased_height_accessor_26_2.py")
+if not noise_height_helper.is_file():
+    raise SystemExit(f"fail-closed: required NoiseBasedChunkGenerator height overlay helper missing: {noise_height_helper}")
+subprocess.run([sys.executable, str(noise_height_helper), str(root)], check=True)
+print("P1_NOISEBASED_HEIGHT_ACCESSOR_26_2_CHAINED")
