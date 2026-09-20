@@ -141,3 +141,12 @@ if not serverlevel_chunkkey_helper.is_file():
     raise SystemExit(f"fail-closed: required MixinServerLevel chunk-key/height overlay helper missing: {serverlevel_chunkkey_helper}")
 subprocess.run([sys.executable, str(serverlevel_chunkkey_helper), str(root)], check=True)
 print("P1_SERVERLEVEL_CHUNKPOS_HEIGHT_26_2_CHAINED")
+
+# P1 standalone does not include Sodium. The pinned optional 1.21.1 bridge depends on the
+# removed ChunkTrackerHolder API and cannot be carried through the 26.2 no-remap classpath.
+# Isolate only its two chunk-notification callbacks; vanilla VS2 rendering remains authoritative.
+sodium_chunk_tracker_helper = Path(__file__).with_name("apply_p1_sodium_chunk_tracker_isolation_26_2.py")
+if not sodium_chunk_tracker_helper.is_file():
+    raise SystemExit(f"fail-closed: required Sodium chunk-tracker isolation helper missing: {sodium_chunk_tracker_helper}")
+subprocess.run([sys.executable, str(sodium_chunk_tracker_helper), str(root)], check=True)
+print("P1_SODIUM_CHUNK_TRACKER_ISOLATION_26_2_CHAINED")
