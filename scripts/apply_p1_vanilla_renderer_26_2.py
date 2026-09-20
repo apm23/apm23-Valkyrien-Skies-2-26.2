@@ -220,7 +220,14 @@ public abstract class MixinLevelRendererVanilla implements LevelRendererDuck, Le
 }
 '''
 
-for obsolete in ("ShaderInstance", "VertexBuffer", "Uniform", "renderSectionLayer", "LightTexture", "RenderSystem"):
+for obsolete in (
+    "com.mojang.blaze3d.shaders.Uniform",
+    "ShaderInstance",
+    "com.mojang.blaze3d.vertex.VertexBuffer",
+    "renderSectionLayer",
+    "LightTexture",
+    "RenderSystem",
+):
     if obsolete in new:
         raise SystemExit(f"fail-closed: obsolete renderer authority leaked into overlay: {obsolete}")
 for anchor in (
