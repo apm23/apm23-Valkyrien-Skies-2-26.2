@@ -22,17 +22,38 @@ GitHub code is the implementation source of truth. This file is the durable cont
 
 The upstream baseline remains pinned. Minecraft 26.2 changes are applied by explicit fail-closed overlays so every adaptation remains traceable to upstream VS2 source.
 
-## Current reconciliation — canonical P1 chain through LavaFluid ServerLevel boundary
+## Current reconciliation — canonical P1 chain through Explosion Level client accessor boundary
 
 Current proven canonical source boundary before this ledger-only reconciliation commit:
-- canonical implementation HEAD: `19b0e356b34dae20c3aa8d9409d90fc0b96838b2`.
-- canonical P1 chain contains the prior frozen overlays plus the canonical LavaFluid ServerLevel overlay.
-- exact-head P0 provenance run `35479600636`: `success`.
-- exact-head LavaFluid randomTick ServerLevel proof run `35479600673`: `success`.
-- exact-head canonical standalone compile run `35479600694`: compiler-frontier failure only; canonical overlay/apply steps completed and the remaining Java frontier failed as expected.
-- compile artifact: `p1-compile-log-19b0e356b34dae20c3aa8d9409d90fc0b96838b2`, ID `10595491627`, size `21334` bytes, artifact digest `sha256:31054e1f3996d1b39a68c524c1b0392a772bed5dfb628670452e89f583f847d3`.
-- compiler log contains **300 `error:` diagnostics across 34 normalized source files**.
-- compared with prior canonical artifact `10595505232` at `5d0fd81810a824b2da989b834dd6d2f92475dc33`, `feature/fire_between_ship_and_world/LavaFluidMixin.java` is removed from the frontier and the only newly visible normalized source file is `feature/explosions/MixinExplosion.java`.
+- canonical implementation HEAD: `322dcf22e2baf25192682d4b9ee942f4a35dc86b`.
+- canonical P1 chain contains the prior frozen overlays plus the canonical Explosion Level client accessor overlay.
+- exact-head P0 provenance run `35480514635`: `success`.
+- exact-head Explosion Level client accessor proof run `35480514714`: `success`.
+- exact-head canonical standalone compile run `35480514642`: compiler-frontier failure only; canonical overlay/apply steps completed and the remaining Java frontier failed as expected.
+- compile artifact: `p1-compile-log-322dcf22e2baf25192682d4b9ee942f4a35dc86b`, ID `10595113874`, size `21450` bytes, artifact digest `sha256:e71073941434f01d85927b75a827fe57d4fe943b0b6d9f0a0efdcea5bf5628c7`.
+- extracted `p1-compile.log`: size `294850` bytes, SHA-256 `ff3d84bf9c2d78d4f97c8aaa7989973a0a3b979edd20d6634b6c2e995f46a8fe`.
+- compiler log contains **300 `: error:` diagnostics across 34 normalized source files**; `MixinExplosion.java` has zero error lines and zero mentions.
+- compared with prior canonical artifact `10595491627` at `19b0e356b34dae20c3aa8d9409d90fc0b96838b2`, the only removed normalized source file is `feature/explosions/MixinExplosion.java`; the only newly visible normalized source file under the 300-diagnostic cap is `mixin/client/renderer/MixinGameRenderer.java`; the other 33 normalized source files are unchanged.
+
+### Explosion Level client accessor boundary — frozen
+
+Pinned upstream target:
+`common/src/main/java/org/valkyrienskies/mod/mixin/feature/explosions/MixinExplosion.java`.
+
+Minimal 26.2 bridge:
+- exactly `this.level.isClientSide` -> `this.level.isClientSide()` at the existing server-side early return in `doExplodeForce()`.
+- this is accessor-vocabulary drift only; no explosion behavior, force math, ship selection, transform, ray/clip, recursion, or physics authority changed.
+- the original real VS2 order remains authoritative: client-side gate, nearby-ship/world logic, ship lookup and transforms, ship/world clipping, splitting hook, recursive explosion behavior, `getSeenPercent`/`noRayTrace` behavior, and `GameToPhysicsAdapter` force application.
+- no custom ship/reference frame, synthetic force/carry, duplicate explosion authority, or manual movement authority was introduced.
+
+Evidence:
+- isolated exact-file proof established the single accessor change and preserved surrounding authority guards.
+- targeted proof run `35480150817`: success before canonicalization.
+- canonical commit `322dcf22e2baf25192682d4b9ee942f4a35dc86b` installs `scripts/apply_p1_explosion_client_accessor_26_2.py` into canonical `p1-compile.yml`.
+- exact canonical P0 `35480514635`: success.
+- exact canonical Explosion proof `35480514714`: success.
+- exact canonical compile `35480514642`: frontier-only failure; artifact `10595113874`; 300 diagnostics / 34 normalized source files; Explosion target absent.
+- comparison against artifact `10595491627`: only `feature/explosions/MixinExplosion.java` left the normalized source frontier; only `mixin/client/renderer/MixinGameRenderer.java` became newly visible under the compiler cap.
 
 ### LavaFluid randomTick ServerLevel boundary — frozen
 
@@ -41,17 +62,15 @@ Pinned upstream target:
 
 Minimal 26.2 bridge:
 - injected callback/local level type is narrowed from `Level` to `ServerLevel` only so the existing vanilla `LavaFluid.randomTick(...)` invocation matches Minecraft 26.2.
-- exact resolved Minecraft 26.2 jar `javap` proves `LavaFluid.randomTick(ServerLevel, BlockPos, FluidState, RandomSource)`.
+- exact resolved Minecraft 26.2 jar `javap` proved `LavaFluid.randomTick(ServerLevel, BlockPos, FluidState, RandomSource)`.
 - no cast, synthetic server lookup, replacement random source, or alternate tick authority was introduced.
 - existing real VS2 fire-between-ship-and-world ship lookup/transform path, block-position conversion, recursion/branch behavior, fire behavior, random source, and vanilla `LavaFluid.randomTick` authority remain unchanged.
 
 Evidence:
 - targeted proof artifact `p1-lavafluid-randomtick-serverlevel-proof-19b0e356b34dae20c3aa8d9409d90fc0b96838b2`, ID `10594948261`, digest `sha256:3fe31b7e7cf3b2c184045d75cecb9c07bd054a62c1e02c311c9fd10069218c64`.
-- exact proof run `35479600673`: success; resolved-jar `javap` records `randomTick(net.minecraft.server.level.ServerLevel, ...)` and exhaustive compile reports no `LavaFluidMixin.java` diagnostic.
-- canonical commit `19b0e356b34dae20c3aa8d9409d90fc0b96838b2` installs `scripts/apply_p1_lavafluid_randomtick_serverlevel_26_2.py` into canonical `p1-compile.yml`.
-- exact canonical P0 `35479600636`: success.
+- exact proof run `35479600673`: success.
+- canonical commit `19b0e356b34dae20c3aa8d9409d90fc0b96838b2`; exact canonical P0 `35479600636`: success.
 - exact canonical compile `35479600694`: frontier-only failure; artifact `10595491627`; 300 diagnostics / 34 normalized source files; LavaFluid target absent.
-- comparison against artifact `10595505232`: LavaFluid left the normalized source frontier; only `feature/explosions/MixinExplosion.java` became newly visible under the compiler cap.
 
 ### Clip-replace Direction descriptor boundary — frozen
 
@@ -61,20 +80,12 @@ Pinned upstream target:
 Minimal 26.2 bridge:
 - `Direction.getNearest(vec3.x, vec3.y, vec3.z)` -> `Direction.getApproximateNearest(vec3.x, vec3.y, vec3.z)` only.
 - exact Minecraft 26.2 resolved client jar proved `getApproximateNearest(double,double,double)` exists while the old triple-double `getNearest` overload does not.
-- the current method preserves nearest-direction selection from the three vector components; this is method-vocabulary drift only.
-- existing real VS2 authorities remain unchanged: ship-managing lookup, existing ship/world clip path, `clipIncludeShipsImpl(...)`, vector `from - to`, face-selection intent, miss/hit construction, collision/raycast semantics, and reference-space transforms.
-- no collision authority, raycast policy, movement authority, camera authority, ship transform authority, or custom reference frame was introduced.
+- existing real VS2 ship-managing lookup, `clipIncludeShipsImpl(...)`, `from - to` vector, face-selection intent, miss/hit construction, collision/raycast semantics, and reference-space transforms remain unchanged.
 
 Evidence:
-- exact API probe proved Minecraft 26.2 `Direction.getApproximateNearest(double,double,double)` against the resolved Loom client jar before mutation.
-- isolated candidate overlay changed exactly one call expression; semantic guards preserved all surrounding clip/reference-space authority.
-- targeted exact-file proof run `35478456716`: success.
-- targeted exact-head P0 run `35478456712`: success.
-- canonical commit `5d0fd81810a824b2da989b834dd6d2f92475dc33` installs `scripts/apply_p1_clip_replace_direction_26_2.py` into canonical `p1-compile.yml`.
-- exact canonical P0 `35478903000`: success.
-- exact canonical clip-replace proof `35478902949`: success.
-- exact canonical compile `35478902906`: frontier-only failure; artifact `10595505232`; 300 diagnostics / 34 normalized source files; target absent.
-- comparison against artifact `10595080252`: only `feature/clip_replace/MixinBlockGetter.java` left the normalized source frontier; no new normalized source file appeared.
+- targeted exact-file proof `35478456716`: success; targeted P0 `35478456712`: success.
+- canonical commit `5d0fd81810a824b2da989b834dd6d2f92475dc33`; exact canonical P0 `35478903000`: success; exact canonical proof `35478902949`: success.
+- exact canonical compile `35478902906`: frontier-only failure; artifact `10595505232`; target absent.
 
 ## Frozen recent canonical P1 boundaries
 
@@ -148,11 +159,12 @@ All frozen-green and negative-evidence records in Git history remain binding. Le
 
 ## Remaining Java compile frontier
 
-Canonical artifact `10595491627` at `19b0e356b34dae20c3aa8d9409d90fc0b96838b2` contains **300 `error:` diagnostics across 34 normalized source files**. This is evidence only and never permission to batch-fix categories.
+Canonical artifact `10595113874` at `322dcf22e2baf25192682d4b9ee942f4a35dc86b` contains **300 `: error:` diagnostics across 34 normalized source files**. This is evidence only and never permission to batch-fix categories.
 
-Compared with prior artifact `10595505232`:
-- removed from frontier: `feature/fire_between_ship_and_world/LavaFluidMixin.java`;
-- newly visible normalized source file: `feature/explosions/MixinExplosion.java`.
+Compared with prior artifact `10595491627`:
+- removed from frontier: `feature/explosions/MixinExplosion.java`;
+- newly visible normalized source file: `mixin/client/renderer/MixinGameRenderer.java`;
+- all other 33 normalized source files are unchanged.
 
 Current broad categories remain:
 1. AI/entity nested-goal and mapping/API drift.
@@ -161,26 +173,22 @@ Current broad categories remain:
 4. chunk/worldgen/server storage/API drift.
 5. optional compatibility/dependency residue, including old mapped Create/Copycat and Sable surfaces that are not standalone-P1 runtime authority.
 
-Current smallest observed mechanical units include:
-- `feature/explosions/MixinExplosion.java`: one source diagnostic repeated across compile tasks; direct `Level.isClientSide` field access is private in 26.2. This is newly visible after LavaFluid left the capped frontier and has frozen same-vocabulary precedents.
-- `feature/structure_template/StructureTemplateMixin.java`: block-entity save ValueOutput API drift.
-- `world/chunk/MixinLevelChunk.java`: `ChunkSerializer` mapping/API drift.
-- `feature/fix_render_chunk_sorting/MixinRenderChunk.java`: removed camera acquisition vocabulary; authority-sensitive and no frozen camera precedent exists yet.
-- `feature/entity_collision/MixinLivingEntity.java`: local-authority method drift; authority-sensitive and not preferred for blind mechanical patch.
-- `compat/create/AirFlowClipContext.java`: old mapped Create/Copycat residue; not preferred for standalone P1.
+Fresh smallest observed units from the canonical artifact include:
+- `feature/structure_template/StructureTemplateMixin.java`: 3 repeated source diagnostics at line 72, `RegistryAccess cannot be converted to ValueOutput`; mechanical serialization API drift candidate and preferred for inspection before render/camera authority work.
+- `world/chunk/MixinLevelChunk.java`: 3 repeated `cannot find symbol` diagnostics; `ChunkSerializer` mapping/API drift candidate.
+- `mixin/client/renderer/MixinGameRenderer.java`: 3 repeated `cannot find symbol` diagnostics and newly visible after Explosion left the capped frontier; renderer/camera-sensitive, therefore not preferred for blind patching.
+- `feature/entity_collision/MixinLivingEntity.java`: 3 repeated `cannot find symbol` diagnostics; local/collision authority-sensitive, therefore not preferred for blind patching.
+- `compat/create/AirFlowClipContext.java`: 3 repeated old mapped Create diagnostics; optional compatibility residue and not preferred for standalone P1.
 
-### Next candidate — Explosion Level client accessor, inspect/prove first
+### Next candidate — StructureTemplate ValueOutput boundary, inspect/prove first
 
 Pinned target:
-`common/src/main/java/org/valkyrienskies/mod/mixin/feature/explosions/MixinExplosion.java`.
+`common/src/main/java/org/valkyrienskies/mod/mixin/feature/structure_template/StructureTemplateMixin.java`.
 
-Fresh canonical compile reports only:
-`isClientSide has private access in Level`
-at the existing `if (this.level.isClientSide)` early-return in `doExplodeForce()`.
+Fresh canonical compile reports the same source error in each compile task at the existing block-entity save call:
+`incompatible types: RegistryAccess cannot be converted to ValueOutput`.
 
-Pinned upstream inspection confirms that this check only gates the existing server-side explosion-force path before the real VS2 ship lookup, ship/world clipping, transforms, splitting hook, and `GameToPhysicsAdapter` force application. Frozen WaterFluid / EntitySectionStorage / particle-collision precedents already establish the 26.2 vocabulary change from direct `Level.isClientSide` field access to `Level.isClientSide()`.
-
-Do **not** broaden or redesign explosion semantics. Before mutation, require this ledger HEAD to pass P0 and establish an exact-file fail-closed proof that the only source change is `this.level.isClientSide` -> `this.level.isClientSide()`. Preserve all existing real VS2 explosion force, ship lookup/transform, clipping, splitting, force application, recursive explosion, and getSeenPercent/noRayTrace behavior exactly.
+Do **not** guess a replacement serialization path. Inspect the pinned upstream method and exact Minecraft 26.2 resolved API first. Preserve the original VS2 StructureTemplate behavior, processor path, block entity data capture, registry context, and template authority exactly. If current 26.2 requires `ValueOutput`, reuse the established minimal Value I/O pattern only when exact signatures and semantics prove it; do not redesign template serialization.
 
 ## Target runtime baseline
 
@@ -197,9 +205,9 @@ Do **not** broaden or redesign explosion semantics. Before mutation, require thi
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_JAVA_API_MIXIN_DRIFT`
-- active_proof_head: `19b0e356b34dae20c3aa8d9409d90fc0b96838b2; canonical P1 chain through frozen LavaFluid ServerLevel boundary`
-- active_proof_run: `P0 35479600636 success; LavaFluid exact proof 35479600673 success; canonical compile 35479600694 frontier-only failure; artifact 10595491627; 300 diagnostics / 34 normalized source files; LavaFluid target absent; MixinExplosion newly visible`
-- active_hypothesis: `next smallest evidence-backed unit is feature/explosions/MixinExplosion direct Level.isClientSide field access; exact pinned source plus frozen 26.2 precedents indicate a one-token accessor-vocabulary bridge, but source mutation waits for this ledger HEAD P0 and exact-file fail-closed proof`
+- active_proof_head: `322dcf22e2baf25192682d4b9ee942f4a35dc86b; canonical P1 chain through frozen Explosion Level client accessor boundary`
+- active_proof_run: `P0 35480514635 success; Explosion exact proof 35480514714 success; canonical compile 35480514642 frontier-only failure; artifact 10595113874; 300 diagnostics / 34 normalized source files; Explosion target absent; MixinGameRenderer newly visible under cap`
+- active_hypothesis: `next preferred mechanical unit is feature/structure_template/StructureTemplateMixin block-entity save API drift; exact current 26.2 ValueOutput semantics must be inspected/proven before source mutation`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 - video_status: `NOT_APPLICABLE_YET`
@@ -219,18 +227,19 @@ Do **not** broaden or redesign explosion semantics. Before mutation, require thi
 - Frozen shipyard teleport mapping may not be replaced by manual packet/setPos/teleport-chase authority.
 - Frozen clip-replace boundary may not be expanded into collision/raycast/reference-space authority.
 - Frozen LavaFluid boundary may not be expanded into custom fire/randomTick or server-selection authority.
+- Frozen Explosion boundary may not be expanded into alternate explosion, transform, clip, splitting, recursion, or force authority.
 - `FINAL_READY` is forbidden from CI alone.
 - Video is closure-only and must not be used for ordinary compile/debug hypothesis testing.
 
 ## next_safe_action
 
-1. This ledger reconciliation commit is documentation-only, not source proof. Require exact-head P0 provenance success before another source/workflow mutation.
+1. This ledger reconciliation commit is documentation-only. Require exact-head P0 provenance success before another source/workflow mutation.
 2. Preserve every frozen boundary above and all frozen/negative evidence in Git history.
-3. Use artifact `10595491627` as the current canonical 300-diagnostic / 34-normalized-file frontier unless HEAD/compiler state changes.
-4. Inspect/prove only pinned `feature/explosions/MixinExplosion.java` and the exact Minecraft 26.2 `Level.isClientSide()` accessor boundary. Do not touch the surrounding explosion/reference-space logic.
-5. If exact inspection/proof confirms the one bounded vocabulary bridge, create one fail-closed overlay changing exactly `this.level.isClientSide` -> `this.level.isClientSide()` and an exact-file exhaustive compiler proof; otherwise HOLD rather than widening scope.
-6. Preserve existing VS2 explosion ship lookup/transform, ship/world clip, splitting hook, `GameToPhysicsAdapter` force application, recursive explosion, `getSeenPercent`, and `noRayTrace` behavior exactly.
-7. Do not combine this with render-camera, entity collision/local authority, StructureTemplate ValueOutput, world/chunk serializer, movement packets, Create/Copycat, Sable, or any other cluster.
+3. Use artifact `10595113874` as the current canonical 300-diagnostic / 34-normalized-file frontier unless HEAD/compiler state changes.
+4. Inspect only pinned `feature/structure_template/StructureTemplateMixin.java` and the exact Minecraft 26.2 block-entity save / `ValueOutput` API around the line-72 failure. Do not mutate source until exact signatures and semantics are established.
+5. If inspection proves one bounded serialization-vocabulary bridge, create one fail-closed overlay and an exact-file exhaustive compiler proof; otherwise HOLD rather than widening scope.
+6. Preserve original VS2 StructureTemplate processor behavior, block-state/template authority, block-entity data capture, registry context, and serialization semantics exactly.
+7. Do not combine this with `MixinGameRenderer`, entity collision/local authority, LevelChunk serializer, movement packets, Create/Copycat, Sable, or any other cluster.
 8. Remain standalone P1. Do not use Create/SNR/Copycats to hide real VS2 failures. Do not record ordinary compile/debug video.
 
 ## Video and milestone gate
