@@ -22,173 +22,102 @@ GitHub code is the implementation source of truth. This file is the durable cont
 
 The upstream baseline remains pinned. Minecraft 26.2 changes are applied by explicit fail-closed overlays so every adaptation remains traceable to upstream VS2 source.
 
-## Current reconciliation — canonical P1 chain through Explosion Level client accessor boundary
+## Current reconciliation — canonical P1 chain through LevelChunk serialization boundary
 
-Current proven canonical source boundary before this ledger-only reconciliation commit:
-- canonical implementation HEAD: `322dcf22e2baf25192682d4b9ee942f4a35dc86b`.
-- canonical P1 chain contains the prior frozen overlays plus the canonical Explosion Level client accessor overlay.
-- exact-head P0 provenance run `35480514635`: `success`.
-- exact-head Explosion Level client accessor proof run `35480514714`: `success`.
-- exact-head canonical standalone compile run `35480514642`: compiler-frontier failure only; canonical overlay/apply steps completed and the remaining Java frontier failed as expected.
-- compile artifact: `p1-compile-log-322dcf22e2baf25192682d4b9ee942f4a35dc86b`, ID `10595113874`, size `21450` bytes, artifact digest `sha256:e71073941434f01d85927b75a827fe57d4fe943b0b6d9f0a0efdcea5bf5628c7`.
-- extracted `p1-compile.log`: size `294850` bytes, SHA-256 `ff3d84bf9c2d78d4f97c8aaa7989973a0a3b979edd20d6634b6c2e995f46a8fe`.
-- compiler log contains **300 `: error:` diagnostics across 34 normalized source files**; `MixinExplosion.java` has zero error lines and zero mentions.
-- compared with prior canonical artifact `10595491627` at `19b0e356b34dae20c3aa8d9409d90fc0b96838b2`, the only removed normalized source file is `feature/explosions/MixinExplosion.java`; the only newly visible normalized source file under the 300-diagnostic cap is `mixin/client/renderer/MixinGameRenderer.java`; the other 33 normalized source files are unchanged.
+Current proven implementation boundary before this documentation-only reconciliation commit:
 
-### Explosion Level client accessor boundary — frozen
+- canonical implementation HEAD: `9b229bbadfc3bab5ed918556144ad566ca37e448` (`ci: adapt LevelChunk serialization API for 26.2`).
+- exact-head P0 provenance run `35490917259`: **success**.
+- exact-head standalone P1 compile run `35490917263` (#122): **frontier-only failure** after all overlay/apply and port-delta validation steps succeeded.
+- compile artifact: `p1-compile-log-9b229bbadfc3bab5ed918556144ad566ca37e448`, ID `10598698213`, digest `sha256:3570994e4fa4ca17c9e64b5ccd0aee49f51e09583829d3931e3624b65fedf80d`.
+- extracted compile log contains **69 `: error:` diagnostics across 8 normalized source files**.
+- `MixinLevelChunk.java`, `ChunkSerializer`, and `SerializableChunkData` have **zero mentions** in the exact-head compile log.
+- immediately prior exact-head `82887915b04b1546129ab0dba610d4ba0ed7e075` had P0 run `35490652424` success and P1 run `35490652399` frontier-only failure with artifact `10598289555`; that artifact contained **72 diagnostics across 9 normalized source files**. `MixinNoiseBasedChunkGenerator.java`, `GenerationStep.Carving`, and `applyCarvers` were absent, proving the preceding applyCarvers adaptation clean.
+- therefore the LevelChunk serialization bridge removed exactly the LevelChunk source unit from the observed frontier without reopening previously frozen units.
 
-Pinned upstream target:
-`common/src/main/java/org/valkyrienskies/mod/mixin/feature/explosions/MixinExplosion.java`.
-
-Minimal 26.2 bridge:
-- exactly `this.level.isClientSide` -> `this.level.isClientSide()` at the existing server-side early return in `doExplodeForce()`.
-- this is accessor-vocabulary drift only; no explosion behavior, force math, ship selection, transform, ray/clip, recursion, or physics authority changed.
-- the original real VS2 order remains authoritative: client-side gate, nearby-ship/world logic, ship lookup and transforms, ship/world clipping, splitting hook, recursive explosion behavior, `getSeenPercent`/`noRayTrace` behavior, and `GameToPhysicsAdapter` force application.
-- no custom ship/reference frame, synthetic force/carry, duplicate explosion authority, or manual movement authority was introduced.
-
-Evidence:
-- isolated exact-file proof established the single accessor change and preserved surrounding authority guards.
-- targeted proof run `35480150817`: success before canonicalization.
-- canonical commit `322dcf22e2baf25192682d4b9ee942f4a35dc86b` installs `scripts/apply_p1_explosion_client_accessor_26_2.py` into canonical `p1-compile.yml`.
-- exact canonical P0 `35480514635`: success.
-- exact canonical Explosion proof `35480514714`: success.
-- exact canonical compile `35480514642`: frontier-only failure; artifact `10595113874`; 300 diagnostics / 34 normalized source files; Explosion target absent.
-- comparison against artifact `10595491627`: only `feature/explosions/MixinExplosion.java` left the normalized source frontier; only `mixin/client/renderer/MixinGameRenderer.java` became newly visible under the compiler cap.
-
-### LavaFluid randomTick ServerLevel boundary — frozen
+### LevelChunk serialization boundary — frozen green
 
 Pinned upstream target:
-`common/src/main/java/org/valkyrienskies/mod/mixin/feature/fire_between_ship_and_world/LavaFluidMixin.java`.
+`common/src/main/java/org/valkyrienskies/mod/mixin/world/chunk/MixinLevelChunk.java`.
 
-Minimal 26.2 bridge:
-- injected callback/local level type is narrowed from `Level` to `ServerLevel` only so the existing vanilla `LavaFluid.randomTick(...)` invocation matches Minecraft 26.2.
-- exact resolved Minecraft 26.2 jar `javap` proved `LavaFluid.randomTick(ServerLevel, BlockPos, FluidState, RandomSource)`.
-- no cast, synthetic server lookup, replacement random source, or alternate tick authority was introduced.
-- existing real VS2 fire-between-ship-and-world ship lookup/transform path, block-position conversion, recursion/branch behavior, fire behavior, random source, and vanilla `LavaFluid.randomTick` authority remain unchanged.
+Minimal Minecraft 26.2 bridge installed by canonical HEAD `9b229bbadfc3bab5ed918556144ad566ca37e448`:
 
-Evidence:
-- targeted proof artifact `p1-lavafluid-randomtick-serverlevel-proof-19b0e356b34dae20c3aa8d9409d90fc0b96838b2`, ID `10594948261`, digest `sha256:3fe31b7e7cf3b2c184045d75cecb9c07bd054a62c1e02c311c9fd10069218c64`.
-- exact proof run `35479600673`: success.
-- canonical commit `19b0e356b34dae20c3aa8d9409d90fc0b96838b2`; exact canonical P0 `35479600636`: success.
-- exact canonical compile `35479600694`: frontier-only failure; artifact `10595491627`; 300 diagnostics / 34 normalized source files; LavaFluid target absent.
+- `ChunkSerializer` import -> `SerializableChunkData`.
+- `ChunkSerializer.write((ServerLevel) srcChunk.getLevel(), srcChunk)` -> `SerializableChunkData.copyOf((ServerLevel) srcChunk.getLevel(), srcChunk).write()`.
+- `ChunkSerializer.read(...)` -> `SerializableChunkData.parse((ServerLevel) level, level.registryAccess(), compoundTag).read(...)` using the same target level, POI manager, `RegionStorageInfo`, and `ChunkPos` already selected by upstream VS2.
 
-### Clip-replace Direction descriptor boundary — frozen
+Authority preserved exactly:
 
-Pinned upstream target:
-`common/src/main/java/org/valkyrienskies/mod/mixin/feature/clip_replace/MixinBlockGetter.java`.
-
-Minimal 26.2 bridge:
-- `Direction.getNearest(vec3.x, vec3.y, vec3.z)` -> `Direction.getApproximateNearest(vec3.x, vec3.y, vec3.z)` only.
-- exact Minecraft 26.2 resolved client jar proved `getApproximateNearest(double,double,double)` exists while the old triple-double `getNearest` overload does not.
-- existing real VS2 ship-managing lookup, `clipIncludeShipsImpl(...)`, `from - to` vector, face-selection intent, miss/hit construction, collision/raycast semantics, and reference-space transforms remain unchanged.
+- the existing VS2 copy-between-dimensions flow remains authoritative;
+- source/target chunk selection is unchanged;
+- block/entity transfer, pending block-entity NBT, post-processing, structures/references, tick containers, light flag, and heightmap recomputation remain unchanged;
+- no ship lifecycle, ticket lifecycle, transform, movement, collision, entity dragging, camera, rendering, or reference-space authority was introduced or replaced.
 
 Evidence:
-- targeted exact-file proof `35478456716`: success; targeted P0 `35478456712`: success.
-- canonical commit `5d0fd81810a824b2da989b834dd6d2f92475dc33`; exact canonical P0 `35478903000`: success; exact canonical proof `35478902949`: success.
-- exact canonical compile `35478902906`: frontier-only failure; artifact `10595505232`; target absent.
 
-## Frozen recent canonical P1 boundaries
+- fail-closed replacement counts passed in run `35490917263`.
+- port-delta validation passed in run `35490917263`.
+- exact-head compile artifact `10598698213` contains 69 diagnostics / 8 source files and zero LevelChunk/ChunkSerializer/SerializableChunkData mentions.
 
-The following boundaries remain frozen green and may not be reopened without direct contradictory evidence:
+Do not reopen this boundary absent direct contradictory compile/runtime evidence.
 
-- **World-weather BlockPos center** — target `feature/world_weather/MixinLevelRenderer.java`; `vanillaHeight.getCenter()` -> `Vec3.atCenterOf(vanillaHeight)` plus required import only. Canonical `2bafed0bb9001a49249d36f4b5b51a6fcdbcbebc`; P0 `35476486062`; proof `35476486047`; artifact `10595080252`; target absent.
-- **Ship debug overlay BlockPos center** — target `feature/ship_debug_overlay/MixinDebugScreenOverlay.java`; block-center vocabulary bridge only. Canonical `7728fb1bb9f44b417039e1d3510b761c659564b7`; P0 `35475480606`; proof `35475480642`; target absent.
-- **Tick-ship-chunks ChunkPos accessors** — exactly three `.x/.z` reads -> `.x()/.z()`; real VS2 distance/shipyard/spawn authorities unchanged. Canonical `20789867ea96d411cfc9e20402e074b235ea5877`; P0 `35474675327`; proof `35474675349`; target absent.
-- **AirAndWaterRandomPos max-build** — old max-build getter -> `getMinY() + getHeight()` only as existing exclusive upper bound. Canonical `960582c42b407e9c4dbc1943f1d2cc3d8c3dbfe6`; P0 `35472794096`; proof `35472793999`; target absent.
-- **POIManager ChunkPos construction** — `new ChunkPos(blockPos)` -> `ChunkPos.containing(blockPos)` only. Canonical `73197278b8ee26ced0dc267d84ea9eb825d02e98`; P0 `35471264991`; proof `35471264941`.
-- **WaterFluid Level client accessor** — `level.isClientSide` -> `level.isClientSide()` only; canonical `224fb040c4e1f3ae9015d712fcac9d26447024bf`; P0 `35470783272`; proof `35470783283`.
-- **EntitySectionStorage Level client accessor** — `level.isClientSide` -> `level.isClientSide()` only; canonical `f90a3c1979dd957a34d5a0ebebfe00ab5c6fc133`; P0 `35470148414`; proof `35470148397`.
-- **NaturalSpawner ChunkPos accessors** — `chunk.getPos().x/z` -> `x()/z()` only; proof `35467860056`; P0 `35467860082`.
-- **Particle-collision Level client accessor** — `level.isClientSide` -> `level.isClientSide()` only; no collision/reference-space authority change.
-- **Shipyard teleport API adaptation** — old `RelativeMovement` vocabulary -> current `Relative`/`PositionMoveRotation` authority; real VS2 `ServerShip.getShipToWorld().transformPosition` stays authoritative; no manual packet/setPos chase. P0 `35467615792`; proof `35467615790`.
-- **Canonical proof-overlay chain repair** — commit `8e40e5dc0885768727f16b96d5968080a7bd0ffb` canonicalized six previously proven overlays without changing their frozen semantics.
+### Recent mechanical Java convergence — preserved
 
-## Other frozen architecture-sensitive proofs
+The following already-landed changes are preserved and must not be repeated blindly:
 
-- **DistanceManager / TicketStorage read boundary** — implementation `8a338f95103227ed6a5acb35804d573bbae0d96c`; proof HEAD `ca07a2fff0fd922cbbd578a0531d3377313827de`; P0 `35463018487`; proof `35463018541`. Read-only compatibility only; it does not replace or modify real ship-ticket lifecycle.
+- `28ee0eabe77778dd2f9bbd84e528d9c3a6718531`: client sound mixin `ResourceLocation` -> `Identifier`; exact-head run `35489919714` proved the targeted sound frontier absent.
+- `4aa395c810476d78c2f8cfb1bee423d2f5248616`: `MixinMinecraftServer` `BlockUtil` package relocation to `net.minecraft.util.BlockUtil`; exact-head run `35490199268` proved the target absent.
+- `880df3aa1ecbdaf2a5b9974d65dd68a266fbc764`: `MixinChunkMap` `DimensionDataStorage` -> `SavedDataStorage`; P0 run `35490412205` succeeded and subsequent compile state moved beyond that type failure.
+- `82887915b04b1546129ab0dba610d4ba0ed7e075`: remove obsolete `GenerationStep.Carving` import/handler argument from the existing `applyCarvers` injection; P0 `35490652424` success and artifact `10598289555` contains zero target mentions.
+- `9b229bbadfc3bab5ed918556144ad566ca37e448`: LevelChunk serialization vocabulary bridge described above; P0 `35490917259` success and artifact `10598698213` proves target absence.
+
+These are API/mapping adaptations only. None authorize a replacement VS2 architecture.
+
+## Frozen architecture-sensitive boundaries
+
+All frozen-green records and all negative evidence already committed in Git history remain binding even where this ledger is compacted. Ledger compaction does **not** unfreeze or supersede prior proof.
+
+Key frozen boundaries include:
+
 - **Real VS2 ship chunk-ticket lifecycle** — implementation `65a42e782de192f27d5bf720691d6e08f395a719`; proof `35450402031`. Load-only radius-zero explicit ticket add/remove lifecycle, flush/order, ship-alive removal guard, and deletion cleanup remain authority.
-- **ShipSavedData persistence** — implementation `f2b3ec68e0d2146bb8b443da76a62a4766e01fce`; proof `35451366140`. Overworld `SavedDataStorage` remains authority; `SavedDataType + Codec` is API bridge only.
+- **DistanceManager / TicketStorage read bridge** — implementation `8a338f95103227ed6a5acb35804d573bbae0d96c`; proof HEAD `ca07a2fff0fd922cbbd578a0531d3377313827de`; P0 `35463018487`; proof `35463018541`. Read-only compatibility only; never expand it into replacement ticket lifecycle.
+- **ShipSavedData persistence** — implementation `f2b3ec68e0d2146bb8b443da76a62a4766e01fce`; proof `35451366140`. Overworld saved-data storage remains authority; codec/type changes are API bridges only.
+- **Entity local authority / interpolation** — implementation `b7e583af13598b6ddcc583380872f578b8a40bb8`; proof HEAD `9f2719be070e79b91b7f47ceddaec61d7f5cff40`; proof `35455551701`. Existing dragging information, ship transforms, and interpolation authority remain intact; no synthetic carry system.
 - **Entity renderer submit lifecycle** — implementation `a87512437f40a3bfa1325d78f8e2588587ec7cc8`; proof HEAD `58d8554ba623896d486b91f18771df9bdcd6f2b3`; proof `35458380245`. Real VS2 render authorities remain authoritative.
-- **Entity local-authority / interpolation** — implementation `b7e583af13598b6ddcc583380872f578b8a40bb8`; proof HEAD `9f2719be070e79b91b7f47ceddaec61d7f5cff40`; proof `35455551701`. Existing dragging information, ship transforms and interpolation authority remain intact.
-- **Optional Create deployer helper isolation** — implementation `cd2434e69caf28e12560bf4444fc220a3023e40b`; proof `35454908850`. P1 compile isolation only, not Create integration.
-- **Optional Sable Companion compile boundary** — overlay `58bd44154c20f141969b758b8e35372d982ac358`; proof HEAD `c0c1efb790c31f90c8916121f7c4a06864a58b7f`; proof `35454031987`. Compile-only; no 1.21.1 Sable runtime compatibility claim.
-- **Renderer handler render-state boundary** — overlay `6a13ff6d1f730678d9dd793f575887c08792b161`; proof HEAD `6aa93ba02e830fa432f0b6e00185ea533227e967`; proof `35452733162`. Upstream VS2 transform math remains intact.
-
-## Frozen implementation ancestry
-
-All frozen-green and negative-evidence records in Git history remain binding. Ledger compaction does not unfreeze or supersede them. Key implementation ancestry includes:
-
-- `30b9f70d3c6c71dfd30ca76339e19cfcb56461e4`: ShipAssembler block-entity ValueInput.
-- `45de97f06a3ab25c1e19b0dc09790ebde2d8e851`: ShipAssembler Clearable.
-- `e923ba7658197ff04af605e85507618c09dd390b`: RelocationUtil block-entity ValueInput.
-- `52a05bdae75fd2a469287234c680bf191fd5b105`: RelocationUtil pending loot-table clear.
-- `7a7e2f320605b27bb65e9f0bb6cb88d8aa41a4e7`: RelocationUtil neighbor-update.
-- `ce6ff8bb8f06eeb8e98544f6bf9ca1e503936fdb`: RelocationUtil direct chunk-write zero flags.
-- `2da9ca25e3ce6fd2f601cc2f6b626b0e3998a677`: ShipAssembler StructureProcessor.
-- `aa26d707fac479c63a6a5e097ca65818dd145262`: ShipAssembler fast-path direct chunk-write.
-- `12f182325f9f3e10c502afae7da567e4b1b95c28`: AssemblyUtil neighbor dispatch.
-- `644d108b111bed17d0f3259dc840803f7c9a3192`: AssemblyUtil block-entity Value I/O.
-- `820ef37e8ca012fe484d9960242cbfc0eefbacc8`: AssemblyUtil ScheduledTick non-null.
-- `a803150d066fdc7e0a0bfdd5bd1661b85c627417`: AssemblyUtil direct chunk-write.
-- `02e356638690d0413a105d409aaae4bcfd6e160c`: ShipAssembler `BlockPos` -> containing `ChunkPos`.
-- `39e2abc40af3d785d4d6ca5f14ac7b28ef03334f`: ShipMountingEntity `kill(ServerLevel)`.
-- `36549552477a1dd9b24cc12c6e21c6849b2e8b54`: ShipMountingEntity `hurtServer`.
-- `0a23528d781baf280bb553a8f9fa94c21f447af2`: ShipMountingEntity Value I/O.
-- `d258e69e46ce2f85c1ccb953dc97db7abd669841`: entity-handler projectile packages.
-- `3d8d7255d36f26da902e0d43e1c830fa5015594e`: VSGameEvents RenderType package.
-- `24802fb75610a3ceb1614fda1a78cab1fab7cfe5`: VSGameUtils build-height / packed chunk-key.
-- `a5e219c7036937ce0ef4b5dfe5032bd82c764ee9`: VSGameUtils ResourceKey / Identifier.
-- `ee7e9c56be55fd95114d0f7e194be69185db4385`: nullable translation arguments.
-- `169e0007dcbeb2263701e6b41e40757de6d62ff2`: TestChair entity creation / positioning.
-- `2c763500338955135d0700b273594a87dab9d982`: VSKeyBindings Category.
-- `5c8a80eca1b996c4b89d5a394d7cfb9115d3f070`: CreativeModeTab.Output access.
-- `4641ae31765f0d067923cc1ef54b9a26abe99a19`: TestHingeBlockEntity Value I/O.
-- `ea2084954eb4edd2bd9922aa1f59342b76709809`: MassDatapackResolver registry-tag.
-- `27e181c70184b2aac38eeb1a646905d93ba45023`: MassDatapackResolver typed reload listener.
-- `ac739bbf0c1598087a6ae9b158117c4764ce3079`: DimensionParametersResolver typed reload listener.
-- `2af9d9ba1d48f8a0baf825398d3d441b1219f19d`: VSEntityHandlerDataLoader typed reload listener.
-- `9d82234aa769a6a0eece07f52e7d5ace2d334aab`: VSGamePackets Identifier vocabulary.
+- **Shipyard teleport API mapping** — P0 `35467615792`; proof `35467615790`. Real VS2 ship-to-world transform remains authority; no manual packet/setPos/teleport chase.
+- **NaturalSpawner, particle collision, EntitySectionStorage, WaterFluid, POIManager, AirAndWaterRandomPos, tick-ship-chunks, ship-debug overlay, world-weather, clip-replace, LavaFluid, Explosion, and StructureTemplate** canonical proof boundaries remain frozen green.
+- **Clip-replace Direction vocabulary** — canonical `5d0fd81810a824b2da989b834dd6d2f92475dc33`; P0 `35478903000`; proof `35478902949`.
+- **LavaFluid randomTick ServerLevel boundary** — canonical `19b0e356b34dae20c3aa8d9409d90fc0b96838b2`; P0 `35479600636`; proof `35479600673`.
+- **Explosion Level client accessor boundary** — canonical `322dcf22e2baf25192682d4b9ee942f4a35dc86b`; P0 `35480514635`; proof `35480514714`.
+- **Optional Sable Companion boundary** — compile-only. It does not authorize bundling or claiming a 1.21.1 Sable runtime on Minecraft 26.2.
+- **Optional Create deployer helper isolation** — P1 compile isolation only, never a substitute for later real Create integration.
 
 ## Locked negative evidence
 
-- `3bcbf90c75dc4d02448cfdb4590cc9c9674e0ed6` / run `35454717409`: wrong Kotlin-source-set exclusion for `DeployerScrollOptionSlot.kt`.
+- `3bcbf90c75dc4d02448cfdb4590cc9c9674e0ed6` / run `35454717409`: wrong Kotlin-source-set exclusion for `DeployerScrollOptionSlot.kt`; do not replay.
 - `a72aaef8eca34a352ef949eeb57e6bbcda81171f`: `setUnsaved(false)` is invalid current API; do not replay absent direct new evidence.
 - VSKeyBindings failed probes `e108526cbd728454c175c76bffc610d4e074da49`, `fcc65187d79c4b546883875da3597345db1e01cd`, `e9a3efd58acb2af9539628eb2875e6cb829c3cec`, `fb3c7e65a4c2089f6fa695114734d14836bde1d3` remain negative evidence.
-- Actions self-push of workflow changes without `workflows` permission is a locked failed transport hypothesis; do not use it as the actual transport step. A validated exact commit/blob may be fast-forwarded through the GitHub connector after diff verification.
+- Actions self-push of workflow changes without `workflows` permission is a locked failed transport hypothesis; do not use it as the actual transport step.
 - retired `apm23/VS2-Create_Interactive` workarounds remain historical warning evidence only and are forbidden as implementation source.
 
-## Remaining Java compile frontier
+## Current remaining Java compile frontier
 
-Canonical artifact `10595113874` at `322dcf22e2baf25192682d4b9ee942f4a35dc86b` contains **300 `: error:` diagnostics across 34 normalized source files**. This is evidence only and never permission to batch-fix categories.
+Exact-head artifact `10598698213` at implementation HEAD `9b229bbadfc3bab5ed918556144ad566ca37e448` contains **69 `: error:` diagnostics across 8 normalized source files**:
 
-Compared with prior artifact `10595491627`:
-- removed from frontier: `feature/explosions/MixinExplosion.java`;
-- newly visible normalized source file: `mixin/client/renderer/MixinGameRenderer.java`;
-- all other 33 normalized source files are unchanged.
+1. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/vanilla_renderer/MixinLevelRendererVanilla.java` — 24 diagnostics.
+2. `common/src/main/java/org/valkyrienskies/mod/mixin/feature/render_ship_debug_bb/MixinDebugRenderer.java` — 9 diagnostics.
+3. `common/src/main/java/org/valkyrienskies/mod/mixin/client/renderer/MixinLevelRenderer.java` — 6 diagnostics.
+4. `common/src/main/java/org/valkyrienskies/mod/mixin/feature/render_pathfinding/MixinDebugRenderer.java` — 6 diagnostics.
+5. `common/src/main/java/org/valkyrienskies/mod/mixin/feature/vs2_alpha_hud/MixinGui.java` — 6 diagnostics.
+6. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/sable/MixinActiveSableCompanion.java` — 6 diagnostics.
+7. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/sable/MixinSubLevelHoldingChunkMap.java` — 6 diagnostics.
+8. `common/src/main/java/org/valkyrienskies/mod/mixin/server/world/MixinChunkMapClose.java` — 6 diagnostics.
 
-Current broad categories remain:
-1. AI/entity nested-goal and mapping/API drift.
-2. client/render/HUD/debug-render lifecycle drift.
-3. entity/player/teleport-reconnect and collision API drift outside already-frozen authority-sensitive units.
-4. chunk/worldgen/server storage/API drift.
-5. optional compatibility/dependency residue, including old mapped Create/Copycat and Sable surfaces that are not standalone-P1 runtime authority.
+Classification:
 
-Fresh smallest observed units from the canonical artifact include:
-- `feature/structure_template/StructureTemplateMixin.java`: 3 repeated source diagnostics at line 72, `RegistryAccess cannot be converted to ValueOutput`; mechanical serialization API drift candidate and preferred for inspection before render/camera authority work.
-- `world/chunk/MixinLevelChunk.java`: 3 repeated `cannot find symbol` diagnostics; `ChunkSerializer` mapping/API drift candidate.
-- `mixin/client/renderer/MixinGameRenderer.java`: 3 repeated `cannot find symbol` diagnostics and newly visible after Explosion left the capped frontier; renderer/camera-sensitive, therefore not preferred for blind patching.
-- `feature/entity_collision/MixinLivingEntity.java`: 3 repeated `cannot find symbol` diagnostics; local/collision authority-sensitive, therefore not preferred for blind patching.
-- `compat/create/AirFlowClipContext.java`: 3 repeated old mapped Create diagnostics; optional compatibility residue and not preferred for standalone P1.
-
-### Next candidate — StructureTemplate ValueOutput boundary, inspect/prove first
-
-Pinned target:
-`common/src/main/java/org/valkyrienskies/mod/mixin/feature/structure_template/StructureTemplateMixin.java`.
-
-Fresh canonical compile reports the same source error in each compile task at the existing block-entity save call:
-`incompatible types: RegistryAccess cannot be converted to ValueOutput`.
-
-Do **not** guess a replacement serialization path. Inspect the pinned upstream method and exact Minecraft 26.2 resolved API first. Preserve the original VS2 StructureTemplate behavior, processor path, block entity data capture, registry context, and template authority exactly. If current 26.2 requires `ValueOutput`, reuse the established minimal Value I/O pattern only when exact signatures and semantics prove it; do not redesign template serialization.
+- renderer/debug/HUD units are rendering/camera-adjacent and must not be blind-patched;
+- Sable units are optional-compat residue and remain compile-only isolation territory, not runtime authority;
+- `MixinChunkMapClose.java` is the only remaining non-render core Java unit in this observed frontier, but it is shutdown/chunk-ticket-work sensitive. Its old `ChunkTaskPriorityQueueSorter`/queue-work assumptions no longer map mechanically to the 26.2 `ChunkMap` task-dispatch structure. Do not rename fields/classes by guesswork.
 
 ## Target runtime baseline
 
@@ -205,9 +134,9 @@ Do **not** guess a replacement serialization path. Inspect the pinned upstream m
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_JAVA_API_MIXIN_DRIFT`
-- active_proof_head: `322dcf22e2baf25192682d4b9ee942f4a35dc86b; canonical P1 chain through frozen Explosion Level client accessor boundary`
-- active_proof_run: `P0 35480514635 success; Explosion exact proof 35480514714 success; canonical compile 35480514642 frontier-only failure; artifact 10595113874; 300 diagnostics / 34 normalized source files; Explosion target absent; MixinGameRenderer newly visible under cap`
-- active_hypothesis: `next preferred mechanical unit is feature/structure_template/StructureTemplateMixin block-entity save API drift; exact current 26.2 ValueOutput semantics must be inspected/proven before source mutation`
+- active_proof_head: `9b229bbadfc3bab5ed918556144ad566ca37e448; canonical P1 chain through frozen LevelChunk serialization boundary`
+- active_proof_run: `P0 35490917259 success; P1 compile 35490917263 frontier-only failure; artifact 10598698213; 69 diagnostics / 8 normalized source files; MixinLevelChunk absent`
+- active_hypothesis: `next non-render core unit is MixinChunkMapClose shutdown-work API drift, but it is authority-sensitive and requires exact 26.2 ChunkMap task-dispatch/hasWork semantics before any mutation`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 - video_status: `NOT_APPLICABLE_YET`
@@ -217,30 +146,31 @@ Do **not** guess a replacement serialization path. Inspect the pinned upstream m
 - First-failure classification stays factual: provenance, build/mappings/API/loader/mixin/VSCore-native/networking/storage/transforms/rendering/collision/entity-player-camera/Create/SNR-Copycats/CI/final packaging.
 - Make one evidence-backed root/semantic change at a time.
 - Standalone real VS2 P1 must initialize before Create integration.
+- Every core ported subsystem must remain traceable to upstream VS2 or be documented as a minimal 26.2 compatibility bridge.
+- Never replace ship-space/physics/collision/entity-dragging/player-camera systems with a new custom implementation.
+- Never use synthetic carry/inertia, fake gravity, manual floor/wall/ceiling clamps, per-tick teleport/setPos chase, camera counter-rotation/forcing, duplicate authority, or floor-only success as final architecture.
 - Frozen TicketStorage read bridge is read-only compatibility; it may not be expanded into a replacement ticket lifecycle.
 - Frozen real ship-ticket lifecycle remains the add/remove/load authority.
 - Frozen renderer submit/state bridge may not be expanded into movement/camera/collision/gameplay authority.
 - Frozen authority/interpolation bridge may not be expanded into a custom movement/carry system.
 - Frozen Sable proof is compile-only and does not authorize bundling a 1.21.1 Sable runtime on 26.2.
 - Frozen Create helper exclusion is P1 compile isolation only, not P3.
-- Frozen ShipSavedData proof authorizes only its `SavedDataType + Codec` bridge and matching server acquisition change.
+- Frozen ShipSavedData proof authorizes only its persistence API bridge and matching server acquisition change.
 - Frozen shipyard teleport mapping may not be replaced by manual packet/setPos/teleport-chase authority.
-- Frozen clip-replace boundary may not be expanded into collision/raycast/reference-space authority.
-- Frozen LavaFluid boundary may not be expanded into custom fire/randomTick or server-selection authority.
-- Frozen Explosion boundary may not be expanded into alternate explosion, transform, clip, splitting, recursion, or force authority.
+- Frozen clip/LavaFluid/Explosion/StructureTemplate/LevelChunk boundaries may not be expanded into unrelated authority.
 - `FINAL_READY` is forbidden from CI alone.
 - Video is closure-only and must not be used for ordinary compile/debug hypothesis testing.
 
 ## next_safe_action
 
-1. This ledger reconciliation commit is documentation-only. Require exact-head P0 provenance success before another source/workflow mutation.
-2. Preserve every frozen boundary above and all frozen/negative evidence in Git history.
-3. Use artifact `10595113874` as the current canonical 300-diagnostic / 34-normalized-file frontier unless HEAD/compiler state changes.
-4. Inspect only pinned `feature/structure_template/StructureTemplateMixin.java` and the exact Minecraft 26.2 block-entity save / `ValueOutput` API around the line-72 failure. Do not mutate source until exact signatures and semantics are established.
-5. If inspection proves one bounded serialization-vocabulary bridge, create one fail-closed overlay and an exact-file exhaustive compiler proof; otherwise HOLD rather than widening scope.
-6. Preserve original VS2 StructureTemplate processor behavior, block-state/template authority, block-entity data capture, registry context, and serialization semantics exactly.
-7. Do not combine this with `MixinGameRenderer`, entity collision/local authority, LevelChunk serializer, movement packets, Create/Copycat, Sable, or any other cluster.
-8. Remain standalone P1. Do not use Create/SNR/Copycats to hide real VS2 failures. Do not record ordinary compile/debug video.
+1. This reconciliation commit is documentation-only. Require exact-head P0 provenance success before another source/workflow mutation.
+2. Preserve every frozen boundary and all negative evidence in Git history. Do not repeat any landed patch above.
+3. Use exact-head compile artifact `10598698213` as the current canonical **69-diagnostic / 8-source-file** frontier until HEAD/compiler state changes.
+4. Inspect only pinned upstream `common/src/main/java/org/valkyrienskies/mod/mixin/server/world/MixinChunkMapClose.java` plus the exact resolved Minecraft 26.2 `ChunkMap.hasWork` / chunk-task-dispatch fields and methods. The mixin is a defense-in-depth shutdown guard; the primary real VS2 ticket cleanup remains `MixinMinecraftServer.preStopServer()` and must remain authoritative.
+5. Do **not** mutate `MixinChunkMapClose` unless the current 26.2 structure proves a bounded compatibility bridge that preserves the original intent without inventing ticket/work authority. If exact semantics are not established, HOLD.
+6. Do not combine that inspection with renderer, HUD, camera, Sable, Create/Copycat, movement, collision, teleport, or reference-space changes.
+7. Remain standalone P1. Do not use optional compatibility exclusions to hide core real-VS2 failures.
+8. Do not record ordinary compile/debug video.
 
 ## Video and milestone gate
 
