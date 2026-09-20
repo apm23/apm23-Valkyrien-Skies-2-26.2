@@ -124,3 +124,9 @@ if not levelchunk_empty_sections_helper.is_file():
     raise SystemExit(f"fail-closed: required LevelChunk empty-sections overlay helper missing: {levelchunk_empty_sections_helper}")
 subprocess.run([sys.executable, str(levelchunk_empty_sections_helper), str(root)], check=True)
 print("P1_LEVELCHUNK_EMPTY_SECTIONS_26_2_CHAINED")
+
+levelchunk_parse_factory_helper = Path(__file__).with_name("apply_p1_levelchunk_serializable_parse_factory_26_2.py")
+if not levelchunk_parse_factory_helper.is_file():
+    raise SystemExit(f"fail-closed: required LevelChunk SerializableChunkData.parse factory helper missing: {levelchunk_parse_factory_helper}")
+subprocess.run([sys.executable, str(levelchunk_parse_factory_helper), str(root)], check=True)
+print("P1_LEVELCHUNK_SERIALIZABLE_PARSE_FACTORY_26_2_CHAINED")
