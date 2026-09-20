@@ -26,20 +26,21 @@ Minecraft 26.2 changes are applied by explicit fail-closed overlays. Every core 
 
 Current proven implementation boundary before this documentation-only reconciliation commit:
 
-- canonical implementation/proof HEAD: `e6a4ed6b6310d2780e0196881393f10e70a0f5eb` — `ci: retrigger corrected LevelChunk dirty mark proof`.
-- exact-head P0 provenance run `35514352658`: **success**.
-- exact-head StructureTemplate isolated proof run `35514352656`: **success**; all chained overlays, including the corrected LevelChunk dirty-mark helper, applied before its compile proof.
-- exact-head standalone P1 compile run `35514352664`: **compile-frontier failure only** after the canonical overlay chain reached javac.
-- canonical compile artifact: `p1-compile-log-e6a4ed6b6310d2780e0196881393f10e70a0f5eb`, ID `10606626295`, digest `sha256:86c6e80473eebca25097ee37297fb04c2fd74ca582305effd651ba8453dee7ae`.
-- extracted `p1-compile.log`: **244638 bytes**, SHA-256 `52d762acdb0b21b31a3e294e1e79d78ffc0ebd07bccd951f65348dfed54a4435`.
-- authoritative first primary javac pass: **57 errors across 8 Java source files**. Later Gradle repeats are not frontier authority.
+- canonical implementation/proof HEAD: `f4333069216e177654ff3a41ec3ecafe034904cb` — `ci: chain LevelChunk empty section factory overlay`.
+- semantic helper commit: `a019168466fe13f0e6d9375575cad5123da9d0dd` — `fix: port LevelChunk empty section factory to 26.2`.
+- exact-head P0 provenance run `35515573633`: **success**.
+- exact-head StructureTemplate/chained-overlay proof run `35515573631`: **success**; the new LevelChunk empty-section helper applied cleanly before the proof compile and all existing StructureTemplate proof gates remained green.
+- exact-head standalone P1 compile run `35515573624`: **compile-frontier failure only** after the canonical overlay chain reached javac.
+- canonical compile artifact: `p1-compile-log-f4333069216e177654ff3a41ec3ecafe034904cb`, ID `10606697863`, digest `sha256:01d020c05ecc45e62a7bb0261d7861ba8d53bc334d406ca011d20f1d3013628d`.
+- extracted `p1-compile.log`: **237576 bytes**, SHA-256 `e415e852fe170dd5bc9905955ea8bdbab7873755c864780425de3ee97dd62d38`.
+- authoritative first primary javac pass: **53 errors across 8 Java source files**. Later Gradle repeats are not frontier authority.
 - project state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`.
 - active blocker classification: `MINECRAFT_26_2_JAVA_API_FRONTIER`.
 - This is not P1 boot proof, not P2/M1 ship proof, and not runtime rendering proof.
 
 ### Artifact metadata correction for the preceding 59-error boundary
 
-The 59-error count at implementation head `8653eb7b9c4d0db62e04614c744aac1810255d75` remains valid, but the previous ledger copied incorrect artifact metadata. GitHub live artifact metadata and the downloaded archive establish the corrected values:
+The 59-error count at implementation head `8653eb7b9c4d0db62e04614c744aac1810255d75` remains valid, but an earlier ledger copied incorrect artifact metadata. GitHub live artifact metadata and the downloaded archive establish the corrected values:
 
 - run `35512025153`, artifact ID `10605932626`.
 - artifact digest: `sha256:259db4d42ab3e5e85f1d9847f3ea22ae17a60c1ffdbddfe4607190095b283be2`.
@@ -63,29 +64,29 @@ Do not restore the superseded incorrect digest/size/hash from the earlier ledger
 11. `MixinClientPacketListener` packet-created mounting-entity creation API: **61 -> 60**. Exact 26.2 packet-spawn creation uses `EntitySpawnReason.LOAD`; real VS2 mounting-entity authority and packet ordering preserved. Proof head `d0bf1efc8ae705ba0aa1f88e7c64be79db3e365b`.
 12. `MixinClientPacketListener` packet-position initialization vocabulary: **60 -> 59**. The old three-double `moveTo` call maps to current `snapTo` at the same packet-position stage; explicit codec sync, rotation, id/UUID, addEntity, teleport handling, spawn reason, cancellation, and real VS2 mounting authority remain unchanged. Exact compile `35512025153` removes `MixinClientPacketListener` entirely.
 13. `MixinLevelChunk` dirty-save marking: **59 -> 57**. Minecraft 26.2 makes `ChunkAccess.unsaved` private and exposes public `markUnsaved()`, whose state transition is `unsaved = true`. The fail-closed overlay replaces exactly the two pinned VS2 post-operation direct assignments after `clearChunk()` and `copyChunkFromOtherDimension()` with `this.markUnsaved()`. Block-entity clearing, tick-container unregister/register ordering, sections/heightmaps, light state, deserialization/copy flow, structure data, blending data, and ship lifecycle are unchanged. Exact compile `35514352664` removes exactly the two private-field diagnostics; `MixinLevelChunk` drops **8 -> 6** with no new primary diagnostic.
+14. `MixinLevelChunk` empty-section construction: **57 -> 53**. Pinned VS2's two biome-registry contexts and two `LevelChunkSection(Registry<Biome>)` constructors map to Minecraft 26.2's `level.palettedContainerFactory()` and `LevelChunkSection(PalettedContainerFactory)`. The helper changes exactly the two null-fill sites in `clearChunk()` and `copyChunkFromOtherDimension()` and removes only the now-unused Registry/Biome imports. Section count, null checks, copy ordering, tick-container lifecycle, heightmaps, light state, dirty marking, `SerializableChunkData.parse(...)`, `blendingData`, and all ship lifecycle/reference-space authority remain unchanged. Exact compile `35515573624` removes exactly four diagnostics; `MixinLevelChunk` drops **6 -> 2** with no new primary diagnostic.
 
-Freeze all thirteen units above at P1 compile/API scope. Runtime semantics remain to be proven later by normal P1/P2 gates.
+Freeze all fourteen units above at P1 compile/API scope. Runtime semantics remain to be proven later by normal P1/P2 gates.
 
-### Current primary Java frontier at `e6a4ed6b...`
+### Current primary Java frontier at `f4333069...`
 
 1. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/immersive_portals/MixinMyBuiltChunkStorage.java` — 25
 2. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/vanilla_renderer/MixinViewAreaVanilla.java` — 14
-3. `common/src/main/java/org/valkyrienskies/mod/mixin/world/chunk/MixinLevelChunk.java` — 6
-4. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/vanilla_renderer/MixinLevelRendererVanilla.java` — 3
-5. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/immersive_portals/MixinImmPtlChunkTracking.java` — 3
-6. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/optifine_vanilla/MixinLevelRenderer.java` — 3
+3. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/vanilla_renderer/MixinLevelRendererVanilla.java` — 3
+4. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/immersive_portals/MixinImmPtlChunkTracking.java` — 3
+5. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/optifine_vanilla/MixinLevelRenderer.java` — 3
+6. `common/src/main/java/org/valkyrienskies/mod/mixin/world/chunk/MixinLevelChunk.java` — 2
 7. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/ftb_chunks/MixinClaimedChunkManagerImpl.java` — 2
 8. `common/src/main/java/org/valkyrienskies/mod/mixin/client/world/MixinClientChunkCache.java` — 1
 
 `MixinServerLevel`, `SodiumCompat`, `MixinEntity`, `MixinLivingEntity`, `MixinLocalPlayer`, `MixinMinecraftServer`, `MixinClientLevel`, and `MixinClientPacketListener` are zero-error in the primary javac pass. `MixinClientChunkCache` remains intentionally at one unresolved ship-render dirty-invalidation error.
 
-The six remaining `MixinLevelChunk` diagnostics are now classified, but are not yet adapted:
+The two remaining `MixinLevelChunk` diagnostics are separate semantic units and are not yet adapted:
 
-- two removed `RegistryAccess.registryOrThrow(...)` callsites paired with two obsolete `LevelChunkSection(Registry<Biome>)` constructors;
-- one `SerializableChunkData.parse(...)` second argument that is still a `RegistryAccess` but Minecraft 26.2 requires `PalettedContainerFactory`;
-- one assignment to `ChunkAccess.blendingData`, which is final in Minecraft 26.2.
+- `SerializableChunkData.parse((ServerLevel) level, level.registryAccess(), compoundTag)`: the second argument is still a `RegistryAccess`, while Minecraft 26.2 requires `PalettedContainerFactory`.
+- `this.blendingData = protoChunk.getBlendingData()`: `ChunkAccess.blendingData` is final in Minecraft 26.2.
 
-Exact Minecraft 26.2 evidence shows `LevelChunkSection` now accepts `PalettedContainerFactory`, `Level` exposes `palettedContainerFactory()`, and vanilla `ChunkMap` passes that factory to `SerializableChunkData.parse(...)`. Treat empty-section construction, parse context, and final blending-data ownership as separately guarded semantic units. Do not bulk-rewrite them.
+Exact Minecraft 26.2 evidence shows `Level` exposes `palettedContainerFactory()` and vanilla `ChunkMap` passes the factory to `SerializableChunkData.parse(...)`. Treat the parse context and final blending-data ownership as separately guarded semantic units. Do not bulk-rewrite them.
 
 ## Frozen architecture-sensitive boundaries
 
@@ -103,6 +104,7 @@ Do not reopen absent direct contradictory evidence:
 - `MixinClientLevel` two-hand barrier read and base-standing-width adaptations are frozen at proof heads `486dbdaec5302f983d76bd871dea4e59eac67479` and `4e880e6271c9fa79001df9d3077086c4dda6530f`; do not broaden to inventory scanning, scale-aware dimensions, or particle/reference-space redesign.
 - `MixinClientPacketListener` creation + snap units are frozen through `8653eb7b9c4d0db62e04614c744aac1810255d75`; do not substitute `setPos`, `setPosRaw`, whole `recreateFromPacket`, another spawn reason, or alter the explicit packet ordering.
 - `MixinLevelChunk` dirty-save unit is frozen through `e6a4ed6b6310d2780e0196881393f10e70a0f5eb`; use the public `markUnsaved()` state transition only. Do not revive `setUnsaved(false)` or direct-field access.
+- `MixinLevelChunk` empty-section factory unit is frozen through `f4333069216e177654ff3a41ec3ecafe034904cb` (semantic helper `a019168466fe13f0e6d9375575cad5123da9d0dd`, proof `35515573624`). Do not restore biome-registry construction or broaden this unit into parse/blending ownership.
 
 Forbidden final architecture remains: custom VS2-like reference frames, synthetic carry/inertia, fake gravity or wall/floor clamps, per-tick setPos chase, camera counter-rotation/forcing, duplicate authority, floor-only fake success, or reuse of retired `apm23/VS2-Create_Interactive` implementation code.
 
@@ -153,11 +155,11 @@ Create/SNR/Copycats are not authority for current standalone P1 source adaptatio
 
 1. This ledger commit is documentation-only. Require exact-head P0 provenance success before the next source mutation.
 2. Preserve all frozen boundaries and negative evidence above.
-3. Treat artifact `10606626295` as the canonical **57-error / 8-source-file** Java frontier until a later exact canonical compile changes it.
-4. Freeze the `MixinLevelChunk` dirty-save `markUnsaved()` unit. Do not replay direct `unsaved` field access or the retired `setUnsaved` hypothesis.
+3. Treat artifact `10606697863` as the canonical **53-error / 8-source-file** Java frontier until a later exact canonical compile changes it.
+4. Freeze both `MixinLevelChunk` proven units: public `markUnsaved()` dirty marking and `PalettedContainerFactory` empty-section construction. Do not replay old private-field or biome-registry APIs.
 5. Keep `MixinClientChunkCache`'s one ship-specific dirty-invalidation error untouched unless its custom ship-render ownership path is independently proven.
-6. Continue `MixinLevelChunk` one semantic unit at a time. The first non-optional bounded candidate is its two empty-section construction sites: prove/use the exact Minecraft 26.2 `PalettedContainerFactory` path for `LevelChunkSection` without changing section-count, null-fill, copy, tick-container, heightmap, light, deserialization, or ship lifecycle behavior. Keep the separate `SerializableChunkData.parse(...)` factory argument and final `blendingData` ownership issues out of that mutation unless independent evidence requires a shared atomic API unit.
-7. Treat `blendingData` as architecture/storage-sensitive because the Minecraft 26.2 field is final. Do not use `@Mutable`, reflection, accessor writes, or duplicate storage authority merely to remove the compiler error; prove the correct ownership/construction path first.
+6. Continue `MixinLevelChunk` one semantic unit at a time. The next smallest non-optional bounded candidate is only the second argument of `SerializableChunkData.parse(...)`: independently prove the exact Minecraft 26.2 factory path and, if one-to-one, adapt only `level.registryAccess()` to the matching `level.palettedContainerFactory()` context. Preserve the serialized tag, read parameters, copy order, sections, ticks, heightmaps, light, dirty marking, and ship lifecycle behavior.
+7. Keep final `blendingData` ownership completely separate. Because Minecraft 26.2 makes the field final, do not use `@Mutable`, reflection, accessor writes, duplicate storage, or constructor bypass merely to remove the compiler error; prove the correct ownership/construction path first.
 8. Optional compat (`Immersive Portals`, FTB Chunks, OptiFine) is not first target merely because it has many errors.
 9. After any bounded source mutation, run exact canonical standalone P1 compile, classify the first primary javac pass from the uploaded artifact, and update this ledger at the next meaningful proven boundary.
 10. Remain P1. No ordinary compile/debug video.
