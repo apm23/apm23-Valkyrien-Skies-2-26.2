@@ -26,13 +26,11 @@ Minecraft 26.2 changes are applied by explicit fail-closed overlays. Every core 
 
 Current proven implementation boundary before this documentation-only reconciliation commit:
 
-- canonical implementation HEAD: `a0f06183c24568cbcde424564bbc3fbf4260ddbb` — `ci: retrigger corrected ClientChunkCache section-range guard proof`.
-- exact-head P0 provenance run `35509250866`: **success**.
-- exact-head ship-debug/canonical-chain proof run `35509251125`: **success**.
-- exact-head standalone P1 compile run `35509250874`: **compile-frontier failure only** after the full canonical overlay chain reached javac.
-- canonical compile artifact: `p1-compile-log-a0f06183c24568cbcde424564bbc3fbf4260ddbb`, ID `10604289769`, artifact digest `sha256:bdf49a72c2a1067f173dcfe8a0d4c87766c7950d377ede1f64c11f2cdd703b53`.
-- extracted `p1-compile.log`: **254846 bytes**, SHA-256 `9b28da4440cde3de85e0f6c74b4f244aa2a95ed3630d0813a2f8f4ec6f930a3f`.
-- authoritative primary javac pass: **64 errors across 11 Java source files**. Gradle repeats diagnostics later; use the first `64 errors` summary as frontier authority.
+- canonical implementation HEAD: `fc887ec127899ba1437433ebf77ee6fc968c82ab` — `fix: port shutdown ship ticket removal to 26.2 radius API`.
+- exact-head standalone P1 compile run `35510099480`: **compile-frontier failure only** after the full canonical overlay chain reached javac.
+- canonical compile artifact: `p1-compile-log-fc887ec127899ba1437433ebf77ee6fc968c82ab`, ID `10603954992`, artifact digest `sha256:483474ac247515fd0f749c39c1d7f2f91f125b596309d28a377f1a784459ae35`.
+- extracted `p1-compile.log`: **253560 bytes**, SHA-256 `1608c7491fe9dd1cd7f7bae99a9676da6fe67dd3d53d05eb28f1b5015f280907`.
+- authoritative primary javac pass: **63 errors across 10 Java source files**. Gradle repeats diagnostics later; use the first `63 errors` summary as frontier authority.
 - project state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`.
 - active blocker classification: `MINECRAFT_26_2_JAVA_API_FRONTIER`.
 - This is not P1 boot proof, not P2/M1 ship proof, and not runtime rendering proof.
@@ -46,10 +44,11 @@ Current proven implementation boundary before this documentation-only reconcilia
 5. `MixinLocalPlayer` movement-packet constructors: **78 -> 74**. All four 26.2 `ServerboundMovePlayerPacket` variants forward the incoming vanilla `horizontalCollision()` flag unchanged while retaining VS2's existing `isOnGround` adaptation and real ship-motion packet/transform paths.
 6. `MixinClientChunkCache` packed chunk keys plus packet-heightmap API: **74 -> 66**. Six exact `ChunkPos.asLong(...)` uses were adapted to canonical 26.2 packed-key vocabulary, and the two packet decode paths now forward `Map<Heightmap.Types, long[]>`; chunk storage, packet decode, relight, terrain connectivity, ship lifecycle, renderer selection, and `onChunkLoaded` ordering remain unchanged.
 7. `MixinClientChunkCache` section-height range: **66 -> 64**. The 1.21.1 exclusive `getMinSection() .. < getMaxSection()` loop is preserved on 26.2 as inclusive `getMinSectionY() .. <= getMaxSectionY()`. A transport guard initially expected one `dx/dz` loop although pinned upstream legitimately contains two; commit `8dea5dfb0e2df52fbf7440abfa6e69b88c94846b` corrected only that fail-closed harness count, and exact-head compile then proved the semantic unit.
+8. `MixinMinecraftServer` shutdown SHIP_CHUNK ticket removal: **64 -> 63**. Pinned upstream removes each active ship chunk's radius-0 `SHIP_CHUNK` ticket before shutdown drain and then clears any legacy FORCED ticket. The already-frozen 26.2 lifecycle overlay maps the same old `removeRegionTicket(type, pos, radius, value)` boundary to `removeTicketWithRadius(type, pos, radius)` elsewhere. Commit `fc887ec127899ba1437433ebf77ee6fc968c82ab` extends only that proven mapping to the missed Java shutdown callsite; iteration, radius 0, shutdown ordering, ticket type, and `updateChunkForced(cp, false)` cleanup are unchanged. Exact compile `35510099480` removes `MixinMinecraftServer` from the primary error set.
 
-Freeze all seven units above at P1 compile/API scope. Runtime semantics remain to be proven later by the normal P1/P2 gates.
+Freeze all eight units above at P1 compile/API scope. Runtime semantics remain to be proven later by the normal P1/P2 gates.
 
-### Current primary Java frontier at `a0f06183...`
+### Current primary Java frontier at `fc887ec1...`
 
 1. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/immersive_portals/MixinMyBuiltChunkStorage.java` — 25
 2. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/vanilla_renderer/MixinViewAreaVanilla.java` — 14
@@ -61,9 +60,8 @@ Freeze all seven units above at P1 compile/API scope. Runtime semantics remain t
 8. `common/src/main/java/org/valkyrienskies/mod/mixin/client/multiplayer/MixinClientPacketListener.java` — 2
 9. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/ftb_chunks/MixinClaimedChunkManagerImpl.java` — 2
 10. `common/src/main/java/org/valkyrienskies/mod/mixin/client/world/MixinClientChunkCache.java` — 1
-11. `common/src/main/java/org/valkyrienskies/mod/mixin/server/MixinMinecraftServer.java` — 1
 
-`MixinServerLevel`, `SodiumCompat`, `MixinEntity`, `MixinLivingEntity`, and `MixinLocalPlayer` remain zero-error in the primary javac pass. `MixinClientChunkCache` has been reduced from 11 errors to one without redesigning its lifecycle/packet/ship-render authority.
+`MixinServerLevel`, `SodiumCompat`, `MixinEntity`, `MixinLivingEntity`, `MixinLocalPlayer`, and `MixinMinecraftServer` are zero-error in the primary javac pass. `MixinClientChunkCache` has been reduced from 11 errors to one without redesigning its lifecycle/packet/ship-render authority.
 
 Do not bulk-rewrite this list. Continue one bounded, evidence-backed 26.2 API unit at a time.
 
@@ -71,7 +69,7 @@ Do not bulk-rewrite this list. Continue one bounded, evidence-backed 26.2 API un
 
 Do not reopen absent direct contradictory evidence:
 
-- real VS2 ship chunk-ticket lifecycle — `65a42e782de192f27d5bf720691d6e08f395a719`, proof `35450402031`.
+- real VS2 ship chunk-ticket lifecycle — original boundary `65a42e782de192f27d5bf720691d6e08f395a719`, proof `35450402031`; matching missed shutdown removal callsite adapted at `fc887ec127899ba1437433ebf77ee6fc968c82ab`, compile proof `35510099480`. Radius/lifetime/type/order remain frozen.
 - DistanceManager / TicketStorage read bridge — `8a338f95103227ed6a5acb35804d573bbae0d96c`, proof head `ca07a2fff0fd922cbbd578a0531d3377313827de`, P0 `35463018487`, proof `35463018541`; **READ ONLY**.
 - ShipSavedData persistence — `f2b3ec68e0d2146bb8b443da76a62a4766e01fce`, proof `35451366140`.
 - entity local authority / interpolation — `b7e583af13598b6ddcc583380872f578b8a40bb8`, proof `35455551701`; no synthetic carry.
@@ -105,7 +103,7 @@ Exact `BASELINE_LOCK.json` remains authoritative. Current locked stack includes:
 - Minecraft `26.2`
 - Java `25`
 - Fabric Loader observed `0.19.3`
-- Fabric API `0.160.0+26.2`, SHA-256 `5f3dff88e1661166e222213302b25ace6c36dc3683804cbd4b5acf93138ea05e`
+- Fabric API `0.160.0+26.2`, SHA-256 `5f3dff88e1666e222213302b25ace6c36dc3683804cbd4b5acf93138ea05e`
 - Create Fly `6.0.9-1`, SHA-256 `d9c6cb6116d5caa1174a289ecd7d3cdd463ccef6e8db1249ab0bcfcd8c935870`
 - SNR embedded `SNR.FLY-STABLE-1.2.2+fabric-mc26.2`, SHA-256 `33c87d5a7da0d468d3b6c0e99f726b835c63b693e7447fdaeca5e1f204caab84`
 - Copycats embedded `3.0.7-createfly+mc.26.2-v1.14`, SHA-256 `1922db10a49dfab42c4c272fbaee41cdc149287cd08ca84148b497e598029858`
@@ -127,12 +125,11 @@ Create/SNR/Copycats are not authority for current standalone P1 source adaptatio
 
 1. This ledger commit is documentation-only. Require exact-head P0 provenance success before the next source mutation.
 2. Preserve all frozen boundaries and negative evidence above.
-3. Treat artifact `10604289769` as the canonical **64-error / 11-source-file** Java frontier until a later exact canonical compile changes it.
-4. Freeze the proven `MixinClientChunkCache` packed-key, packet-heightmap, and exclusive-to-inclusive section-range units. Do not replay them.
-5. `MixinClientChunkCache.java` now has exactly one primary error: upstream `renderSection.setDirty(true)` on a ship render section returned by `IVSViewAreaMethods.vs$getShipRenderSection(...)`. Do not guess a direct replacement. Prove the exact Minecraft 26.2 dirty API signature, how the client exposes `LevelExtractor`, and—critically—how VS2's custom ship render-section storage must be invalidated without substituting vanilla section authority.
-6. Keep packet decode, relight, terrain connectivity updates, ship chunk lifecycle, renderer selection, and `onChunkLoaded` ordering unchanged while researching/adapting that bounded renderer-dirty unit.
-7. If preserving ship-specific dirty invalidation cannot be proven through existing VS2/26.2 renderer architecture, leave this one error in place and move only to another bounded non-optional core API unit with stronger evidence; do not invent a parallel renderer architecture.
-8. Optional compat (`Immersive Portals`, FTB Chunks, OptiFine) is not the first target merely because it has many errors. Establish target-runtime optionality/dependency evidence before isolation or port work.
-9. `MixinLevelChunk`, `MixinClientLevel`, `MixinClientPacketListener`, and `MixinMinecraftServer` each contain lifecycle/authority-sensitive changes. Split them into separately evidenced units.
-10. After any bounded mutation, run exact canonical standalone P1 compile, classify the first primary javac pass from the uploaded artifact, and update this ledger at the next meaningful proven boundary.
-11. Remain P1. No ordinary compile/debug video.
+3. Treat artifact `10603954992` as the canonical **63-error / 10-source-file** Java frontier until a later exact canonical compile changes it.
+4. Freeze the proven `MixinClientChunkCache` packed-key, packet-heightmap, and exclusive-to-inclusive section-range units plus the `MixinMinecraftServer` shutdown radius-ticket API adaptation. Do not replay them.
+5. `MixinClientChunkCache.java` still has exactly one primary error: upstream `renderSection.setDirty(true)` on a ship render section returned by `IVSViewAreaMethods.vs$getShipRenderSection(...)`. Exact ship-specific 26.2 invalidation ownership has not been proven. Leave this error in place rather than substituting vanilla dirty authority.
+6. Move to the smallest non-optional core frontier with stronger evidence. `MixinClientLevel.java` has two independent API errors: removed `LocalPlayer.getHandSlots()` in creative barrier detection and protected `Player.STANDING_DIMENSIONS` in scale calculation. Split them. First inspect the exact 26.2 public two-hand access API and adapt only barrier-item detection if a one-to-one replacement is proven; do not touch the standing-dimensions/scale unit in the same hypothesis.
+7. `MixinClientPacketListener.java` also has two errors around client creation/placement of the real `SHIP_MOUNTING_ENTITY_TYPE`. Treat entity spawn/placement as a separate lifecycle-sensitive unit; do not guess a spawn reason or placement API merely to compile.
+8. `MixinLevelChunk.java` remains lifecycle/storage sensitive and must be split by error class before mutation. Optional compat (`Immersive Portals`, FTB Chunks, OptiFine) is not the first target merely because it has many errors.
+9. After any bounded mutation, run exact canonical standalone P1 compile, classify the first primary javac pass from the uploaded artifact, and update this ledger at the next meaningful proven boundary.
+10. Remain P1. No ordinary compile/debug video.
