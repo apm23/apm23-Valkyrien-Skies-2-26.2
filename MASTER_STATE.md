@@ -22,17 +22,38 @@ GitHub code is the implementation source of truth. This file is the durable cont
 
 The upstream baseline remains pinned. Minecraft 26.2 changes are applied by explicit fail-closed overlays so every adaptation remains traceable to upstream VS2 source.
 
-## Current reconciliation — canonical P1 chain through ship debug overlay BlockPos center boundary
+## Current reconciliation — canonical P1 chain through world-weather BlockPos center boundary
 
 Current proven canonical source boundary before this ledger-only reconciliation commit:
-- canonical implementation HEAD: `7728fb1bb9f44b417039e1d3510b761c659564b7`.
-- canonical P1 chain contains **82 ordered fail-closed overlays**.
-- exact-head P0 provenance run `35475480606`: `success`.
-- exact-head ship-debug-overlay proof run `35475480642`: `success`.
-- exact-head canonical standalone compile run `35475480661`: compiler-frontier failure only; all 82 overlay/apply steps, port-delta validation, and Gradle-runtime validation were green before compilation.
-- compile artifact: `p1-compile-log-7728fb1bb9f44b417039e1d3510b761c659564b7`, ID `10593368657`, size `21774` bytes, artifact SHA-256 `ab97633c5c7f71bf4d813c3d41695d5ff1517d356361687995d5248135710027`; contained `p1-compile.log` SHA-256 `debfaf1ffd7d79ba1ecb08f94b72bce43a64c19e9d49f9e1b783c75b954fb658`.
-- compiler log contains **300 `error:` diagnostics across 36 normalized source files** with no javac cap marker observed.
-- `feature/ship_debug_overlay/MixinDebugScreenOverlay.java` is absent from that frontier. Compared with tick-ship-chunks artifact `10593542676`, it disappeared and **no new normalized source file appeared**.
+- canonical implementation HEAD: `2bafed0bb9001a49249d36f4b5b51a6fcdbcbebc`.
+- canonical P1 chain contains **83 ordered fail-closed overlays**.
+- exact-head P0 provenance run `35476486062`: `success`.
+- exact-head world-weather proof run `35476486047`: `success`.
+- exact-head canonical standalone compile run `35476486105`: compiler-frontier failure only; canonical overlay/apply steps and pre-compile validation completed before the expected remaining Java frontier failed.
+- compile artifact: `p1-compile-log-2bafed0bb9001a49249d36f4b5b51a6fcdbcbebc`, ID `10595080252`, size `21726` bytes, artifact SHA-256 `d0b118230c210b91c2b2e63ed39896c480a64162503c19d98e94cb5aabccaa52`; contained `p1-compile.log` SHA-256 `e1aab69339c04c64c1815a1116c068d3b5debccb13c64fe90e21044ae3840e99`.
+- compiler log contains **300 `error:` diagnostics across 35 normalized source files**.
+- `feature/world_weather/MixinLevelRenderer.java` is absent from that frontier. Compared with prior artifact `10593368657`, it disappeared and **no new normalized source file appeared**.
+
+### World-weather BlockPos center boundary — frozen
+
+Pinned upstream target:
+`common/src/main/java/org/valkyrienskies/mod/mixin/feature/world_weather/MixinLevelRenderer.java`.
+
+Minimal 26.2 bridge:
+- `vanillaHeight.getCenter()` -> `Vec3.atCenterOf(vanillaHeight)` at the existing `CompatUtil.INSTANCE.toSameSpaceAs(...)` call.
+- only the required `net.minecraft.world.phys.Vec3` import is added.
+- This reuses the already-frozen CompatUtil/ship-debug center mapping and preserves exact block-center geometry.
+- Existing real VS2/weather authorities remain unchanged: vanilla `getHeightmapPos`, `CompatUtil.INSTANCE.toSameSpaceAs(...)`, `BlockPos.containing(...)`, ship heightmap hit, shared lookup position, block/fluid/collision surface lookup, and rain/snow render occlusion.
+- No camera, weather-policy, movement, collision-authority, ship-transform, entity-dragging, or custom reference-frame authority was introduced.
+
+Evidence:
+- fail-closed overlay script commit `1f2c0ec5696a1739ec27d89b759f0eb495a207a5`.
+- exact-file proof workflow commit `ad1ad237397e5299d39d140d73079fd78b500068`.
+- canonical commit `2bafed0bb9001a49249d36f4b5b51a6fcdbcbebc`.
+- exact canonical P0 `35476486062`: success.
+- exact canonical world-weather proof `35476486047`: success, including exact baseline replay/apply/semantic validation and exact target-file compiler-clean classification.
+- exact canonical compile `35476486105`: frontier-only failure; artifact `10595080252`; 300 diagnostics / 35 normalized source files; target absent.
+- compared with ship-debug-boundary artifact `10593368657`: only `feature/world_weather/MixinLevelRenderer.java` left the normalized source frontier; no new normalized source file appeared.
 
 ### Ship debug overlay BlockPos center boundary — frozen
 
@@ -271,10 +292,10 @@ Locked negative evidence:
 
 ## Remaining Java compile frontier
 
-Canonical artifact `10593368657` at `7728fb1bb9f44b417039e1d3510b761c659564b7` contains **300 `error:` diagnostics across 36 normalized source files** with no javac cap marker observed. This is evidence only and never permission to batch-fix categories.
+Canonical artifact `10595080252` at `2bafed0bb9001a49249d36f4b5b51a6fcdbcbebc` contains **300 `error:` diagnostics across 35 normalized source files**. This is evidence only and never permission to batch-fix categories.
 
-Compared with prior tick-ship-chunks artifact `10593542676`:
-- removed from frontier: `feature/ship_debug_overlay/MixinDebugScreenOverlay.java`;
+Compared with prior ship-debug-boundary artifact `10593368657`:
+- removed from frontier: `feature/world_weather/MixinLevelRenderer.java`;
 - newly visible normalized source files: none.
 
 Current broad categories remain:
@@ -285,8 +306,7 @@ Current broad categories remain:
 5. optional compatibility/dependency residue, including old mapped Create/Copycat and Sable surfaces that are not standalone-P1 runtime authority.
 
 Current smallest observed mechanical units include:
-- `feature/world_weather/MixinLevelRenderer.java`: one removed `BlockPos.getCenter()` call at the existing weather-height coordinate conversion.
-- `MixinBlockGetter.java`: `Direction.getNearest(double,double,double)` descriptor drift.
+- `feature/clip_replace/MixinBlockGetter.java`: `Direction.getNearest(double,double,double)` descriptor drift; canonical compiler reports current candidates `Direction.getNearest(int,int,int,@Nullable Direction)` and `Direction.getNearest(Vec3i,@Nullable Direction)`.
 - `LavaFluidMixin.java`: `randomTick` now expects `ServerLevel`.
 - `feature/fix_render_chunk_sorting/MixinRenderChunk.java`: removed `GameRenderer.getMainCamera()` and `Camera.getPosition()`; no frozen 26.2 camera-acquisition precedent exists yet.
 - `MixinLivingEntity.java`: removed local-authority method; authority-sensitive and not preferred for a blind mechanical patch.
@@ -294,19 +314,15 @@ Current smallest observed mechanical units include:
 - `world/chunk/MixinLevelChunk.java`: `ChunkSerializer` mapping/API drift.
 - `compat/create/AirFlowClipContext.java`: old mapped Create/Copycat dependency residue; not preferred for standalone P1.
 
-### Next candidate — world-weather BlockPos center, proof first
+### Next candidate — clip-replace Direction.getNearest descriptor, inspect/prove first
 
 Pinned target:
-`common/src/main/java/org/valkyrienskies/mod/mixin/feature/world_weather/MixinLevelRenderer.java`.
+`common/src/main/java/org/valkyrienskies/mod/mixin/feature/clip_replace/MixinBlockGetter.java`.
 
-Fresh canonical compile shows the bounded center-vocabulary diagnostic at:
-`CompatUtil.INSTANCE.toSameSpaceAs(level, vanillaHeight.getCenter(), (Ship) null, null)`.
+Fresh canonical compile shows a bounded descriptor-vocabulary diagnostic at:
+`Direction.getNearest(vec3.x, vec3.y, vec3.z)`.
 
-There are now two frozen local precedents for this exact geometry adaptation: the CompatUtil center bridge and the just-frozen ship-debug-overlay bridge. Inspect/prove only:
-- `vanillaHeight.getCenter()` -> `Vec3.atCenterOf(vanillaHeight)`;
-- add only the required `net.minecraft.world.phys.Vec3` import if the pinned file does not already import it.
-
-Preserve all existing weather/ship behavior exactly: vanilla `getHeightmapPos` result, `CompatUtil.INSTANCE.toSameSpaceAs(...)`, `BlockPos.containing(...)`, ship heightmap hit, shared lookup position, block/fluid/collision surface lookup, and rain/snow render occlusion. This is a coordinate-vocabulary bridge only; it must not become camera, weather-policy, movement, collision-authority, or ship-transform authority.
+Do **not** guess the replacement from the error signature alone. Inspect the pinned target and exact Minecraft 26.2 Direction API/bytecode/source mapping first, then prove only the smallest semantic equivalent for the existing VS2 clip-face selection. Preserve the existing real VS2 clip/reference-space path and all hit-result/collision semantics. This may only be a method-vocabulary bridge; it must not become collision authority, raycast policy, ship transform authority, movement authority, or a custom reference frame.
 
 ## Target runtime baseline
 
@@ -323,9 +339,9 @@ Preserve all existing weather/ship behavior exactly: vanilla `getHeightmapPos` r
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_JAVA_API_MIXIN_DRIFT`
-- active_proof_head: `7728fb1bb9f44b417039e1d3510b761c659564b7; canonical P1 chain through ship debug overlay BlockPos center boundary`
-- active_proof_run: `P0 35475480606 success; ship-debug-overlay exact proof 35475480642 success; canonical compile 35475480661 frontier-only failure; artifact 10593368657; 300 diagnostics / 36 normalized source files; target absent`
-- active_hypothesis: `next smallest direct-precedent unit is feature/world_weather/MixinLevelRenderer vanillaHeight.getCenter(); prove only Vec3.atCenterOf(vanillaHeight) using frozen center precedents after this ledger HEAD passes P0`
+- active_proof_head: `2bafed0bb9001a49249d36f4b5b51a6fcdbcbebc; canonical P1 chain through world-weather BlockPos center boundary`
+- active_proof_run: `P0 35476486062 success; world-weather exact proof 35476486047 success; canonical compile 35476486105 frontier-only failure; artifact 10595080252; 300 diagnostics / 35 normalized source files; target absent`
+- active_hypothesis: `next smallest observed unit is feature/clip_replace/MixinBlockGetter Direction.getNearest descriptor drift; inspect exact 26.2 Direction semantics first and prove only a semantic-equivalent vocabulary bridge after this ledger HEAD passes P0`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 - video_status: `NOT_APPLICABLE_YET`
@@ -350,11 +366,11 @@ Preserve all existing weather/ship behavior exactly: vanilla `getHeightmapPos` r
 
 1. This ledger reconciliation commit is documentation-only, not source proof. Require exact-head P0 provenance success before another source/workflow mutation.
 2. Preserve every frozen boundary above and all frozen/negative evidence in Git history.
-3. Use artifact `10593368657` as the current canonical 300-diagnostic / 36-normalized-file frontier unless HEAD/compiler state changes.
-4. Inspect/prove only pinned `feature/world_weather/MixinLevelRenderer.java` BlockPos center vocabulary.
-5. If still bounded and unambiguous, create one fail-closed overlay changing only `vanillaHeight.getCenter()` to `Vec3.atCenterOf(vanillaHeight)` plus the required Vec3 import, and an exact-file exhaustive compiler proof.
-6. Preserve the existing weather heightmap, `CompatUtil.INSTANCE.toSameSpaceAs`, ship-heightmap-hit, shared surface lookup, block/fluid/collision lookup, and rain/snow occlusion semantics exactly.
-7. Do not combine this with `MixinRenderChunk` camera API drift, `MixinBlockGetter`, LavaFluid, collision authority, StructureTemplate, world/chunk serializer drift, Create/Copycat, Sable, or any other cluster.
+3. Use artifact `10595080252` as the current canonical 300-diagnostic / 35-normalized-file frontier unless HEAD/compiler state changes.
+4. Inspect only pinned `feature/clip_replace/MixinBlockGetter.java` and the exact Minecraft 26.2 `Direction.getNearest` API/semantics. Do not infer a replacement solely from javac candidates.
+5. If inspection establishes one bounded semantic-equivalent vocabulary bridge, create one fail-closed overlay for that descriptor change and an exact-file exhaustive compiler proof; otherwise HOLD rather than widening scope.
+6. Preserve the existing VS2 clip/reference-space transform path, face selection intent, collision/raycast semantics, hit-result construction, and all ship/world authority exactly.
+7. Do not combine this with `MixinRenderChunk` camera API drift, LavaFluid, collision authority, StructureTemplate, world/chunk serializer drift, entity movement packets, Create/Copycat, Sable, or any other cluster.
 8. Remain standalone P1. Do not use Create/SNR/Copycats to hide real VS2 failures. Do not record ordinary compile/debug video.
 
 ## Video and milestone gate
