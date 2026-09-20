@@ -98,3 +98,12 @@ if not weather_server_helper.is_file():
     raise SystemExit(f"fail-closed: required world-weather ServerLevel overlay helper missing: {weather_server_helper}")
 subprocess.run([sys.executable, str(weather_server_helper), str(root)], check=True)
 print("P1_WORLD_WEATHER_SERVERLEVEL_26_2_CHAINED")
+
+# Mechanical Camera accessor adaptation proven from the exact MC26.2 Camera javap artifact.
+# Changes only getPosition() -> position() on already-owned Camera instances; no camera acquisition,
+# transform, orientation, or authority logic changes.
+camera_position_helper = Path(__file__).with_name("apply_p1_camera_position_accessor_26_2.py")
+if not camera_position_helper.is_file():
+    raise SystemExit(f"fail-closed: required Camera position accessor overlay helper missing: {camera_position_helper}")
+subprocess.run([sys.executable, str(camera_position_helper), str(root)], check=True)
+print("P1_CAMERA_POSITION_ACCESSOR_26_2_CHAINED")
