@@ -330,4 +330,34 @@ replace_count(
     5,
 )
 
+# Exact-head run 35488463541 proved the Bee package relocation clean and moved the first
+# Java compiler frontier to three villager AI mixins that still reference the pre-26.x
+# net.minecraft.world.entity.npc.Villager package. Minecraft 26.2 relocates Villager to
+# net.minecraft.world.entity.npc.villager.Villager. Preserve all upstream VS2 AI behavior
+# and change only Java imports plus explicit Mixin method descriptors that encode the type.
+for rel in (
+    "common/src/main/java/org/valkyrienskies/mod/mixin/feature/ai/goal/villagers/MixinAssignProfessionFromJobSite.java",
+    "common/src/main/java/org/valkyrienskies/mod/mixin/feature/ai/goal/villagers/MixinWorkAtPoi.java",
+    "common/src/main/java/org/valkyrienskies/mod/mixin/feature/ai/goal/villagers/MixinGoToClosestVillage.java",
+):
+    replace_count(
+        rel,
+        "net.minecraft.world.entity.npc.Villager",
+        "net.minecraft.world.entity.npc.villager.Villager",
+        1,
+    )
+
+replace_count(
+    "common/src/main/java/org/valkyrienskies/mod/mixin/feature/ai/goal/villagers/MixinAssignProfessionFromJobSite.java",
+    "Lnet/minecraft/world/entity/npc/Villager;",
+    "Lnet/minecraft/world/entity/npc/villager/Villager;",
+    1,
+)
+replace_count(
+    "common/src/main/java/org/valkyrienskies/mod/mixin/feature/ai/goal/villagers/MixinWorkAtPoi.java",
+    "Lnet/minecraft/world/entity/npc/Villager;",
+    "Lnet/minecraft/world/entity/npc/villager/Villager;",
+    2,
+)
+
 print("P1_SOURCE_API_26_2_OVERLAY_APPLIED")
