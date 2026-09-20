@@ -142,7 +142,7 @@ replace_count(
     1,
 )
 
-# Run 35329592695 proved VectorConversionsMC is now clean. ValkyrienSkies.kt contains the
+# Run 35329592695 proved VectorConversionsMC.kt is now clean. ValkyrienSkies.kt contains the
 # same upstream transformDirection(Direction, ...) overload and the same private Direction
 # backing-field access. Adapt only that one compiler-proven callsite to the public 26.x
 # accessor; API surface, overload structure, and JOML transform behavior remain unchanged.
@@ -357,6 +357,18 @@ replace_count(
     "common/src/main/java/org/valkyrienskies/mod/mixin/feature/ai/goal/villagers/MixinWorkAtPoi.java",
     "Lnet/minecraft/world/entity/npc/Villager;",
     "Lnet/minecraft/world/entity/npc/villager/Villager;",
+    2,
+)
+
+# Exact-head run 35488737330 proved the Villager package relocation clean and exposed the
+# same Minecraft 26.2 ResourceLocation -> Identifier rename in the client sound mixin. The
+# pinned file contains exactly two occurrences (import + null constructor cast). Preserve
+# all upstream VS2 ship lookup, render-transform position, velocity, and sound-reference
+# behavior unchanged; adapt only the renamed Mojang identifier type.
+replace_count(
+    "common/src/main/java/org/valkyrienskies/mod/mixin/feature/sound/client/MixinAbstractTickableSoundInstance.java",
+    "ResourceLocation",
+    "Identifier",
     2,
 )
 
