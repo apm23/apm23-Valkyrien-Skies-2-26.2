@@ -106,4 +106,4 @@ camera_position_helper = Path(__file__).with_name("apply_p1_camera_position_acce
 if not camera_position_helper.is_file():
     raise SystemExit(f"fail-closed: required Camera position accessor overlay helper missing: {camera_position_helper}")
 subprocess.run([sys.executable, str(camera_position_helper), str(root)], check=True)
-print("P1_CAMERA_POSITION_ACCESSOR_26_2_CHAINED")
+print("P1_CAMERA_POSITION_ACCESSOR_26_2_CHAINED_V2")
