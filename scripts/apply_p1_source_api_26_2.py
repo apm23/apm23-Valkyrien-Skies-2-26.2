@@ -298,4 +298,36 @@ replace_count(
     1,
 )
 
+# Exact-head run 35485352592 proved the obsolete optional Create/ETF jars are no longer
+# contaminating javac and exposed Minecraft 26.2's vanilla Bee package relocation as the
+# first clean Java frontier. Preserve every upstream VS2 Bee mixin body and adapt only the
+# relocated Mojang package names, including the one explicit Mixin target descriptor and
+# the access-widener entries that make Bee's nested goal classes accessible.
+for rel, expected in (
+    ("common/src/main/java/org/valkyrienskies/mod/mixin/feature/ai/goal/bees/MixinLocateHiveGoal.java", 2),
+    ("common/src/main/java/org/valkyrienskies/mod/mixin/feature/ai/goal/bees/MixinBee.java", 1),
+    ("common/src/main/java/org/valkyrienskies/mod/mixin/feature/ai/goal/bees/MixinGrowCropGoal.java", 1),
+    ("common/src/main/java/org/valkyrienskies/mod/mixin/feature/ai/goal/bees/MixinEnterHiveGoal.java", 1),
+    ("common/src/main/java/org/valkyrienskies/mod/mixin/feature/ai/goal/bees/MixinPollinateGoal.java", 1),
+):
+    replace_count(
+        rel,
+        "net.minecraft.world.entity.animal.Bee",
+        "net.minecraft.world.entity.animal.bee.Bee",
+        expected,
+    )
+
+replace_count(
+    "common/src/main/java/org/valkyrienskies/mod/mixin/feature/ai/goal/bees/MixinPollinateGoal.java",
+    "Lnet/minecraft/world/entity/animal/Bee;",
+    "Lnet/minecraft/world/entity/animal/bee/Bee;",
+    1,
+)
+replace_count(
+    "common/src/main/resources/valkyrienskies-common.accesswidener",
+    "net/minecraft/world/entity/animal/Bee$",
+    "net/minecraft/world/entity/animal/bee/Bee$",
+    5,
+)
+
 print("P1_SOURCE_API_26_2_OVERLAY_APPLIED")
