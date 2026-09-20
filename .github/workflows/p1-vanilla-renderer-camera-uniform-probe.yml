@@ -1,0 +1,100 @@
+name: P1 vanilla renderer camera uniform proof
+# Inspection-only: pin exact 26.2 CameraRenderState cull-frustum copy and terrain camera-relative globals.
+
+on:
+  push:
+    paths:
+      - '.github/workflows/p1-vanilla-renderer-camera-uniform-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prove-camera-uniforms:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Replay canonical P1 overlays
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, shlex, subprocess
+          workflow=Path('.github/workflows/p1-compile.yml').read_text()
+          commands=re.findall(r'^\s*run:\s+(python3 scripts/apply_p1_[^\n]+ upstream-vs2)\s*$',workflow,flags=re.MULTILINE)
+          if len(commands)<50: raise SystemExit(f'fail-closed: canonical chain count={len(commands)}')
+          for command in commands: subprocess.run(shlex.split(command),check=True)
+          target='common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/vanilla_renderer/MixinLevelRendererVanilla.java'
+          actual=subprocess.check_output(['git','-C','upstream-vs2','hash-object',target],text=True).strip()
+          if actual!='824e1ac56a99bc6480cc80c32c085d18c2425b09': raise SystemExit('fail-closed: pinned renderer source drift')
+          PY
+      - name: Resolve exact common compile classpath
+        shell: bash
+        working-directory: upstream-vs2
+        run: |
+          set -euo pipefail
+          cat > ../p1-camera-uniform.init.gradle <<'GRADLE'
+          gradle.projectsEvaluated {
+            def p=gradle.rootProject.findProject(':common')
+            if (p==null) throw new GradleException('fail-closed: :common missing')
+            p.tasks.register('vsPrintMainCompileClasspath') { doLast {
+              p.extensions.getByName('sourceSets').getByName('main').compileClasspath.files.each { f -> println('VS_CP_FILE='+f.absolutePath) }
+            }}
+          }
+          GRADLE
+          ./gradlew -I ../p1-camera-uniform.init.gradle :common:vsPrintMainCompileClasspath --no-daemon | tee ../p1-camera-uniform-classpath.log
+          grep -q '^VS_CP_FILE=' ../p1-camera-uniform-classpath.log
+      - name: Prove exact camera and global-uniform semantics
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' | tee p1-vanilla-renderer-camera-uniform-probe.log
+          from pathlib import Path
+          import subprocess,zipfile
+          jars=[]
+          for line in Path('p1-camera-uniform-classpath.log').read_text(errors='replace').splitlines():
+            if line.startswith('VS_CP_FILE='):
+              p=Path(line.split('=',1)[1])
+              if p.exists() and p.suffix=='.jar': jars.append(p)
+          owners=[]
+          for jar in jars:
+            try:
+              with zipfile.ZipFile(jar) as z:
+                if 'net/minecraft/client/renderer/LevelRenderer.class' in z.namelist(): owners.append(jar)
+            except zipfile.BadZipFile: pass
+          if len(owners)!=1: raise SystemExit(f'fail-closed: MC owner count={len(owners)}')
+          owner=owners[0]
+          outputs={}
+          for cls in ('net.minecraft.client.Camera','net.minecraft.client.renderer.GlobalSettingsUniform'):
+            p=subprocess.run(['javap','-classpath',str(owner),'-p','-s','-c',cls],text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+            print('\n=== JAVAP',cls,'===\n'+p.stdout)
+            if p.returncode: raise SystemExit(f'fail-closed: javap failed: {cls}')
+            outputs[cls]=p.stdout
+          camera=outputs['net.minecraft.client.Camera']
+          globals_=outputs['net.minecraft.client.renderer.GlobalSettingsUniform']
+          camera_anchors=('extractRenderState','getCullFrustum','CameraRenderState.cullFrustum')
+          missing=[x for x in camera_anchors if x not in camera]
+          if missing: raise SystemExit(f'fail-closed: Camera render-state semantics drift: {missing}')
+          global_anchors=('CameraBlockPos','CameraOffset')
+          missing=[x for x in global_anchors if x not in globals_]
+          if missing: raise SystemExit(f'fail-closed: global terrain camera uniform names drift: {missing}')
+          print('VANILLA_RENDERER_26_2_CAMERA_UNIFORMS_PROVEN camera_cull_copy=true camera_relative_globals=true')
+          PY
+      - name: Upload exact proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-vanilla-renderer-camera-uniform-probe-${{ github.sha }}
+          path: |
+            p1-camera-uniform-classpath.log
+            p1-vanilla-renderer-camera-uniform-probe.log
+          if-no-files-found: warn
