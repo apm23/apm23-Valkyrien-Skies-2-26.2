@@ -176,3 +176,11 @@ if not moveplayer_collision_helper.is_file():
     raise SystemExit(f"fail-closed: required move-player horizontal-collision overlay helper missing: {moveplayer_collision_helper}")
 subprocess.run([sys.executable, str(moveplayer_collision_helper), str(root)], check=True)
 print("P1_MOVEPLAYER_HORIZONTAL_COLLISION_26_2_CHAINED_V2")
+
+# Mechanical packed-key vocabulary for exactly six MixinClientChunkCache ship-chunk map sites.
+# Preserve storage, packet, connectivity, relight, renderer, and unload lifecycle authority.
+clientchunk_pack_helper = Path(__file__).with_name("apply_p1_clientchunkcache_chunkpos_pack_26_2.py")
+if not clientchunk_pack_helper.is_file():
+    raise SystemExit(f"fail-closed: required ClientChunkCache packed-key overlay helper missing: {clientchunk_pack_helper}")
+subprocess.run([sys.executable, str(clientchunk_pack_helper), str(root)], check=True)
+print("P1_CLIENTCHUNKCACHE_CHUNKPOS_PACK_26_2_CHAINED")
