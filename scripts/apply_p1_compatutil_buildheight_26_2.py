@@ -43,3 +43,4 @@ print("P1_COMPATUTIL_BUILDHEIGHT_26_2_OVERLAY_APPLIED")
 # Transport-only canonical P1 retrigger for the chained OptiFine renderer section-range proof.
 # Transport-only canonical P1 retrigger for the chained OptiFine renderer dirty-authority proof.
 # Transport-only canonical P1 retrigger for the chained Immersive Portals chunk-tracking build-height proof.
+# Transport-only canonical P1 retrigger for the chained Fabric VSDataComponents Identifier proof.
