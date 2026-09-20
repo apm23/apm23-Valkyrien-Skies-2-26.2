@@ -48,7 +48,7 @@ required_source = {
     old_call.strip(): 1,
     "relightChunk(worldChunk);": 1,
     "this.level.onChunkLoaded(pos);": 1,
-    "ValkyrienCommonMixinConfigPlugin.getVSRenderer() != VSRenderer.SODIUM": 2,
+    "ValkyrienCommonMixinConfigPlugin.getVSRenderer() != VSRenderer.SODIUM": 3,
     "ValkyrienCommonMixinConfigPlugin.getVSRenderer() == VSRenderer.SODIUM": 1,
 }
 for anchor, expected in required_source.items():
