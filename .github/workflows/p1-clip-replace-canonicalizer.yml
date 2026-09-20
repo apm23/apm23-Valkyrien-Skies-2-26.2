@@ -1,0 +1,110 @@
+name: P1 clip-replace canonicalizer staging
+
+on:
+  push:
+    paths:
+      - '.github/workflows/p1-clip-replace-canonicalizer.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  stage-canonical-workflow:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout port repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build exact canonical workflow staging blob
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .ci-transport
+          python3 - <<'PY'
+          from pathlib import Path
+
+          src = Path('.github/workflows/p1-compile.yml')
+          dst = Path('.ci-transport/p1-compile.yml')
+          text = src.read_text(encoding='utf-8')
+
+          path_anchor = "      - 'scripts/apply_p1_world_weather_blockpos_center_26_2.py'\n"
+          path_insert = path_anchor + "      - 'scripts/apply_p1_clip_replace_direction_26_2.py'\n"
+          step_anchor = (
+              "      - name: Apply traceable P1 world-weather BlockPos center overlay\n"
+              "        run: python3 scripts/apply_p1_world_weather_blockpos_center_26_2.py upstream-vs2\n"
+          )
+          step_insert = step_anchor + (
+              "\n      - name: Apply traceable P1 clip-replace Direction vocabulary overlay\n"
+              "        run: python3 scripts/apply_p1_clip_replace_direction_26_2.py upstream-vs2\n"
+          )
+
+          candidate = 'scripts/apply_p1_clip_replace_direction_26_2.py'
+          if candidate in text:
+              raise SystemExit('fail-closed: candidate already present in canonical workflow')
+          if text.count(path_anchor) != 1:
+              raise SystemExit(f'fail-closed: expected one world-weather trigger anchor, found {text.count(path_anchor)}')
+          if text.count(step_anchor) != 1:
+              raise SystemExit(f'fail-closed: expected one world-weather apply-step anchor, found {text.count(step_anchor)}')
+
+          text = text.replace(path_anchor, path_insert, 1)
+          text = text.replace(step_anchor, step_insert, 1)
+
+          if text.count(candidate) != 2:
+              raise SystemExit(f'fail-closed: expected candidate exactly twice after canonicalization, found {text.count(candidate)}')
+          if text.count('run: python3 scripts/apply_p1_clip_replace_direction_26_2.py upstream-vs2') != 1:
+              raise SystemExit('fail-closed: candidate run-step count mismatch')
+          if text.count("- 'scripts/apply_p1_clip_replace_direction_26_2.py'") != 1:
+              raise SystemExit('fail-closed: candidate path-trigger count mismatch')
+
+          dst.write_text(text, encoding='utf-8')
+          print('P1_CLIP_REPLACE_CANONICAL_STAGING_OK')
+          PY
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+          p = Path('.ci-transport/p1-compile.yml')
+          data = p.read_bytes()
+          print('STAGED_CANONICAL_SHA256=' + hashlib.sha256(data).hexdigest())
+          print('STAGED_CANONICAL_SIZE=' + str(len(data)))
+          PY
+
+      - name: Validate staging delta is candidate-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import difflib
+
+          old = Path('.github/workflows/p1-compile.yml').read_text(encoding='utf-8').splitlines(keepends=True)
+          new = Path('.ci-transport/p1-compile.yml').read_text(encoding='utf-8').splitlines(keepends=True)
+          diff = ''.join(difflib.unified_diff(old, new, fromfile='p1-compile.yml', tofile='canonical-p1-compile.yml'))
+          print(diff)
+          added = [line[1:].rstrip('\n') for line in diff.splitlines() if line.startswith('+') and not line.startswith('+++')]
+          expected = {
+              "      - 'scripts/apply_p1_clip_replace_direction_26_2.py'",
+              "      - name: Apply traceable P1 clip-replace Direction vocabulary overlay",
+              "        run: python3 scripts/apply_p1_clip_replace_direction_26_2.py upstream-vs2",
+          }
+          if set(added) != expected or len(added) != 3:
+              raise SystemExit(f'fail-closed: unexpected canonical added lines: {added!r}')
+          removed = [line for line in diff.splitlines() if line.startswith('-') and not line.startswith('---')]
+          if removed:
+              raise SystemExit(f'fail-closed: canonicalization removed lines: {removed!r}')
+          print('CANONICAL_DELTA_EXACTLY_CANDIDATE_ONLY')
+          PY
+
+      - name: Commit staging transport only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add .ci-transport/p1-compile.yml
+          test "$(git diff --cached --name-only)" = '.ci-transport/p1-compile.yml'
+          git commit -m 'ci: stage clip-replace canonical workflow blob'
+          git push origin HEAD:main
