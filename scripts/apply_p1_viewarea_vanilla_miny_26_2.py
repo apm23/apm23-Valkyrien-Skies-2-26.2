@@ -6,7 +6,7 @@ changes exactly one ship RenderSection lookup coordinate expression and leaves d
 scheduling, section construction, custom map/array ownership, and disposal untouched.
 """
 from pathlib import Path
-import sys
+import subprocess, sys
 
 root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("upstream-vs2")
 path = root / "common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/vanilla_renderer/MixinViewAreaVanilla.java"
@@ -58,3 +58,10 @@ for anchor, expected in anchors.items():
 
 path.write_text(new_text, encoding="utf-8")
 print("P1_VIEWAREA_VANILLA_MINY_26_2_OVERLAY_APPLIED sites=1")
+
+# RenderSection construction is a separate exact-mapped 26.2 lifecycle unit.
+ctor_helper = Path(__file__).with_name("apply_p1_viewarea_vanilla_rendersection_ctor_26_2.py")
+if not ctor_helper.is_file():
+    raise SystemExit(f"fail-closed: required ViewArea RenderSection constructor helper missing: {ctor_helper}")
+subprocess.run([sys.executable, str(ctor_helper), str(root)], check=True)
+print("P1_VIEWAREA_VANILLA_RENDERSECTION_CTOR_26_2_CHAINED")
