@@ -7,7 +7,7 @@ without changing arguments, map ownership, renderer lifecycle, dirty scheduling,
 construction, or buffer disposal.
 """
 from pathlib import Path
-import sys
+import subprocess, sys
 
 root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("upstream-vs2")
 path = root / "common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/vanilla_renderer/MixinViewAreaVanilla.java"
@@ -61,3 +61,11 @@ for anchor, expected in anchors.items():
 
 path.write_text(new_text, encoding="utf-8")
 print("P1_VIEWAREA_VANILLA_CHUNKPOS_PACK_26_2_OVERLAY_APPLIED sites=5")
+
+# Minimum build-height vocabulary is a separate already-evidenced MC26.2 unit.
+# Chain only after the independently frozen packed-key transform.
+miny_helper = Path(__file__).with_name("apply_p1_viewarea_vanilla_miny_26_2.py")
+if not miny_helper.is_file():
+    raise SystemExit(f"fail-closed: required ViewArea minY helper missing: {miny_helper}")
+subprocess.run([sys.executable, str(miny_helper), str(root)], check=True)
+print("P1_VIEWAREA_VANILLA_MINY_26_2_CHAINED")
