@@ -159,3 +159,12 @@ if not entity_inside_helper.is_file():
     raise SystemExit(f"fail-closed: required Entity inside-effect collector overlay helper missing: {entity_inside_helper}")
 subprocess.run([sys.executable, str(entity_inside_helper), str(root)], check=True)
 print("P1_ENTITY_INSIDE_EFFECT_COLLECTOR_26_2_CHAINED")
+
+# Minecraft 26.2 renamed/refactored the local-instance authority query while preserving
+# the old VS2 guard's ownership semantics. Change only that one query; keep dragged-entity
+# ship lookup and interpolation authority unchanged.
+livingentity_authority_helper = Path(__file__).with_name("apply_p1_livingentity_local_authority_26_2.py")
+if not livingentity_authority_helper.is_file():
+    raise SystemExit(f"fail-closed: required LivingEntity local-authority overlay helper missing: {livingentity_authority_helper}")
+subprocess.run([sys.executable, str(livingentity_authority_helper), str(root)], check=True)
+print("P1_LIVINGENTITY_LOCAL_AUTHORITY_26_2_CHAINED")
