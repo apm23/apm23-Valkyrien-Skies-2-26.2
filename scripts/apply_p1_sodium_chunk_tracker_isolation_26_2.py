@@ -58,8 +58,8 @@ for unexpected in ("renderShips(", "SodiumWorldRenderer", "RenderSectionManager"
         raise SystemExit(f"fail-closed: unexpected broader Sodium integration present: {unexpected}")
 
 added_new = (
-    "        // P1 standalone intentionally has no Sodium runtime. Sodium 26.2 removed the\n"
-    "        // legacy ChunkTrackerHolder API used by this pinned optional compatibility path."
+    "        // P1 standalone intentionally has no Sodium runtime. Minecraft 26.2 Sodium removed the\n"
+    "        // legacy chunk-tracker callback API used by this pinned optional compatibility path."
 )
 removed_new = added_new
 
