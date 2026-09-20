@@ -12,6 +12,7 @@ addToLists/buildInfoList, palette construction, entity list clearing, ship looku
 transforms, physics, collision, rendering, networking, or any runtime movement authority.
 """
 from pathlib import Path
+import subprocess
 import sys
 
 root = Path(sys.argv[1] if len(sys.argv) > 1 else "upstream-vs2")
@@ -91,3 +92,11 @@ for needle, expected in required_before.items():
 
 path.write_text(text, encoding="utf-8")
 print("P1_STRUCTURE_TEMPLATE_VALUE_OUTPUT_26_2_OVERLAY_APPLIED")
+
+# Transport-only chaining from a workflow-watched canonical helper. The semantic adaptation
+# remains isolated in its own fail-closed helper; do not modify the independent player-scale unit here.
+clientlevel_hand_helper = Path(__file__).with_name("apply_p1_clientlevel_hand_items_26_2.py")
+if not clientlevel_hand_helper.is_file():
+    raise SystemExit(f"fail-closed: required ClientLevel hand-items overlay helper missing: {clientlevel_hand_helper}")
+subprocess.run([sys.executable, str(clientlevel_hand_helper), str(root)], check=True)
+print("P1_CLIENTLEVEL_HAND_ITEMS_26_2_CHAINED")
