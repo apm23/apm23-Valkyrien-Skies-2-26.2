@@ -24,7 +24,7 @@ Minecraft 26.2 changes are applied by explicit fail-closed overlays. Every core 
 
 ## Current reconciliation — 2026-09-20 P1 Java API frontier
 
-Current proven implementation boundary before this documentation-only reconciliation commit:
+Current proven source implementation boundary:
 
 - canonical implementation/proof HEAD: `b7104b6e1796fa498f1e7782ebfcc899e771b3fe` — `ci: chain LevelChunk serialized parse factory overlay`.
 - semantic helper commit: `22c6668c8a02d98fcabaa334220a85b586a9d1bd` — `fix: port LevelChunk serialized parse factory to 26.2`.
@@ -34,8 +34,18 @@ Current proven implementation boundary before this documentation-only reconcilia
 - canonical compile artifact: `p1-compile-log-b7104b6e1796fa498f1e7782ebfcc899e771b3fe`, ID `10607530237`, digest `sha256:6a9035938d523d9ec6aae0a6976101836ab26aa8ad091ae30227d5ec111f5176`.
 - extracted `p1-compile.log`: **235530 bytes**, SHA-256 `b6b2d5b542919de810ac8e2241a8d540d4c07df8f2a99d73aa80ebd25e99a538`.
 - authoritative first primary javac pass: **52 errors across 8 Java source files**. Later Gradle repeats are not frontier authority.
+
+Current ownership-boundary evidence after that compile:
+
+- documentation freeze commit `67e1cf5fde706e8f673a7758969d2e5725378fe8`; exact-head P0 run `35517338549`: **success**.
+- ownership-probe HEAD `df2722ced726e73d5fe70b2290225d664860cfd8` — `ci: inspect LevelChunk blending data ownership`.
+- exact-head P0 provenance run `35517373180`: **success**.
+- exact mapped ownership probe run `35517373126`: **success**.
+- ownership artifact `p1-levelchunk-blendingdata-ownership-probe-df2722ced726e73d5fe70b2290225d664860cfd8`, ID `10607406974`, digest `sha256:4bca5d6470869e95b1d9963d2977c6eb13734c549e8d4d524540234c3151cc8b`.
+- extracted classpath log: **30709 bytes**, SHA-256 `80fa2200aeaa7d52d9e0460388eee69a1a026d49cf5009017745401138612ffb`.
+- extracted ownership probe log: **428831 bytes**, SHA-256 `f8e0ad29d2ee5cd6ee63a99c4932ad7a04cbf006ac4188ff2d01a8c955fba72b`.
 - project state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`.
-- active blocker classification: `MINECRAFT_26_2_JAVA_API_FRONTIER`.
+- active blocker classification: `MINECRAFT_26_2_LEVELCHUNK_BLENDING_OWNERSHIP_BOUNDARY`.
 - This is not P1 boot proof, not P2/M1 ship proof, and not runtime rendering proof.
 
 ### Artifact metadata correction for the preceding 59-error boundary
@@ -82,11 +92,30 @@ Freeze all fifteen units above at P1 compile/API scope. Runtime semantics remain
 
 `MixinServerLevel`, `SodiumCompat`, `MixinEntity`, `MixinLivingEntity`, `MixinLocalPlayer`, `MixinMinecraftServer`, `MixinClientLevel`, and `MixinClientPacketListener` are zero-error in the primary javac pass. `MixinClientChunkCache` remains intentionally at one unresolved ship-render dirty-invalidation error.
 
-The only remaining `MixinLevelChunk` diagnostic is a separate ownership/construction semantic unit and is not yet adapted:
+### LevelChunk final blending-data ownership boundary
+
+The only remaining `MixinLevelChunk` diagnostic is:
 
 - `this.blendingData = protoChunk.getBlendingData()`: `ChunkAccess.blendingData` is final in Minecraft 26.2.
 
-Pinned upstream performs this assignment after it has serialized the source chunk, read a temporary `ProtoChunk`, unpacked ticks, and copied sections into the existing `LevelChunk`. Because 26.2 makes `blendingData` final, this is not a mechanical field-access migration. Prove the exact mapped 26.2 `ChunkAccess`/`LevelChunk`/`ProtoChunk` constructor and conversion ownership path before changing source. Do not use `@Mutable`, reflection, accessor writes, duplicate storage, or constructor bypass merely to remove the compiler error.
+Exact mapped 26.2 bytecode from the canonical P1 compile classpath proves:
+
+- `ChunkAccess` declares `protected final BlendingData blendingData`.
+- `ChunkAccess`'s constructor receives `BlendingData` and performs the field write there.
+- `LevelChunk(Level, ChunkPos, UpgradeData, LevelChunkTicks, LevelChunkTicks, long, LevelChunkSection[], PostLoadProcessor, BlendingData)` forwards the supplied value into `ChunkAccess` construction.
+- vanilla `LevelChunk(ServerLevel, ProtoChunk, PostLoadProcessor)` calls `ProtoChunk.getBlendingData()` and forwards that value into the constructor above.
+- `ProtoChunk` likewise receives blending data at construction.
+- no mapped `setBlendingData` method exists in the inspected `ChunkAccess` / `LevelChunk` / `ProtoChunk` boundary.
+- `SerializableChunkData.read(...)` unpacks persisted blending data before constructing either `LevelChunk` or `ProtoChunk`; vanilla ownership is therefore construction-time, not post-construction reassignment.
+
+Pinned VS2's real dimension-transfer path is materially different from vanilla construction ownership:
+
+- `MixinMinecraftServer.moveTerrainAcrossDimensions(...)` obtains an already-live destination `LevelChunk` via `destLevel.getChunk(x, z)` and then calls `VSLevelChunk.copyChunkFromOtherDimension(...)` on that existing object.
+- immediately before that, `VSServerLevel.removeChunk(x, z)` is called with an upstream comment explicitly calling the sequence a hack intended to fix destination-level state.
+- pinned `MixinServerLevel.removeChunk(...)` only removes the chunk position from VS's private `vs$knownChunks` tracking map; it does **not** evict or replace the vanilla `LevelChunk` object in `ServerChunkCache` / `ChunkHolder`.
+- therefore vanilla's legitimate constructor path cannot be substituted locally inside `MixinLevelChunk.copyChunkFromOtherDimension(...)`: replacing the live chunk requires an independently proven server chunk-holder/cache lifecycle boundary.
+
+This evidence rejects a mechanical final-field workaround. Do not use `@Mutable`, reflection, accessor writes, duplicate blending storage, unsafe/final-field mutation, silently drop the assignment, or preserve stale destination blending data without semantic proof.
 
 ## Frozen architecture-sensitive boundaries
 
@@ -125,6 +154,7 @@ Forbidden final architecture remains: custom VS2-like reference frames, syntheti
 - `player.getDimensions(Pose.STANDING)` is a locked failed/forbidden standing-width hypothesis for this site; use the proven base-standing `getDefaultDimensions(Pose.STANDING)` mapping only.
 - LevelChunk dirty-mark first chain at `bc2825456b124096b7845bbc4654082e5379902e`, StructureTemplate proof `35514218070`, failed before javac because its helper wrongly expected both direct `unsaved` assignments to be immediately adjacent to `registerTickContainerInLevel(...)`. Pinned upstream has one such site separated by a blank line. `37514ff84a4b7233b6f347fbac1d30105430fcd9` corrected only the fail-closed guard; `e6a4ed6b6310d2780e0196881393f10e70a0f5eb` retriggered the watched chain and proved **57 errors / 8 files**. Never treat `35514218070` as semantic failure.
 - LevelChunk parse-factory first helper guard expected a line break between `parse(...)` and `.read(...)`, while the canonical overlay source had the call on one line. This was harness-only; `02dd62e7705e42b320ab673b808d697fc741a6cb` corrected the guard before the helper entered the canonical chain. Never treat it as semantic failure.
+- LevelChunk `blendingData` is a locked non-mechanical boundary: the exact mapped field is final and construction-owned. Do not replay direct assignment with `@Mutable`, accessors, reflection/unsafe, duplicate storage, assignment removal, or stale destination-state retention merely to make javac pass.
 - Actions self-push workflow edits without `workflows` permission remain failed transport hypothesis.
 - retired `apm23/VS2-Create_Interactive` implementation is forbidden.
 
@@ -157,11 +187,12 @@ Create/SNR/Copycats are not authority for current standalone P1 source adaptatio
 
 1. This ledger commit is documentation-only. Require exact-head P0 provenance success before the next source mutation.
 2. Preserve all frozen boundaries and negative evidence above.
-3. Treat artifact `10607530237` as the canonical **52-error / 8-source-file** Java frontier until a later exact canonical compile changes it.
-4. Freeze all three proven `MixinLevelChunk` API units: public `markUnsaved()` dirty marking, `PalettedContainerFactory` empty-section construction, and `SerializableChunkData.parse(...)` factory context. Do not replay old private-field, biome-registry, or `RegistryAccess` parse APIs.
+3. Treat artifact `10607530237` as the canonical **52-error / 8-source-file** Java compile frontier until a later exact canonical compile changes it.
+4. Treat ownership probe `35517373126` / artifact `10607406974` as authoritative evidence that 26.2 `blendingData` is constructor-owned and final; do not attempt another one-line `MixinLevelChunk` field patch.
 5. Keep `MixinClientChunkCache`'s one ship-specific dirty-invalidation error untouched unless its custom ship-render ownership path is independently proven.
-6. Continue `MixinLevelChunk` one semantic unit at a time. The only remaining unit is final `blendingData` ownership. Before source mutation, inspect the exact mapped Minecraft 26.2 `ChunkAccess`, `LevelChunk`, `ProtoChunk`, and any vanilla proto-to-level conversion constructor/method boundary from the exact P1 compile classpath. Determine where blending data is supplied/owned and whether pinned VS2's in-place cross-dimension copy can preserve semantics through a legitimate 26.2 construction/ownership boundary.
-7. Do not use `@Mutable`, reflection, accessor writes, duplicate blending storage, unsafe/final-field mutation, or constructor bypass merely to remove the diagnostic. If no legitimate one-to-one ownership adaptation exists, classify the boundary as `ROOT_REDESIGN` and inspect the upstream VS2 chunk-copy architecture rather than inventing a fake substitute.
-8. Optional compat (`Immersive Portals`, FTB Chunks, OptiFine) is not first target merely because it has many errors.
-9. After any bounded source mutation, run exact canonical standalone P1 compile, classify the first primary javac pass from the uploaded artifact, and update this ledger at the next meaningful proven boundary.
-10. Remain P1. No ordinary compile/debug video.
+6. Enter a bounded `ROOT_REDESIGN` investigation of the **existing upstream VS2 dimension-transfer/chunk-copy boundary**, not a replacement architecture. Inspect exact Minecraft 26.2 `ServerChunkCache`, `ChunkHolder`, `ChunkMap`, and related full-chunk promotion/replacement APIs from the canonical P1 classpath, together with pinned `MixinMinecraftServer.moveTerrainAcrossDimensions`, `VSServerLevel.removeChunk`, and `MixinLevelChunk.copyChunkFromOtherDimension`.
+7. Determine whether a legitimate 26.2 path can construct the destination `LevelChunk` from the deserialized `ProtoChunk` (thereby transferring `BlendingData` through vanilla construction) and install it through vanilla chunk lifecycle while preserving VS2 ticketing, tick-container registration, block entities, heightmaps, lighting, terrain updates, save state, and object visibility. Do not mutate source until that lifecycle path is proven.
+8. If vanilla exposes no safe live-chunk replacement boundary, inspect the upstream VS2 transfer design for the smallest traceable adaptation; do not invent custom chunk authority and do not silently discard source blending semantics.
+9. Optional compat (`Immersive Portals`, FTB Chunks, OptiFine) is not first target merely because it has many errors.
+10. After any bounded source mutation, run exact canonical standalone P1 compile, classify the first primary javac pass from the uploaded artifact, and update this ledger at the next meaningful proven boundary.
+11. Remain P1. No ordinary compile/debug video.
