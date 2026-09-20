@@ -1,6 +1,6 @@
 # MASTER_STATE — REAL VS2 26.2 PORT
 
-GitHub code is the implementation source of truth. This file is the durable continuity ledger; chat memory is not authoritative. Git history remains binding for frozen-green and negative-evidence records even when this ledger is compacted.
+GitHub code is the implementation source of truth. This file is the durable continuity ledger; chat memory is not authoritative. Git history remains binding for all frozen-green and negative-evidence records even when this ledger is compacted.
 
 ## Project identity
 
@@ -22,65 +22,68 @@ GitHub code is the implementation source of truth. This file is the durable cont
 
 Minecraft 26.2 changes are applied by explicit fail-closed overlays. Every core ported subsystem must remain traceable to upstream VS2 or be documented as a minimal 26.2 compatibility bridge.
 
-## Current reconciliation — canonical P1 chain through ChunkMap shutdown-work boundary
+## Current reconciliation — canonical P1 chain through alpha-HUD API boundary
 
 Current proven implementation boundary before this documentation-only reconciliation commit:
 
-- canonical implementation HEAD: `6faec034d400458d4471e8aa608c77ecb01119e9` — `ci: adapt ChunkMap shutdown work dispatchers for 26.2`.
-- exact-head P0 provenance run `35492025315`: **success**.
-- exact-head standalone P1 compile run `35492025305` (#123): **frontier-only failure**. All overlay/apply steps, port-delta validation, and Gradle runtime setup succeeded; only the remaining javac frontier failed.
-- compile artifact: `p1-compile-log-6faec034d400458d4471e8aa608c77ecb01119e9`, ID `10599810712`, artifact digest `sha256:7766dbb259f545e85471624b6a8d8aa5d490454327efbcfe647f7f88d0abda23`.
-- extracted `p1-compile.log`: 193588 bytes, SHA-256 `60903897cd141b4d1d17dcac4f0806f4ced029492891e59443ef9e98435464f0`.
-- exact compile log contains **63 `: error:` diagnostics across 7 normalized source files**.
-- `MixinChunkMapClose.java`, `ChunkTaskPriorityQueueSorter`, `ChunkTaskDispatcher`, `worldgenTaskDispatcher`, and `lightTaskDispatcher` have **zero mentions** in the exact-head compile log.
-- immediately prior implementation HEAD `9b229bbadfc3bab5ed918556144ad566ca37e448` had artifact `10598698213` with **69 diagnostics across 8 normalized source files**. Therefore the bounded ChunkMap shutdown-work bridge removed exactly `MixinChunkMapClose.java` from the observed frontier without reopening previously frozen units.
+- canonical implementation HEAD: `480ca1e32024db619574b28488ad8a1c88045d52` — `ci: adapt VS2 alpha HUD API for 26.2`.
+- exact-head P0 provenance run `35493204506`: **success**.
+- exact-head standalone P1 compile run `35493204485` (#124): **frontier-only failure**. All overlay/apply steps, port-delta validation, Gradle runtime setup, and diagnostic upload succeeded; only the remaining javac frontier failed.
+- compile artifact: `p1-compile-log-480ca1e32024db619574b28488ad8a1c88045d52`, ID `10600285721`, artifact digest `sha256:94b983084696b37599b153bc9fb957998e5a8909b6b2d1427d6e268736a06056`.
+- extracted `p1-compile.log`: 191240 bytes, SHA-256 `671d6aca6279258cf5f19026941662f33e924f520cb10f96a2e9302e2804b8c3`.
+- exact compile log contains **57 `: error:` diagnostics across 6 normalized source files**.
+- `MixinGui.java`, `GuiGraphics`, `GuiGraphicsExtractor`, `renderEffects`, and `extractEffects` have **zero mentions** in the exact-head compile log.
+- immediately prior implementation HEAD `6faec034d400458d4471e8aa608c77ecb01119e9` had artifact `10599810712` with **63 diagnostics across 7 normalized source files**. Therefore the bounded alpha-HUD bridge removed exactly `feature/vs2_alpha_hud/MixinGui.java` from the observed frontier without reopening previously frozen units.
 
-## ChunkMap shutdown-work API bridge — frozen green
+## Alpha HUD API bridge — frozen green
 
 Pinned upstream target:
-`common/src/main/java/org/valkyrienskies/mod/mixin/server/world/MixinChunkMapClose.java`.
+`common/src/main/java/org/valkyrienskies/mod/mixin/feature/vs2_alpha_hud/MixinGui.java`.
 
-Upstream VS2 intent preserved:
+Upstream VS2 behavior preserved:
 
-- primary shutdown fix remains `MixinMinecraftServer.preStopServer()`, which removes real VS2 `SHIP_CHUNK` tickets;
-- `MixinChunkMapClose` remains defense-in-depth only;
-- when `updatingChunkMap` contains only shipyard chunks, it evaluates vanilla non-ticket work and intentionally omits only `distanceManager.hasTickets()` because stale shipyard ticket entries may linger;
-- no ticket lifecycle, chunk authority, ship lifecycle, transform, movement, collision, entity dragging, camera, rendering, or reference-space authority was replaced or introduced.
+- the existing optional VS2 alpha/debug HUD remains the only behavior of this mixin;
+- debug-toggle/config reads, physics/voxel/UDP text, text order, positions, background rectangles, and colors remain unchanged;
+- the mixin introduces no ship lifecycle, transform, movement, collision, entity dragging, camera, networking, physics, or reference-space authority.
 
 ### Exact Minecraft 26.2 API proof
 
-Probe-only commit: `080c8720ffd389b5f67e5218fd101c6c10e13c50`.
+Probe-only commit: `39d20e58f40fec26bb4face0823255789f560747` — `ci: inspect Minecraft 26.2 HUD extraction API`.
 
-- P0 provenance run `35491869222`: **success**.
-- exact API probe run `35491869220`: **success**.
-- probe artifact: `p1-chunkmap-haswork-api-probe-080c8720ffd389b5f67e5218fd101c6c10e13c50`, ID `10599332974`, digest `sha256:c75ef5ec5287807fda907ce206b67918badce88b9dfaa94dd728044a2080de89`.
-- extracted probe log SHA-256: `cbecc43ac4b1303cf5b2ae66ff6c22b65a80ff72dc63d57a0f833155d23a7095`.
-- exact resolved 26.2 mapped jar proves old `ChunkTaskPriorityQueueSorter` is absent.
-- exact `ChunkMap` contains `worldgenTaskDispatcher` and `lightTaskDispatcher`, both current task-dispatch boundaries.
-- exact `ChunkMap.hasWork()` checks, in vanilla work semantics: light engine; pending unloads; updating map; POI work; `toDrop`; unload queue; `worldgenTaskDispatcher.hasWork()`; `lightTaskDispatcher.hasWork()`; then `distanceManager.hasTickets()`.
-- exact `ChunkTaskDispatcher.hasWork()` exists and reports dispatcher/priority-queue work.
-- probe marker: `CHUNKMAP_26_2_API_PROVEN old_sorter_absent=true current_dispatchers=true hasWork_signatures=true`.
+- P0 provenance run `35492969228`: **success**.
+- exact API probe run `35492969240`: **success**.
+- probe artifact: `p1-gui-hud-api-probe-39d20e58f40fec26bb4face0823255789f560747`, ID `10599492174`, digest `sha256:e0bd8d6c812e96256e8876e9ee8d3ce40168f93f6b021e0bb5e184fd1f0ed1b5`.
+- exact mapped 26.2 compile classpath proves obsolete `net.minecraft.client.gui.GuiGraphics` is absent.
+- exact `Gui` has neither old `renderEffects` nor current `extractEffects` ownership.
+- exact `Hud` contains the `Minecraft minecraft` field used by upstream VS2.
+- exact `Hud` contains `extractEffects(GuiGraphicsExtractor, DeltaTracker)` with descriptor `(Lnet/minecraft/client/gui/GuiGraphicsExtractor;Lnet/minecraft/client/DeltaTracker;)V`.
+- exact `GuiGraphicsExtractor` exposes `fill(int,int,int,int,int)`.
+- exact `GuiGraphicsExtractor` exposes `text(Font,String,int,int,int)`; bytecode delegates to the boolean overload with `shadow=true`, preserving the old five-argument `drawString` presentation behavior.
+- probe marker: `GUI_HUD_26_2_API_PROVEN old_gui_graphics_absent=true gui_renderEffects_absent=true hud_extractEffects=true hud_minecraft=true extractor_fill=true`.
 
-### Minimal bridge installed by `6faec034d400458d4471e8aa608c77ecb01119e9`
+### Minimal bridge installed by `480ca1e32024db619574b28488ad8a1c88045d52`
 
-Only the proven API structure changed:
+Only the exact proven HUD API surface changed:
 
-- `ChunkTaskPriorityQueueSorter` import -> `ChunkTaskDispatcher`;
-- one old `queueSorter` shadow -> two current shadows, `worldgenTaskDispatcher` and `lightTaskDispatcher`;
-- `queueSorter.hasWork()` -> `worldgenTaskDispatcher.hasWork() || lightTaskDispatcher.hasWork()`.
+- `Gui` import/target -> `Hud`;
+- `GuiGraphics` -> `GuiGraphicsExtractor`;
+- injection method `renderEffects` -> `extractEffects`;
+- handler graphics parameter -> `GuiGraphicsExtractor`;
+- five-argument `drawString(...)` -> five-argument `text(...)`.
 
-The intentional omission of `distanceManager.hasTickets()` is unchanged. Do not reopen this boundary absent direct contradictory compile/runtime evidence.
+The exact-head compile artifact proves this source unit absent from the frontier. Do not reopen this boundary absent direct contradictory compile/runtime evidence.
 
 ## Recent mechanical Java convergence — preserved
 
-The following already-landed changes must not be repeated blindly:
+Already-landed API/mapping bridges that must not be repeated blindly include:
 
 - `28ee0eabe77778dd2f9bbd84e528d9c3a6718531`: client sound `ResourceLocation` -> `Identifier`.
 - `4aa395c810476d78c2f8cfb1bee423d2f5248616`: `BlockUtil` package relocation.
 - `880df3aa1ecbdaf2a5b9974d65dd68a266fbc764`: `DimensionDataStorage` -> `SavedDataStorage` in `MixinChunkMap`.
-- `82887915b04b1546129ab0dba610d4ba0ed7e075`: `applyCarvers` signature adaptation; obsolete `GenerationStep.Carving` removed only where unused.
-- `9b229bbadfc3bab5ed918556144ad566ca37e448`: LevelChunk `ChunkSerializer` -> `SerializableChunkData` serialization-vocabulary bridge; exact artifact `10598698213` proves target absence.
-- `6faec034d400458d4471e8aa608c77ecb01119e9`: ChunkMap shutdown-work dispatcher bridge described above.
+- `82887915b04b1546129ab0dba610d4ba0ed7e075`: `applyCarvers` signature adaptation.
+- `9b229bbadfc3bab5ed918556144ad566ca37e448`: LevelChunk `ChunkSerializer` -> `SerializableChunkData` vocabulary bridge.
+- `6faec034d400458d4471e8aa608c77ecb01119e9`: ChunkMap shutdown-work dispatcher bridge.
+- `480ca1e32024db619574b28488ad8a1c88045d52`: alpha-HUD owner/graphics/text API bridge described above.
 
 These are API/mapping adaptations only and authorize no replacement VS2 architecture.
 
@@ -94,7 +97,7 @@ All prior frozen-green proof records in Git history remain binding. Key locks in
 - **Entity local authority / interpolation** — implementation `b7e583af13598b6ddcc583380872f578b8a40bb8`; proof HEAD `9f2719be070e79b91b7f47ceddaec61d7f5cff40`; proof `35455551701`. Real dragging information, ship transforms, and interpolation authority remain intact; no synthetic carry system.
 - **Entity renderer submit lifecycle** — implementation `a87512437f40a3bfa1325d78f8e2588587ec7cc8`; proof HEAD `58d8554ba623896d486b91f18771df9bdcd6f2b3`; proof `35458380245`. Real VS2 render authorities remain authoritative.
 - **Shipyard teleport API mapping** — P0 `35467615792`; proof `35467615790`. Real VS2 ship-to-world transform remains authority; no manual packet/setPos/teleport chase.
-- NaturalSpawner, particle collision, EntitySectionStorage, WaterFluid, POIManager, AirAndWaterRandomPos, tick-ship-chunks, ship-debug overlay, world-weather, clip-replace, LavaFluid, Explosion, StructureTemplate, LevelChunk, and ChunkMapClose canonical proof boundaries remain frozen green.
+- NaturalSpawner, particle collision, EntitySectionStorage, WaterFluid, POIManager, AirAndWaterRandomPos, tick-ship-chunks, ship-debug overlay, world-weather, clip-replace, LavaFluid, Explosion, StructureTemplate, LevelChunk, ChunkMapClose, and alpha-HUD canonical proof boundaries remain frozen green.
 - **Clip-replace Direction vocabulary** — canonical `5d0fd81810a824b2da989b834dd6d2f92475dc33`; P0 `35478903000`; proof `35478902949`.
 - **LavaFluid randomTick ServerLevel** — canonical `19b0e356b34dae20c3aa8d9409d90fc0b96838b2`; P0 `35479600636`; proof `35479600673`.
 - **Explosion Level client accessor** — canonical `322dcf22e2baf25192682d4b9ee942f4a35dc86b`; P0 `35480514635`; proof `35480514714`.
@@ -111,28 +114,26 @@ All prior frozen-green proof records in Git history remain binding. Key locks in
 
 ## Current remaining Java compile frontier
 
-Exact-head artifact `10599810712` at implementation HEAD `6faec034d400458d4471e8aa608c77ecb01119e9` contains **63 `: error:` diagnostics across 7 normalized source files**:
+Exact-head artifact `10600285721` at implementation HEAD `480ca1e32024db619574b28488ad8a1c88045d52` contains **57 `: error:` diagnostics across 6 normalized source files**:
 
 1. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/vanilla_renderer/MixinLevelRendererVanilla.java` — 24 diagnostics.
 2. `common/src/main/java/org/valkyrienskies/mod/mixin/feature/render_ship_debug_bb/MixinDebugRenderer.java` — 9 diagnostics.
-3. `common/src/main/java/org/valkyrienskies/mod/mixin/client/renderer/MixinLevelRenderer.java` — 6 diagnostics.
-4. `common/src/main/java/org/valkyrienskies/mod/mixin/feature/render_pathfinding/MixinDebugRenderer.java` — 6 diagnostics.
-5. `common/src/main/java/org/valkyrienskies/mod/mixin/feature/vs2_alpha_hud/MixinGui.java` — 6 diagnostics.
+3. `common/src/main/java/org/valkyrienskies/mod/mixin/feature/render_pathfinding/MixinDebugRenderer.java` — 6 diagnostics.
+4. `common/src/main/java/org/valkyrienskies/mod/mixin/client/renderer/MixinLevelRenderer.java` — 6 diagnostics.
+5. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/sable/MixinSubLevelHoldingChunkMap.java` — 6 diagnostics.
 6. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/sable/MixinActiveSableCompanion.java` — 6 diagnostics.
-7. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/sable/MixinSubLevelHoldingChunkMap.java` — 6 diagnostics.
 
 Observed direct missing-symbol surfaces:
 
-- ship-debug renderer: `MultiBufferSource`, `RenderType`, and `MultiBufferSource.BufferSource` vocabulary;
-- pathfinding renderer: `MultiBufferSource.BufferSource` vocabulary;
-- alpha HUD: `GuiGraphics` vocabulary / injected render callback type;
-- client level renderer: `LightTexture` vocabulary / render signature;
-- vanilla renderer compat: `Uniform`, `VertexBuffer`, `LightTexture`, `RenderType`, `ShaderInstance` plus related signatures;
+- pathfinding debug renderer: `net.minecraft.client.renderer.MultiBufferSource.BufferSource` no longer resolves;
+- ship-debug renderer: `MultiBufferSource`, `RenderType`, and `MultiBufferSource.BufferSource` no longer resolve;
+- client level renderer: `LightTexture` no longer resolves and its render callback signature is renderer-sensitive;
+- vanilla renderer compat: `Uniform`, `VertexBuffer`, `LightTexture`, `RenderType`, `ShaderInstance`, plus related signatures no longer resolve;
 - Sable: absent optional companion classes/packages.
 
 Classification:
 
-- all five non-Sable units are rendering/HUD/camera-adjacent and must not be blind-patched;
+- all four non-Sable units are rendering/debug/camera-adjacent and must not be blind-patched;
 - both Sable units are optional compatibility residue and remain compile-only isolation territory, not standalone-P1 runtime authority;
 - there is currently no remaining non-render core Java unit in the observed frontier.
 
@@ -150,10 +151,10 @@ Classification:
 ## Project state
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
-- active_blocker: `MINECRAFT_26_2_RENDER_HUD_API_MIXIN_DRIFT`
-- active_proof_head: `6faec034d400458d4471e8aa608c77ecb01119e9; canonical P1 chain through frozen ChunkMap shutdown-work dispatcher boundary`
-- active_proof_run: `P0 35492025315 success; P1 compile 35492025305 frontier-only failure; artifact 10599810712; 63 diagnostics / 7 normalized source files; MixinChunkMapClose absent`
-- active_hypothesis: `next work must inspect one smallest renderer/HUD boundary against exact resolved Minecraft 26.2 APIs before any mutation; do not batch renderer families and do not use Sable residue to hide standalone VS2 failures`
+- active_blocker: `MINECRAFT_26_2_RENDERER_API_MIXIN_DRIFT`
+- active_proof_head: `480ca1e32024db619574b28488ad8a1c88045d52; canonical P1 chain through frozen alpha-HUD API boundary`
+- active_proof_run: `P0 35493204506 success; P1 compile 35493204485 frontier-only failure; artifact 10600285721; 57 diagnostics / 6 normalized source files; MixinGui absent`
+- active_hypothesis: `next work must inspect one smallest remaining renderer/debug boundary against exact resolved Minecraft 26.2 APIs before any mutation; do not batch renderer families and do not use Sable residue to hide standalone VS2 failures`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 - video_status: `NOT_APPLICABLE_YET`
@@ -178,11 +179,11 @@ Classification:
 
 1. This ledger reconciliation commit is documentation-only. Require exact-head P0 provenance success before another source/workflow mutation.
 2. Preserve every frozen boundary and all negative evidence in Git history. Do not repeat landed patches.
-3. Use exact-head compile artifact `10599810712` as the canonical **63-diagnostic / 7-source-file** frontier until HEAD/compiler state changes.
-4. Do **not** batch-patch renderer/HUD classes by package-name guesswork and do not widen the frozen renderer authority bridges.
-5. Preferred next inspection unit: pinned upstream `feature/vs2_alpha_hud/MixinGui.java`, because it has only two unique direct compiler failures (`GuiGraphics` import and corresponding callback parameter) repeated across compile tasks. Inspect the exact Minecraft 26.2 `Gui` render/status-effect overlay method and current graphics/context type before any source mutation.
-6. If exact resolved 26.2 signatures prove one bounded HUD vocabulary/signature bridge with unchanged VS2 alpha-HUD behavior, create one fail-closed overlay and exact-file proof. Otherwise HOLD and inspect no broader renderer family.
-7. Do not combine that unit with `MixinLevelRenderer`, vanilla renderer compat, debug renderers, Sable, Create/SNR/Copycats, movement, collision, entity dragging, or camera authority.
+3. Use exact-head compile artifact `10600285721` as the canonical **57-diagnostic / 6-source-file** frontier until HEAD/compiler state changes.
+4. Do **not** batch-patch renderer/debug classes by package-name guesswork and do not widen frozen renderer authority bridges.
+5. Preferred next inspection unit: pinned upstream `feature/render_pathfinding/MixinDebugRenderer.java`, because its observed direct compile drift is limited to the removed `MultiBufferSource.BufferSource` vocabulary. Inspect the exact Minecraft 26.2 `DebugRenderer` render callback signature and the current buffer/extractor type on the resolved compile classpath before any source mutation.
+6. If exact resolved 26.2 signatures prove one bounded debug-render vocabulary/signature bridge with unchanged upstream VS2 pathfinding transform behavior, create one fail-closed overlay and exact-file proof. Otherwise HOLD and inspect no broader renderer family.
+7. Do not combine that unit with ship-debug renderer, `MixinLevelRenderer`, vanilla renderer compat, Sable, Create/SNR/Copycats, movement, collision, entity dragging, or camera authority.
 8. Remain standalone P1. No ordinary compile/debug video.
 
 ## Video and milestone gate
