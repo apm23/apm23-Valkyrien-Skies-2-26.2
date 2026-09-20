@@ -137,6 +137,47 @@ Classification:
 - both Sable units are optional compatibility residue and remain compile-only isolation territory, not standalone-P1 runtime authority;
 - there is currently no remaining non-render core Java unit in the observed frontier.
 
+## Pathfinding debug exact API inspection — HOLD
+
+Pinned upstream unit inspected:
+`common/src/main/java/org/valkyrienskies/mod/mixin/feature/render_pathfinding/MixinDebugRenderer.java`.
+
+Upstream 1.21.1 behavior at pin `f39132148e717d325933b4ce6e9e9fb13d929390`:
+
+- targets `DebugRenderer`;
+- shadows a dedicated `PathfindingRenderer pathfindingRenderer` field;
+- injects at `DebugRenderer.render(...)` HEAD;
+- when `VSGameConfig.COMMON.ADVANCED.getRenderPathfinding()` is true, directly calls `pathfindingRenderer.render(PoseStack, BufferSource, camX, camY, camZ)`.
+
+Probe history:
+
+- probe-only commit `e1f0472b4a3765b5df3c039123ec8276efe5842f` added only `.github/workflows/p1-pathfinding-debug-api-probe.yml`.
+- exact-head P0 run `35493504094`: **success**.
+- first probe run `35493504112`: **infrastructure-only failure** before `javap`; canonical overlays replayed successfully, then Gradle could not resolve `architectury-plugin:3.5.170`. This run is not renderer-API evidence.
+- one probe-only retry commit `60d2669345667436f4be4986bff0f6d8d2271b63` changed only the inspection workflow and documented the retry.
+- retry exact-head P0 run `35493559167`: **success**.
+- retry probe run `35493559177`: classpath resolution **success**; exact mapped Minecraft 26.2 jar was inspected. The job conclusion is failure only because its deliberate fail-closed assertion expected the obsolete `DebugRenderer.pathfindingRenderer` field, which exact 26.2 proves no longer exists.
+- retry artifact: `p1-pathfinding-debug-api-probe-60d2669345667436f4be4986bff0f6d8d2271b63`, ID `10600326144`, digest `sha256:5ebc5d2985270d212967f906fd771e7a54e37e8526b091056ec1209a6ef40710`.
+
+Exact Minecraft 26.2 evidence from the mapped jar:
+
+- `DebugRenderer` no longer has a dedicated `pathfindingRenderer` field. It owns `List<DebugRenderer.SimpleDebugRenderer> renderers` plus a debug-entry version field.
+- `DebugRenderer.render(...)` is gone. Current boundary is `emitGizmos(Frustum,double,double,double,float)` with descriptor `(Lnet/minecraft/client/renderer/culling/Frustum;DDDF)V`.
+- `DebugRenderer.emitGizmos(...)` creates `DebugValueAccess` through the current client connection, refreshes the renderer list when debug-entry state changes, then iterates `SimpleDebugRenderer` instances and calls `emitGizmos(double,double,double,DebugValueAccess,Frustum,float)`.
+- `refreshRendererList()` creates/adds a `PathfindingRenderer` only under vanilla `SharedConstants.DEBUG_PATHFINDING`; there is no old always-addressable pathfinding-renderer field.
+- `PathfindingRenderer` now implements `DebugRenderer.SimpleDebugRenderer`.
+- current `PathfindingRenderer.emitGizmos(...)` descriptor is `(DDDLnet/minecraft/util/debug/DebugValueAccess;Lnet/minecraft/client/renderer/culling/Frustum;F)V`.
+- current pathfinding debug data comes through `DebugSubscriptions.ENTITY_PATHS` / `DebugValueAccess` and output is emitted through the gizmo system (`Gizmos`, `GizmoStyle`, `TextGizmo`), not `PoseStack` + `MultiBufferSource.BufferSource`.
+- exact class inventory contains current gizmo/submit infrastructure such as `LevelRenderer$FinalizedGizmos`, `SubmitNodeCollector`, `SubmitNodeStorage`, and gizmo feature/render classes.
+- exact probe markers: `DebugRenderer render=false emitGizmos=true MultiBufferSource=false PoseStack=false DebugValueAccess=true`; `PathfindingRenderer render=false emitGizmos=true MultiBufferSource=false PoseStack=false DebugValueAccess=true`.
+
+Decision for this unit:
+
+- this is **not** a direct `BufferSource` rename or bounded callback-signature drift;
+- Minecraft changed the ownership/lifecycle/data-input/render-output model for debug pathfinding;
+- blindly changing the old injection to `emitGizmos`, manually creating `DebugValueAccess`, or inventing a second pathfinding renderer could duplicate or bypass vanilla 26.2 debug-render authority;
+- therefore no source overlay was applied in this cycle and the canonical compiler frontier remains 57 diagnostics / 6 files.
+
 ## Target runtime baseline
 
 - Minecraft `26.2`
@@ -152,9 +193,9 @@ Classification:
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
 - active_blocker: `MINECRAFT_26_2_RENDERER_API_MIXIN_DRIFT`
-- active_proof_head: `480ca1e32024db619574b28488ad8a1c88045d52; canonical P1 chain through frozen alpha-HUD API boundary`
-- active_proof_run: `P0 35493204506 success; P1 compile 35493204485 frontier-only failure; artifact 10600285721; 57 diagnostics / 6 normalized source files; MixinGui absent`
-- active_hypothesis: `next work must inspect one smallest remaining renderer/debug boundary against exact resolved Minecraft 26.2 APIs before any mutation; do not batch renderer families and do not use Sable residue to hide standalone VS2 failures`
+- active_proof_head: `480ca1e32024db619574b28488ad8a1c88045d52; canonical P1 compile implementation remains unchanged through frozen alpha-HUD API boundary`
+- active_proof_run: `P0 35493204506 success; P1 compile 35493204485 frontier-only failure; artifact 10600285721; 57 diagnostics / 6 normalized source files; pathfinding exact API probe 35493559177 proves gizmo/list architecture migration but authorizes no source patch`
+- active_hypothesis: `pathfinding debug requires a lifecycle-preserving integration into the 26.2 SimpleDebugRenderer/gizmo pipeline, not a vocabulary rename; no mutation is authorized until exact list membership, nested interface accessibility, refresh ordering, duplicate-render avoidance, and per-frame VS config semantics are proven`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 - video_status: `NOT_APPLICABLE_YET`
@@ -179,11 +220,11 @@ Classification:
 
 1. This ledger reconciliation commit is documentation-only. Require exact-head P0 provenance success before another source/workflow mutation.
 2. Preserve every frozen boundary and all negative evidence in Git history. Do not repeat landed patches.
-3. Use exact-head compile artifact `10600285721` as the canonical **57-diagnostic / 6-source-file** frontier until HEAD/compiler state changes.
-4. Do **not** batch-patch renderer/debug classes by package-name guesswork and do not widen frozen renderer authority bridges.
-5. Preferred next inspection unit: pinned upstream `feature/render_pathfinding/MixinDebugRenderer.java`, because its observed direct compile drift is limited to the removed `MultiBufferSource.BufferSource` vocabulary. Inspect the exact Minecraft 26.2 `DebugRenderer` render callback signature and the current buffer/extractor type on the resolved compile classpath before any source mutation.
-6. If exact resolved 26.2 signatures prove one bounded debug-render vocabulary/signature bridge with unchanged upstream VS2 pathfinding transform behavior, create one fail-closed overlay and exact-file proof. Otherwise HOLD and inspect no broader renderer family.
-7. Do not combine that unit with ship-debug renderer, `MixinLevelRenderer`, vanilla renderer compat, Sable, Create/SNR/Copycats, movement, collision, entity dragging, or camera authority.
+3. Use compile artifact `10600285721` as the canonical **57-diagnostic / 6-source-file** frontier until implementation/compiler state changes. Probe-only workflow commits do not change that frontier.
+4. Keep `feature/render_pathfinding/MixinDebugRenderer.java` on **HOLD** for source mutation: exact 26.2 proves a renderer lifecycle/data-path migration, not a direct vocabulary/signature bridge.
+5. If this same unit is inspected further, stay inspection-only and prove the exact `DebugRenderer.SimpleDebugRenderer` accessibility/contract, renderer-list refresh timing, and a way to preserve the upstream per-render VS config toggle without creating duplicate `PathfindingRenderer` instances or bypassing vanilla `DebugValueAccess`/gizmo authority. Do not invent that bridge from inference.
+6. If those invariants cannot all be established exactly, keep this unit HOLD. Do not patch around it merely to reduce javac diagnostics.
+7. Do not broaden the same action into ship-debug renderer, `MixinLevelRenderer`, vanilla renderer compat, Sable, Create/SNR/Copycats, movement, collision, entity dragging, or camera authority.
 8. Remain standalone P1. No ordinary compile/debug video.
 
 ## Video and milestone gate
