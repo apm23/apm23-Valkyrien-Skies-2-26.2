@@ -168,3 +168,11 @@ if not livingentity_authority_helper.is_file():
     raise SystemExit(f"fail-closed: required LivingEntity local-authority overlay helper missing: {livingentity_authority_helper}")
 subprocess.run([sys.executable, str(livingentity_authority_helper), str(root)], check=True)
 print("P1_LIVINGENTITY_LOCAL_AUTHORITY_26_2_CHAINED_V2")
+
+# Minecraft 26.2 adds a horizontal-collision bit to every move-player packet variant.
+# Preserve the incoming vanilla flag while retaining VS2's existing onGround adaptation only.
+moveplayer_collision_helper = Path(__file__).with_name("apply_p1_moveplayer_horizontal_collision_26_2.py")
+if not moveplayer_collision_helper.is_file():
+    raise SystemExit(f"fail-closed: required move-player horizontal-collision overlay helper missing: {moveplayer_collision_helper}")
+subprocess.run([sys.executable, str(moveplayer_collision_helper), str(root)], check=True)
+print("P1_MOVEPLAYER_HORIZONTAL_COLLISION_26_2_CHAINED")
