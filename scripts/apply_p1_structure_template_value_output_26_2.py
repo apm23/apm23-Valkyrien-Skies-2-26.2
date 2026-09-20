@@ -93,8 +93,14 @@ path.write_text(text, encoding="utf-8")
 print("P1_STRUCTURE_TEMPLATE_VALUE_OUTPUT_26_2_OVERLAY_APPLIED")
 
 # Transport-only chaining from a workflow-watched canonical helper. Each semantic unit
-# remains isolated in its own fail-closed helper. The canonical chain has already applied
-# the frozen ClientLevel hand adaptation before these calls.
+# remains isolated in its own fail-closed helper. The standing-dimensions helper requires
+# the frozen ClientLevel hand adaptation, so replay that dependency explicitly first.
+hand_helper = Path(__file__).with_name("apply_p1_clientlevel_hand_items_26_2.py")
+if not hand_helper.is_file():
+    raise SystemExit(f"fail-closed: required ClientLevel hand-items overlay helper missing: {hand_helper}")
+subprocess.run([sys.executable, str(hand_helper), str(root)], check=True)
+print("P1_CLIENTLEVEL_HAND_ITEMS_26_2_CHAINED")
+
 standing_helper = Path(__file__).with_name("apply_p1_clientlevel_standing_dimensions_26_2.py")
 if not standing_helper.is_file():
     raise SystemExit(f"fail-closed: required ClientLevel standing-dimensions overlay helper missing: {standing_helper}")
