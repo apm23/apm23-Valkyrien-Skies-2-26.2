@@ -122,4 +122,4 @@ noise_height_helper = Path(__file__).with_name("apply_p1_noisebased_height_acces
 if not noise_height_helper.is_file():
     raise SystemExit(f"fail-closed: required NoiseBasedChunkGenerator height overlay helper missing: {noise_height_helper}")
 subprocess.run([sys.executable, str(noise_height_helper), str(root)], check=True)
-print("P1_NOISEBASED_HEIGHT_ACCESSOR_26_2_CHAINED")
+print("P1_NOISEBASED_HEIGHT_ACCESSOR_26_2_CHAINED_RECONNECT_CTOR_V2")
