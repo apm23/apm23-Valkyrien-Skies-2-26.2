@@ -13,217 +13,168 @@ GitHub code is the implementation source of truth. This file is the durable cont
 
 ## Authoritative upstream baseline
 
-- repository: `ValkyrienSkies/Valkyrien-Skies-2`
+- upstream repository: `ValkyrienSkies/Valkyrien-Skies-2`
 - selection branch: `1.21.1/main`
 - exact commit: `f39132148e717d325933b4ce6e9e9fb13d929390`
 - exact root tree: `91116399605d3ecd1c93b0011560e09281ee1fa4`
 - upstream mod version: `2.4.12`
 - imported as gitlink/submodule `upstream-vs2/`
 
-Minecraft 26.2 changes are applied by explicit fail-closed overlays. Every core subsystem remains traceable to upstream VS2 or is documented as a minimal 26.2 bridge.
+Minecraft 26.2 changes are applied by explicit fail-closed overlays. Every core subsystem must remain traceable to upstream VS2 or to a documented minimal 26.2 adaptation feeding the existing VS2 architecture.
 
 ## Current reconciliation — 2026-09-20 P1 Java API frontier
 
 Current proven implementation boundary before this documentation-only reconciliation commit:
 
-- canonical implementation HEAD: `cc56a4ca3a8b851d283f051d090f434628de1ec6` — `ci: retrigger Camera accessor after exact guard repair`.
-- exact-head P0 provenance run `35501765675`: **success**.
-- exact-head ship-debug/dispatcher proof run `35501765686`: **success**, including replay, isolated dispatcher apply, semantic validation, unrelated-failure compile preservation, and ship-debug compiler-clean proof.
-- exact-head standalone P1 compile run `35501765677`: **compile-frontier failure only**. All canonical overlays/apply steps, port-delta validation, and Gradle runtime steps succeeded; diagnostic upload succeeded.
-- canonical compile artifact: `p1-compile-log-cc56a4ca3a8b851d283f051d090f434628de1ec6`, ID `10602268395`, artifact digest `sha256:4bc1959854df54971730967fafb041cef57c13166e6ab5be3184b4a1ed9234c9`.
-- extracted `p1-compile.log`: **297300 bytes**, SHA-256 `8d9d9f8e4fe10b09f1b0d7f9fa8dad5b3b1c93f21e9eb9b049898c079bade8b7`.
-- current primary javac pass: **94 errors across 20 Java source files**. Gradle repeats the same diagnostics later in the log; the primary count is authoritative for frontier size.
+- canonical implementation HEAD: `e84097bd8aa6a588f3b16d47db4f8894df42ae83` — `ci: retrigger reconnect constructor after guard repair`.
+- exact-head P0 provenance run `35503419553`: **success**.
+- exact-head ship-debug/canonical-chain proof run `35503419721`: **success**. Replay, isolated apply, semantic validation, compile-preservation, and existing ship-debug compiler-clean proof all succeeded.
+- exact-head standalone P1 compile run `35503419633`: **compile-frontier failure only**. All 87 canonical overlay/apply steps, port-delta validation, Gradle runtime, and diagnostic upload succeeded.
+- canonical compile artifact: `p1-compile-log-e84097bd8aa6a588f3b16d47db4f8894df42ae83`, ID `10603565748`, artifact digest `sha256:011b57bfe89f51ffa7cc93165e955ddd066af5401af614b0afee527edd109332`.
+- extracted `p1-compile.log`: **288339 bytes**, SHA-256 `f2c619fe7a76147ce39c496ba1687192e56228370ab19c1b8beef82956a1853c`.
+- authoritative primary javac pass: **88 errors across 17 Java source files**. Gradle repeats the same diagnostics later; use the first javac summary for frontier size.
 - project state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`.
 - active blocker classification: `MINECRAFT_26_2_JAVA_API_FRONTIER`.
-- This is not P1 boot proof, not M1 proof, and not runtime rendering proof.
+- This is not P1 boot proof, not P2/M1 ship proof, and not runtime rendering proof.
 
-### Current primary Java frontier at `cc56a4ca...`
-
-Primary javac errors by normalized source file:
+### Current primary Java frontier at `e84097bd...`
 
 1. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/immersive_portals/MixinMyBuiltChunkStorage.java` — 25
 2. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/vanilla_renderer/MixinViewAreaVanilla.java` — 14
 3. `common/src/main/java/org/valkyrienskies/mod/mixin/client/world/MixinClientChunkCache.java` — 11
 4. `common/src/main/java/org/valkyrienskies/mod/mixin/world/chunk/MixinLevelChunk.java` — 8
 5. `common/src/main/java/org/valkyrienskies/mod/mixin/feature/entity_movement_packets/MixinLocalPlayer.java` — 4
-6. `common/src/main/java/org/valkyrienskies/mod/mixin/feature/fix_render_chunk_sorting/MixinRenderChunk.java` — 4
-7. `common/src/main/java/org/valkyrienskies/mod/mixin/server/world/MixinServerLevel.java` — 4
-8. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/vanilla_renderer/MixinLevelRendererVanilla.java` — 3
-9. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/immersive_portals/MixinImmPtlChunkTracking.java` — 3
-10. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/optifine_vanilla/MixinLevelRenderer.java` — 3
-11. `common/src/main/java/org/valkyrienskies/mod/compat/SodiumCompat.java` — 2
-12. `common/src/main/java/org/valkyrienskies/mod/mixin/client/world/MixinClientLevel.java` — 2
-13. `common/src/main/java/org/valkyrienskies/mod/mixin/client/multiplayer/MixinClientPacketListener.java` — 2
-14. `common/src/main/java/org/valkyrienskies/mod/mixin/server/world/MixinChunkMap.java` — 2
-15. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/ftb_chunks/MixinClaimedChunkManagerImpl.java` — 2
-16. `common/src/main/java/org/valkyrienskies/mod/mixin/entity/MixinEntity.java` — 1
-17. `common/src/main/java/org/valkyrienskies/mod/mixin/feature/teleport_reconnected_player_to_ship/MixinServerPlayer.java` — 1
-18. `common/src/main/java/org/valkyrienskies/mod/mixin/feature/entity_collision/MixinLivingEntity.java` — 1
-19. `common/src/main/java/org/valkyrienskies/mod/mixin/world/level/levelgen/MixinNoiseBasedChunkGenerator.java` — 1
-20. `common/src/main/java/org/valkyrienskies/mod/mixin/server/MixinMinecraftServer.java` — 1
+6. `common/src/main/java/org/valkyrienskies/mod/mixin/server/world/MixinServerLevel.java` — 4
+7. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/vanilla_renderer/MixinLevelRendererVanilla.java` — 3
+8. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/immersive_portals/MixinImmPtlChunkTracking.java` — 3
+9. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/optifine_vanilla/MixinLevelRenderer.java` — 3
+10. `common/src/main/java/org/valkyrienskies/mod/compat/SodiumCompat.java` — 2
+11. `common/src/main/java/org/valkyrienskies/mod/mixin/client/world/MixinClientLevel.java` — 2
+12. `common/src/main/java/org/valkyrienskies/mod/mixin/client/multiplayer/MixinClientPacketListener.java` — 2
+13. `common/src/main/java/org/valkyrienskies/mod/mixin/server/world/MixinChunkMap.java` — 2
+14. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/ftb_chunks/MixinClaimedChunkManagerImpl.java` — 2
+15. `common/src/main/java/org/valkyrienskies/mod/mixin/entity/MixinEntity.java` — 1
+16. `common/src/main/java/org/valkyrienskies/mod/mixin/feature/entity_collision/MixinLivingEntity.java` — 1
+17. `common/src/main/java/org/valkyrienskies/mod/mixin/server/MixinMinecraftServer.java` — 1
 
-Do not treat this list as permission for a bulk rewrite. Continue one bounded evidence-backed 26.2 API unit at a time.
+Do not treat this list as permission for a bulk rewrite. Continue one bounded, evidence-backed Minecraft 26.2 API unit at a time.
 
-## Newly converged mechanical units — current cycle
+## Newly converged bounded units
 
-### Legacy Sable compile-only isolation — completed
+### Render-chunk sorting Camera vocabulary — frozen P1 compile-clean
 
-- The prior Sable-only frontier is no longer the active blocker.
-- Canonical dispatcher now removes only the two exact optional legacy Sable mixin sources plus their common mixin registration for standalone P1 compilation.
-- This is compile-only isolation. It does not bundle, emulate, or claim Sable runtime compatibility on 26.2.
+- canonical chain: `c3521c0ee92bb7566d182f6a6c34999c303a7b50`.
+- exact upstream target: `feature/fix_render_chunk_sorting/MixinRenderChunk.java`.
+- adaptation only: `GameRenderer.getMainCamera()` -> `mainCamera()` and three `Camera.getPosition()` -> `position()` calls.
+- upstream VS2 ship-to-world render transform and distance calculation remain unchanged.
+- exact-head P0 `35502115969`: success; proof `35502115961`: success; P1 `35502115938`: unrelated-frontier failure.
+- artifact `10602721957` proves `MixinRenderChunk.java` has zero primary javac errors and reduced the frontier from 94 to 90 without a new source file.
+- No camera forcing, orientation, reference-space, or gameplay authority was introduced.
 
-### ChunkPos record accessor family — completed for the proven set
+### NoiseBasedChunkGenerator height vocabulary — frozen P1 compile-clean
 
-- Canonical helper adapts **54 active** `ChunkPos.x/z` field accesses to Minecraft 26.2 record accessors `x()/z()` across 10 files.
-- Historical/commented-out occurrences are not blindly rewritten.
-- The original 40-error batch was removed; a later javac pass exposed 14 additional active sites in `MixinServerLevel` and `MixinChunkMapShipyard`, which were added under the same bounded mechanical hypothesis.
+- helper creation: `17b4e1868262ab51107ae453c242753881e02b3c`.
+- canonical chain: `c66a45c7c34e89690c4b1ea74d15259a108f5aed`.
+- exact adaptation: one `LevelHeightAccessor.getMinBuildHeight()` -> `getMinY()` in the existing shipyard noise-generation guard.
+- `VS2ChunkAllocator` shipyard authority and all cancellation behavior remain unchanged.
+- exact-head P0 `35502363441`: success; proof `35502363442`: success; P1 `35502363470`: unrelated-frontier failure.
+- artifact `10602184412`, digest `sha256:f38811d8ab70fc0ca1c431b44d6af4a62c7b7846e5a03ed674a87ece2973f0ae`; extracted log SHA-256 `afeecdde8cd27c8d8c19aa649501831b5055c8b6da6af378baf10a2535b490e9`.
+- target file has zero primary javac errors; frontier reduced 90 -> 89 and 19 -> 18 files.
 
-### Level client-side accessor family — completed for the proven set
+### Reconnected-player mixin superclass constructor — frozen P1 compile-clean
 
-- Canonical helper adapts **7 exact** `Level.isClientSide` field uses to the public `isClientSide()` method across 2 files.
+- upstream target: `feature/teleport_reconnected_player_to_ship/MixinServerPlayer.java`, pinned blob `71d145feac17c628a6d0807edbcd74d311abdce4`.
+- helper creation: `c13aa2a0ba27e8baf4fbec6a64fe17e214720089`.
+- canonical transport first wired at `13ffc4b59797b06afc56363cc71da2e06f3930e7`.
+- exact adaptation only: unreachable mixin constructor superclass call `super(level, blockPos, f, gameProfile)` -> Minecraft 26.2 `super(level, gameProfile)`.
+- the constructor signature, explicit `IllegalStateException("Unreachable")`, read/save injections, ship lookup, ship-to-world restore transform, and world-to-ship save transform remain unchanged.
+- `e9499c10396afbc341a915a585926773fbfc5e7b` / proof `35503354785` is locked **assertion-only negative evidence**: the helper expected the `getShipObjectWorld(...).getById(lastShipId)` authority anchor once although pinned upstream legitimately contains it twice. No compile signal was produced.
+- guard corrected at `1759012799662ad9c86c8656e92b0256e3fcb73c`; exact-head P0 `35503387834`: success.
+- final canonical proof boundary `e84097bd8aa6a588f3b16d47db4f8894df42ae83`.
+- exact-head P0 `35503419553`: success; proof `35503419721`: success; P1 `35503419633`: unrelated-frontier failure.
+- artifact `10603565748`, digest `sha256:011b57bfe89f51ffa7cc93165e955ddd066af5401af614b0afee527edd109332`.
+- independent artifact inspection: reconnect `MixinServerPlayer.java` has zero primary javac errors; frontier reduced **89 -> 88** and **18 -> 17** files with no new compile unit.
 
-### CompoundTag Optional primitive family — completed for the proven set
+### Previously converged current-cycle mechanical families
 
-- Canonical helper adapts **7 exact** primitive reads to the 26.2 Optional-returning API with the old primitive default semantics preserved.
+- legacy Sable compatibility is bounded compile-only isolation; the old Sable frontier is gone. Never claim 1.21.1 Sable runtime compatibility on 26.2 without separate evidence.
+- ChunkPos record accessor family: 54 active `ChunkPos.x/z` sites adapted across 10 files; historical/commented sites were not blindly rewritten.
+- Level client-side accessor family: seven exact `Level.isClientSide` field uses -> `isClientSide()` across two files.
+- CompoundTag Optional primitive family: seven exact primitive reads adapted to Optional-returning 26.2 API while preserving old numeric default semantics.
+- world-weather ServerLevel vocabulary: canonical `1fc653b2641ae1b95f2de264cdd10d45a0fa8dcb`; one `getMinBuildHeight()` -> `getMinY()` and three `BlockPos.getCenter()` -> `Vec3.atCenterOf(...)`; target compile-clean in artifact `10602646175`.
+- Camera position accessor family: canonical `cc56a4ca3a8b851d283f051d090f434628de1ec6`; exactly three `getPosition()` -> `position()` sites; artifact `10602268395` proves both target files compile-clean. No acquisition/transform/orientation authority changed.
 
-### World-weather ServerLevel vocabulary — frozen P1 compile-clean at target
+## Renderer/debug boundaries — frozen at proven scope
 
-- helper: `scripts/apply_p1_world_weather_serverlevel_26_2.py`
-- helper creation: `531abf3b307b8198698d8452d62cf761154f5cf1` — `fix: adapt server weather API to 26.2`.
-- canonical wiring: `1fc653b2641ae1b95f2de264cdd10d45a0fa8dcb` — `fix: chain server weather 26.2 overlay`.
-- exact pinned target blob: `82442838833e64b8d854091be5b93f7ded8793c3`.
-- exact adaptation: 1× `getMinBuildHeight()` -> `getMinY()` and 3× `BlockPos.getCenter()` -> `Vec3.atCenterOf(...)`.
-- upstream VS2 weather/ship-space authority anchors remain unchanged.
-- exact-head `1fc653...` P0 run `35501378926`: **success**; dispatcher proof `35501378851`: **success**; P1 compile `35501378883`: unrelated-frontier failure only.
-- compile artifact `10602646175`, digest `sha256:ff9ada938ff73aaf1ede5e19a69d4ae0a0d2c9502ba30a30e2162a8bfaad0466`.
-- independent artifact inspection: `world_weather/MixinServerLevel.java` has **zero compiler error markers**.
-- Freeze this four-call-site unit at P1 compile/API scope; no runtime-weather claim yet.
-
-### Camera `position()` accessor family — frozen P1 compile-clean at the three proven sites
-
-- exact MC26.2 mapped `Camera` evidence from artifact `10601632052` proves `public net.minecraft.world.phys.Vec3 position()`.
-- helper created at `86c02dd04d951f10c7ecd042d0db0e5767054d28`.
-- first canonical wiring `414091705188ec6ee9a672e5f6b9bab9867684c1` failed only because the helper incorrectly expected the **raw** block-entity mixin blob after an earlier canonical source-API overlay had already widened `BlockEntityRenderer<E>` to `BlockEntityRenderer<E, ?>`. This is locked assertion/integration negative evidence, not an API failure.
-- guard repair `4640a16c0af2bc383cf8afd061629b4ec54519c1` anchors the exact post-source-api blob `25eec1917bf21d640a8f9ddd96611b25a700f1df` while preserving authority anchors.
-- canonical retrigger/implementation boundary `cc56a4ca3a8b851d283f051d090f434628de1ec6`.
-- exact adaptation only:
-  - `MixinBlockEntityRenderDispatcher`: `this.camera.getPosition()` -> `this.camera.position()`;
-  - `MixinGameRenderer`: `camera.getPosition()` -> `camera.position()`;
-  - `MixinGameRenderer`: `this.mainCamera.getPosition()` -> `this.mainCamera.position()`.
-- no camera acquisition, camera transform, orientation, reference-space, or forcing logic was added or changed.
-- exact-head P0 `35501765675`: **success**; dispatcher proof `35501765686`: **success**; canonical compile `35501765677`: unrelated-frontier failure only.
-- artifact `10602268395`, digest `sha256:4bc1959854df54971730967fafb041cef57c13166e6ab5be3184b4a1ed9234c9`.
-- independent artifact inspection: both `MixinBlockEntityRenderDispatcher.java` and `client/renderer/MixinGameRenderer.java` have **zero compiler error markers**.
-- Freeze only these three accessor sites at P1 compile/API scope.
-
-## Vanilla renderer 26.2 bridge — frozen P1 compile/API boundary
-
-Pinned upstream target:
-`common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/vanilla_renderer/MixinLevelRendererVanilla.java`, exact upstream blob `824e1ac56a99bc6480cc80c32c085d18c2425b09`.
-
-Canonical bridge boundary `290e2bb6c1f6248437e4d189dfb4a01e82a31e33` remains architecture-frozen:
-
-- ship-aware compile distance still uses `VSGameUtilsKt.squaredDistanceBetweenInclShips`;
-- loaded `ClientShip` iteration, `ShipRenderer.VANILLA`, active-chunk/air-section checks and transformed ship render-AABB frustum semantics remain upstream VS2 behavior;
-- terrain/block-entity transform authority remains upstream `VSClientGameUtils.transformRenderWithShip`;
-- Minecraft 26.2 retains terrain GPU/draw ownership through `prepareChunkRenders`, `ChunkSectionsToRender`, and `DynamicUniforms.ChunkSectionInfo`;
-- no physics, collision, movement, entity-dragging, camera forcing, ship lifecycle, or replacement reference-space authority is introduced.
-
-Evidence:
-
-- terrain/frustum probe `20a99be85e597385b01dd9892b4028ab9020d5fa`, run `35497544023`: success; artifact `10601551867`, digest `sha256:963c973bba1b9003e280395327e984d44e482fc0883fdd461aaf94e7870368bc`.
-- camera/global-uniform artifact `10601632052`, digest `sha256:117146b78f813612288fcbeb0d13fe6d2bb7cdd47a546f2039cecb60aaf8e59d`; run `35497721437` failed only over-strict textual assertion. Bytecode evidence remains valid.
-- corrected scratch proof `3be7a411b73bc48aa9f34fdb55b84332bae2d00c`, run `35498189907`: success; artifact `10600767769`, digest `sha256:96fa794b526d7c175a95d9ea609f2e72ba272e6942b239a0ca70fd25fd1d3e09`.
-
-The current 94-error frontier again contains `MixinLevelRendererVanilla` errors exposed after later compiler progress. Do **not** reopen the frozen transform/authority design. Any follow-up there must be a separately evidenced 26.2 API/lifecycle adaptation.
-
-## Other frozen renderer/debug boundaries
-
-- **Ship debug bounding-box gizmo** — `a17dd669717354bfdfcb6c05146836aacc62be8f`; probe `35495680174`, artifact `10600194493`, digest `sha256:5f82165eeb7c20c71c8abe27c32ad5a26eca2a66e9c26bad57737f725cfa5757`.
-- **LevelRenderer / LevelExtractor split** — `660d5320902a3ecba4f3219969aa77b0316cfa52`; lifecycle probe `35494987861`, artifact `10600567053`; block-damage proof `35495140731`, artifact `10599724029`. Existing `IVSCamera` observation only; no replacement camera authority.
-- **Pathfinding debug lifecycle** — `f56fa6d76d31661e561de85b7223b6de64e39de9`; proof `35494083822`, artifact `10600376722`, digest `sha256:dc8aada751ed3f75050029951cd0f2bf0f3551ebcbcf4af485219777456032ab`.
-
-Do not reopen these boundaries absent direct contradictory evidence.
+- **Vanilla renderer bridge** — canonical `290e2bb6c1f6248437e4d189dfb4a01e82a31e33`. Real upstream VS2 ship-aware distance, loaded-ship iteration, `ShipRenderer.VANILLA`, transformed ship AABB, and `VSClientGameUtils.transformRenderWithShip` remain authority. Minecraft 26.2 retains terrain draw/GPU authority through `prepareChunkRenders` / `DynamicUniforms.ChunkSectionInfo`. Frozen at P1 compile/API design scope only; later compiler progress has exposed three new API errors in this file, but do not redesign the transform authority.
+- renderer terrain/frustum probe `35497544023`, artifact `10601551867`; camera/global-uniform artifact `10601632052`; corrected scratch proof `35498189907`, artifact `10600767769`.
+- **Ship debug BB gizmo** — `a17dd669717354bfdfcb6c05146836aacc62be8f`, proof `35495680174`, artifact `10600194493`.
+- **LevelRenderer / LevelExtractor split** — `660d5320902a3ecba4f3219969aa77b0316cfa52`, lifecycle proof `35494987861`, artifact `10600567053`; block-damage proof `35495140731`, artifact `10599724029`. Existing `IVSCamera` is observation only; no replacement camera authority.
+- **Pathfinding debug lifecycle** — `f56fa6d76d31661e561de85b7223b6de64e39de9`, proof `35494083822`, artifact `10600376722`.
 
 ## Frozen architecture-sensitive boundaries
 
-- **Real VS2 ship chunk-ticket lifecycle** — `65a42e782de192f27d5bf720691d6e08f395a719`; proof `35450402031`.
-- **DistanceManager / TicketStorage read bridge** — `8a338f95103227ed6a5acb35804d573bbae0d96c`; proof head `ca07a2fff0fd922cbbd578a0531d3377313827de`, P0 `35463018487`, proof `35463018541`. READ ONLY.
-- **ShipSavedData persistence** — `f2b3ec68e0d2146bb8b443da76a62a4766e01fce`; proof `35451366140`.
-- **Entity local authority / interpolation** — `b7e583af13598b6ddcc583380872f578b8a40bb8`; proof head `9f2719be070e79b91b7f47ceddaec61d7f5cff40`, proof `35455551701`. No synthetic carry.
-- **Entity renderer submit lifecycle** — `a87512437f40a3bfa1325d78f8e2588587ec7cc8`; proof head `58d8554ba623896d486b91f18771df9bdcd6f2b3`, proof `35458380245`.
-- **Shipyard teleport API mapping** — P0 `35467615792`, proof `35467615790`; real VS2 transform authority, no manual teleport chase.
-- **Clip Direction** — `5d0fd81810a824b2da989b834dd6d2f92475dc33`; proof `35478902949`.
-- **LavaFluid** — `19b0e356b34dae20c3aa8d9409d90fc0b96838b2`; proof `35479600673`.
-- **Explosion accessor** — `322dcf22e2baf25192682d4b9ee942f4a35dc86b`; proof `35480514714`.
-- Optional Sable remains compile-only isolation; never claim 26.2 Sable runtime compatibility without separate evidence.
-- Create deployer helper isolation remains P1 compile isolation only, never P3 integration.
+Do not reopen absent direct contradictory evidence:
 
-## Recent mechanical convergence — preserved
+- real VS2 ship chunk-ticket lifecycle — `65a42e782de192f27d5bf720691d6e08f395a719`, proof `35450402031`.
+- DistanceManager / TicketStorage read bridge — `8a338f95103227ed6a5acb35804d573bbae0d96c`, proof head `ca07a2fff0fd922cbbd578a0531d3377313827de`, P0 `35463018487`, proof `35463018541`; **READ ONLY**.
+- ShipSavedData persistence — `f2b3ec68e0d2146bb8b443da76a62a4766e01fce`, proof `35451366140`.
+- entity local authority / interpolation — `b7e583af13598b6ddcc583380872f578b8a40bb8`, proof `35455551701`; no synthetic carry.
+- entity renderer submit lifecycle — `a87512437f40a3bfa1325d78f8e2588587ec7cc8`, proof `35458380245`.
+- shipyard teleport API mapping — proof `35467615790`; real VS2 transform authority, no per-tick teleport chase.
+- clip Direction — `5d0fd81810a824b2da989b834dd6d2f92475dc33`, proof `35478902949`.
+- LavaFluid — `19b0e356b34dae20c3aa8d9409d90fc0b96838b2`, proof `35479600673`.
+- Explosion accessor — `322dcf22e2baf25192682d4b9ee942f4a35dc86b`, proof `35480514714`.
+- optional Create deployer helper is P1 compile isolation only, never P3 Create integration.
 
-Do not repeat blindly. Important landed families include:
-
-- client sound `ResourceLocation` -> `Identifier`;
-- `BlockUtil` relocation;
-- `DimensionDataStorage` -> `SavedDataStorage`;
-- `applyCarvers` signature;
-- LevelChunk serializer vocabulary;
-- ChunkMap shutdown-work dispatcher;
-- alpha-HUD lifecycle;
-- pathfinding lifecycle;
-- LevelRenderer/LevelExtractor split;
-- ship-debug BB gizmo;
-- vanilla renderer bridge;
-- Sable compile-only isolation;
-- 54 active ChunkPos record accessors;
-- 7 Level client-side accessors;
-- 7 CompoundTag Optional primitive reads;
-- world-weather ServerLevel 4-call-site adaptation;
-- three proven Camera `position()` accessors.
-
-These are compatibility adaptations only and authorize no replacement VS2 architecture.
+Forbidden final architecture remains: custom VS2-like reference frames, synthetic carry/inertia, fake gravity or wall/floor clamps, per-tick setPos chase, camera counter-rotation/forcing, duplicate authority, floor-only fake success, or reuse of retired `apm23/VS2-Create_Interactive` implementation code.
 
 ## Locked negative evidence
 
-- `3bcbf90c75dc4d02448cfdb4590cc9c9674e0ed6` / `35454717409`: wrong Kotlin source-set exclusion for DeployerScrollOptionSlot.
-- `a72aaef8eca34a352ef949eeb57e6bbcda81171f`: `setUnsaved(false)` invalid.
+- `3bcbf90c75dc4d02448cfdb4590cc9c9674e0ed6` / `35454717409`: wrong Kotlin source-set exclusion for `DeployerScrollOptionSlot`.
+- `a72aaef8eca34a352ef949eeb57e6bbcda81171f`: `setUnsaved(false)` is invalid current API.
 - VSKeyBindings failed probes `e108526cbd728454c175c76bffc610d4e074da49`, `fcc65187d79c4b546883875da3597345db1e01cd`, `e9a3efd58acb2af9539628eb2875e6cb829c3cec`, `fb3c7e65a4c2089f6fa695114734d14836bde1d3`.
-- pathfinding `b3927e625acf40edbf517970ebc952a104a20c97` / `35493933563`: too-strict textual javap assertion only.
-- initial LevelRenderer probe `3e824228...` / `35494738882`: obsolete-owner assertion only.
-- renderer camera probe `3d6ca4d5...` / `35497721437`: textual uniform-name assertion only; bytecode evidence valid.
-- renderer proof failures `35497975815` and `35498155312`: bare `Uniform` guard falsely matched `DynamicUniforms`; never replay broad substring guard.
-- `414091705188ec6ee9a672e5f6b9bab9867684c1` / proof `35501644581` / canonical `35501644590`: Camera accessor helper expected raw BlockEntityRenderDispatcher blob after `apply_p1_source_api_26_2.py` had already changed its renderer generic. Guard failure only; corrected at `4640a16...` and proven at `cc56a4ca...`.
-- Actions self-push workflow changes without `workflows` permission remain failed transport hypothesis.
-- retired `apm23/VS2-Create_Interactive` workarounds are forbidden implementation source.
+- pathfinding `b3927e625acf40edbf517970ebc952a104a20c97` / `35493933563`: parser/assertion-only failure.
+- initial LevelRenderer probe `3e824228...` / `35494738882`: obsolete-owner assertion-only failure.
+- renderer camera probe `3d6ca4d5...` / `35497721437`: textual shader/uniform assertion-only failure; artifact bytecode evidence remains valid.
+- renderer helper/proof `35497975815` and `35498155312`: broad substring `Uniform` falsely matched valid `DynamicUniforms`; never replay broad guard.
+- Camera accessor first canonical attempt `414091705188ec6ee9a672e5f6b9bab9867684c1`: raw-upstream guard was invalid after earlier canonical generic widening; assertion-only, not API failure.
+- reconnect constructor proof `35503354785` at `e9499c10396afbc341a915a585926773fbfc5e7b`: authority-anchor count assertion-only failure; corrected by exact count 2.
+- Actions self-push workflow edits without `workflows` permission remain a failed transport hypothesis.
+- retired `apm23/VS2-Create_Interactive` implementation is forbidden.
 
 ## Target runtime baseline
+
+Exact `BASELINE_LOCK.json` remains authoritative. Current locked stack includes:
 
 - Minecraft `26.2`
 - Java `25`
 - Fabric Loader observed `0.19.3`
 - Fabric API `0.160.0+26.2`, SHA-256 `5f3dff88e1661166e222213302b25ace6c36dc3683804cbd4b5acf93138ea05e`
 - Create Fly `6.0.9-1`, SHA-256 `d9c6cb6116d5caa1174a289ecd7d3cdd463ccef6e8db1249ab0bcfcd8c935870`
-- embedded SNR `SNR.FLY-STABLE-1.2.2+fabric-mc26.2`, SHA-256 `33c87d5a7da0d468d3b6c0e99f726b835c63b693e7447fdaeca5e1f204caab84`
-- embedded Copycats `3.0.7-createfly+mc.26.2-v1.14`, SHA-256 `1922db10a49dfab42c4c272fbaee41cdc149287cd08ca84148b497e598029858`
-- exact final lock remains `BASELINE_LOCK.json`.
+- SNR embedded `SNR.FLY-STABLE-1.2.2+fabric-mc26.2`, SHA-256 `33c87d5a7da0d468d3b6c0e99f726b835c63b693e7447fdaeca5e1f204caab84`
+- Copycats embedded `3.0.7-createfly+mc.26.2-v1.14`, SHA-256 `1922db10a49dfab42c4c272fbaee41cdc149287cd08ca84148b497e598029858`
 
-## Milestone state
+Create/SNR/Copycats are not authority for current standalone P1 source adaptation and must not be pulled into the active frontier prematurely.
 
-- P0 provenance/import: established and continuously gated.
-- P1 standalone VS2: **source/API adaptation in progress**.
-- P1 standalone boot/runtime: not yet proven.
-- P2/M1 real standalone ship: not started as a completed milestone.
-- P3 Create Fly bridge: not authorized yet.
-- P4 SNR + Copycats: not authorized yet.
-- P5/final: not authorized yet.
-- `M1_COMPLETE`, `FINAL_BUILD`, `FINAL_VERIFY`, and `FINAL_READY` are forbidden at the current state.
+## Phase gates
+
+- P0 provenance/import: maintained by exact-head provenance workflow.
+- P1 standalone VS2 source/API/boot: **in progress**. Java compile frontier remains.
+- P2/M1 real standalone VS2 ship: not entered; `M1_COMPLETE` forbidden.
+- P3 Create Fly bridge: not entered.
+- P4 SNR + Copycats: not entered.
+- P5/final: not entered.
+- `FINAL_READY` requires exact-final-JAR real-user runtime acceptance; CI alone can never authorize it.
+- Video is closure-only, never compile/debug instrumentation.
 
 ## next_safe_action
 
-Do **not** reopen completed Sable, ChunkPos, client-side accessor, CompoundTag, world-weather ServerLevel, or the three proven Camera-position units.
-
-Next action is one bounded P1 Java API unit from the current `cc56a4ca...` artifact. Preferred candidate is `feature/fix_render_chunk_sorting/MixinRenderChunk.java` because its four primary errors are a small coherent camera-API family, but **first obtain exact Minecraft 26.2 evidence for the current GameRenderer camera acquisition owner/method**. `Camera.position()` itself is already exact-proven; the old `GameRenderer.getMainCamera()` replacement is not yet authorized by this ledger. If exact API evidence supports a direct minimal owner/method mapping, patch only that file and preserve its existing VS2 ship/world distance semantics. Otherwise select another small compiler-proven unit with exact API evidence.
-
-For optional compat frontiers (Immersive Portals, FTB, OptiFine, Sodium), do not invent stubs or replacement integrations. Isolate or adapt only when dependency status and runtime intent are explicitly evidenced.
-
-After each source change: require exact-head P0 green, consume only the relevant latest P1 run, independently inspect the compile artifact, update this ledger when the frontier meaningfully moves, and never infer runtime success from compile success.
+1. This ledger commit is documentation-only. Require exact-head P0 provenance success before the next source mutation.
+2. Preserve all frozen boundaries and negative evidence above. Do not reopen renderer architecture, physics, collision authority, dragging, player/camera authority, networking, ship lifecycle, Create, SNR, or Copycats merely because the compiler frontier still contains related files.
+3. Treat artifact `10603565748` as the canonical **88-error / 17-source-file** Java frontier until a later exact canonical compile changes it.
+4. Prefer the smallest mechanical frontier unit with exact Minecraft 26.2 API evidence. Current first candidate: the two `MixinChunkMap.java` errors where old `new ChunkPos(BlockPos.containing(...))` no longer compiles because `ChunkPos` is a record with only `(int,int)` construction. Before mutation, inspect exact current `ChunkPos` API / already-proven repository usage and prove the intended `ChunkPos.containing(BlockPos)` replacement. If exact evidence supports it, adapt only those two constructions fail-closed and preserve the existing VS2 world-coordinate transform and wrapped-call semantics unchanged.
+5. Do **not** patch the one-error `MixinEntity.entityInside`, `MixinLivingEntity.isControlledByLocalInstance`, or `MixinMinecraftServer.removeRegionTicket` units without separate exact lifecycle/authority evidence; those touch collision/effect, control authority, or ship-ticket lifecycle boundaries.
+6. Do not bulk-port optional compat (`Immersive Portals`, FTB Chunks, OptiFine/Sodium) merely to reduce the error count. Establish target-runtime optionality/dependency evidence before isolation or compatibility work.
+7. After any bounded mutation, run exact canonical standalone P1 compile, classify the new primary frontier from the uploaded artifact, then update this ledger only at a meaningful proven boundary.
+8. Remain P1. No ordinary compile/debug video.
