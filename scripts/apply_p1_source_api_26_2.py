@@ -462,4 +462,50 @@ replace_count(
     1,
 )
 
+# Exact Minecraft 26.2 HUD API probe run 35492969240 proved that the old Gui-owned
+# renderEffects(GuiGraphics, DeltaTracker) boundary no longer exists. The mapped 26.2 jar
+# has Hud.extractEffects(GuiGraphicsExtractor, DeltaTracker), Hud retains the Minecraft
+# field used by upstream VS2, GuiGraphics is absent, and GuiGraphicsExtractor exposes both
+# fill(int,int,int,int,int) and text(Font,String,int,int,int). The five-argument text overload
+# delegates with shadow=true, preserving the old five-argument drawString presentation.
+# Adapt only the HUD owner/method/graphics vocabulary and text submission call. Debug-text
+# config, physics/voxel/UDP reads, positions, colors, and every non-HUD VS2 authority remain
+# unchanged.
+replace_count(
+    "common/src/main/java/org/valkyrienskies/mod/mixin/feature/vs2_alpha_hud/MixinGui.java",
+    "import net.minecraft.client.gui.Gui;\n",
+    "import net.minecraft.client.gui.Hud;\n",
+    1,
+)
+replace_count(
+    "common/src/main/java/org/valkyrienskies/mod/mixin/feature/vs2_alpha_hud/MixinGui.java",
+    "import net.minecraft.client.gui.GuiGraphics;\n",
+    "import net.minecraft.client.gui.GuiGraphicsExtractor;\n",
+    1,
+)
+replace_count(
+    "common/src/main/java/org/valkyrienskies/mod/mixin/feature/vs2_alpha_hud/MixinGui.java",
+    "@Mixin(Gui.class)",
+    "@Mixin(Hud.class)",
+    1,
+)
+replace_count(
+    "common/src/main/java/org/valkyrienskies/mod/mixin/feature/vs2_alpha_hud/MixinGui.java",
+    "@Inject(method = \"renderEffects\", at = @At(\"HEAD\"))",
+    "@Inject(method = \"extractEffects\", at = @At(\"HEAD\"))",
+    1,
+)
+replace_count(
+    "common/src/main/java/org/valkyrienskies/mod/mixin/feature/vs2_alpha_hud/MixinGui.java",
+    "private void preRenderStatusEffectOverlay(GuiGraphics guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci)",
+    "private void preRenderStatusEffectOverlay(GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci)",
+    1,
+)
+replace_count(
+    "common/src/main/java/org/valkyrienskies/mod/mixin/feature/vs2_alpha_hud/MixinGui.java",
+    "guiGraphics.drawString(fontRenderer, string, 2, posY, 14737632);",
+    "guiGraphics.text(fontRenderer, string, 2, posY, 14737632);",
+    1,
+)
+
 print("P1_SOURCE_API_26_2_OVERLAY_APPLIED")
