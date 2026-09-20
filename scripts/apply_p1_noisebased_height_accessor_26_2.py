@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import subprocess
 import sys
 
 root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("upstream-vs2")
@@ -41,3 +42,12 @@ for token, count in predecessor_anchors + authority_anchors:
 
 path.write_text(text, encoding="utf-8")
 print("P1_NOISEBASED_HEIGHT_ACCESSOR_26_2_OVERLAY_APPLIED count=1")
+
+# Transport-only chain for the unreachable reconnect-player mixin superclass constructor.
+# Minecraft 26.2 javac evidence requires Player(Level, GameProfile); injected ship save/restore
+# behavior remains untouched in the dedicated fail-closed helper.
+reconnect_ctor_helper = Path(__file__).with_name("apply_p1_reconnected_player_constructor_26_2.py")
+if not reconnect_ctor_helper.is_file():
+    raise SystemExit(f"fail-closed: required reconnect-player constructor overlay helper missing: {reconnect_ctor_helper}")
+subprocess.run([sys.executable, str(reconnect_ctor_helper), str(root)], check=True)
+print("P1_RECONNECTED_PLAYER_CONSTRUCTOR_26_2_CHAINED")
