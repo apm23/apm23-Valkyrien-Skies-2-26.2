@@ -69,8 +69,8 @@ def main() -> None:
         (
             "dev.ryanhcode.sable.ActiveSableCompanion",
             "@Mixin(ActiveSableCompanion.class)",
-            "projectOutOfSubLevel",
-            "getVelocity",
+            "projectOutOfSubLevel(Lnet/minecraft/world/level/Level;Lorg/joml/Vector3dc;Lorg/joml/Vector3d;)Lorg/joml/Vector3d;",
+            "getVelocity(Lnet/minecraft/world/level/Level;Lorg/joml/Vector3dc;Lorg/joml/Vector3d;)Lorg/joml/Vector3d;",
         ),
     )
     verify_source(
