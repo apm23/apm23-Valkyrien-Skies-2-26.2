@@ -183,4 +183,4 @@ clientchunk_pack_helper = Path(__file__).with_name("apply_p1_clientchunkcache_ch
 if not clientchunk_pack_helper.is_file():
     raise SystemExit(f"fail-closed: required ClientChunkCache packed-key overlay helper missing: {clientchunk_pack_helper}")
 subprocess.run([sys.executable, str(clientchunk_pack_helper), str(root)], check=True)
-print("P1_CLIENTCHUNKCACHE_CHUNKPOS_PACK_26_2_CHAINED_HEIGHTMAPS_SECTION_RANGE_V2")
+print("P1_CLIENTCHUNKCACHE_CHUNKPOS_PACK_26_2_CHAINED_HEIGHTMAPS_SECTION_RANGE_V3")
