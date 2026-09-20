@@ -37,3 +37,4 @@ print("P1_COMPATUTIL_BUILDHEIGHT_26_2_OVERLAY_APPLIED")
 # Retriggered after correcting only the pinned one-site ViewArea ship-section method guard.
 # Transport-only canonical P1 retrigger for the chained ViewArea packed-key proof.
 # Transport-only canonical P1 retrigger for the chained ViewArea minimum-height proof.
+# Transport-only canonical P1 retrigger for the chained ViewArea RenderSection constructor proof.
