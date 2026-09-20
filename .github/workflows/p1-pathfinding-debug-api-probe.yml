@@ -138,7 +138,7 @@ jobs:
               if marker not in debug:
                   raise SystemExit('fail-closed: DebugRenderer contract marker missing: ' + marker)
 
-          if 'public abstract interface net.minecraft.client.renderer.debug.DebugRenderer$SimpleDebugRenderer' not in simple:
+          if 'public interface net.minecraft.client.renderer.debug.DebugRenderer$SimpleDebugRenderer' not in simple:
               raise SystemExit('fail-closed: SimpleDebugRenderer is not a public interface')
           if 'public abstract void emitGizmos(double, double, double, net.minecraft.util.debug.DebugValueAccess, net.minecraft.client.renderer.culling.Frustum, float);' not in simple:
               raise SystemExit('fail-closed: SimpleDebugRenderer emitGizmos contract changed')
