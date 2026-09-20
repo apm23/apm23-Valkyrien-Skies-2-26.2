@@ -26,13 +26,13 @@ Minecraft 26.2 changes are applied by explicit fail-closed overlays. Every core 
 
 Current proven implementation boundary before this documentation-only reconciliation commit:
 
-- canonical implementation/proof HEAD: `d0bf1efc8ae705ba0aa1f88e7c64be79db3e365b` — `ci: chain ClientPacketListener creation overlay`.
-- exact-head P0 provenance run `35511573402`: **success**.
-- exact-head standalone P1 compile run `35511573445`: **compile-frontier failure only** after all canonical overlay steps reached javac.
-- exact-head StructureTemplate isolated proof run `35511573399`: **success**; the transport chain did not regress that frozen proof.
-- canonical compile artifact: `p1-compile-log-d0bf1efc8ae705ba0aa1f88e7c64be79db3e365b`, ID `10605476571`, artifact digest `sha256:65a6e2d37cc62cd95b6e3b64210b6269c4c502363d7a0ce7bf7e4863524b766e`.
-- extracted `p1-compile.log`: **250840 bytes**, SHA-256 `f706a11ffb3e68130bddccdadd83ef7b275264e4d17ef2d2cbb8fe4f911e0c4c`.
-- authoritative primary javac pass: **60 errors across 9 Java source files**. Gradle repeats diagnostics later; use the first `60 errors` summary as frontier authority.
+- canonical implementation/proof HEAD: `8653eb7b9c4d0db62e04614c744aac1810255d75` — `ci: chain ClientPacketListener snap overlay`.
+- exact-head P0 provenance run `35512025222`: **success**.
+- exact-head standalone P1 compile run `35512025153`: **compile-frontier failure only** after all canonical overlay steps reached javac.
+- exact-head StructureTemplate isolated proof run `35512025283`: **success**; the transport chain did not regress that frozen proof.
+- canonical compile artifact: `p1-compile-log-8653eb7b9c4d0db62e04614c744aac1810255d75`, ID `10605932626`, artifact digest `sha256:259db9962dcb41c9fcc08a3bdadbe177e0cb7a14d777aef61faacf9710ea237c`.
+- extracted `p1-compile.log`: **249478 bytes**, SHA-256 `59f13f2f7ec9c53d2c8a07a73b81333fb800485544b376b10ad47e2ea06eb92f`.
+- authoritative primary javac pass: **59 errors across 8 Java source files**. Gradle repeats diagnostics later; use the first `59 errors` summary as frontier authority.
 - project state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`.
 - active blocker classification: `MINECRAFT_26_2_JAVA_API_FRONTIER`.
 - This is not P1 boot proof, not P2/M1 ship proof, and not runtime rendering proof.
@@ -49,11 +49,12 @@ Current proven implementation boundary before this documentation-only reconcilia
 8. `MixinMinecraftServer` shutdown SHIP_CHUNK ticket removal: **64 -> 63**. `fc887ec127899ba1437433ebf77ee6fc968c82ab` extends the already-proven radius-ticket mapping to the missed shutdown callsite only; radius/type/order/FORCED cleanup unchanged. Proof `35510099480`.
 9. `MixinClientLevel` creative barrier two-hand API: **63 -> 62**. `getHandSlots()` became explicit public `getMainHandItem()` OR `getOffhandItem()` reads. Creative gate, barrier marker behavior, player-scale math, real VS2 ship intersection/world-to-ship transforms, probabilities, and renderer/physics authority unchanged. Proof `35510781654` at `486dbdaec5302f983d76bd871dea4e59eac67479`.
 10. `MixinClientLevel` canonical standing-width API: **62 -> 61**. Pinned VS2 divides current `getBbWidth()` by the unscaled standing constant `STANDING_DIMENSIONS.width()`. Exact Minecraft 26.2 `Avatar` source proves public `getDefaultDimensions(Pose.STANDING)` returns `POSES.getOrDefault(Pose.STANDING, STANDING_DIMENSIONS)`, and `POSES` maps `Pose.STANDING` directly to that same base `STANDING_DIMENSIONS`. The fail-closed overlay therefore changes only the protected-field access to `player.getDefaultDimensions(Pose.STANDING).width()` and explicitly forbids the scale-aware `player.getDimensions(Pose.STANDING)` substitution. Numerator, ship intersection, world-to-ship transforms, particle probabilities/ranges, barrier behavior, and VS2 renderer/physics authority are unchanged. Exact compile `35511223209` removes `MixinClientLevel` entirely from the primary error set.
-11. `MixinClientPacketListener` packet-created mounting-entity creation API: **61 -> 60**. Exact Minecraft 26.2 `ClientPacketListener.createEntityFromPacket(ClientboundAddEntityPacket)` creates non-player packet entities with `type.create(this.level, EntitySpawnReason.LOAD)`. The fail-closed overlay changes only `SHIP_MOUNTING_ENTITY_TYPE.create(level)` to `SHIP_MOUNTING_ENTITY_TYPE.create(level, EntitySpawnReason.LOAD)` and adds the required import. Packet cancellation, packet coordinates, `syncPacketPositionCodec`, the still-unresolved position initialization, rotation, id/UUID, `level.addEntity`, teleport handling, and real VS2 mounting-entity authority are unchanged. Exact compile `35511573445` removes only the creation-signature diagnostic and leaves exactly one independent `entity.moveTo(d,e,f)` error in `MixinClientPacketListener`.
+11. `MixinClientPacketListener` packet-created mounting-entity creation API: **61 -> 60**. Exact Minecraft 26.2 `ClientPacketListener.createEntityFromPacket(ClientboundAddEntityPacket)` creates non-player packet entities with `type.create(this.level, EntitySpawnReason.LOAD)`. The fail-closed overlay changes only `SHIP_MOUNTING_ENTITY_TYPE.create(level)` to `SHIP_MOUNTING_ENTITY_TYPE.create(level, EntitySpawnReason.LOAD)` and adds the required import. Packet cancellation, packet coordinates, `syncPacketPositionCodec`, position initialization, rotation, id/UUID, `level.addEntity`, teleport handling, and real VS2 mounting-entity authority are unchanged. Exact compile `35511573445` removes only the creation-signature diagnostic.
+12. `MixinClientPacketListener` packet position initialization vocabulary: **60 -> 59**. Pinned Minecraft 1.21.1 `Entity.moveTo(double,double,double)` and Minecraft 26.2 `Entity.snapTo(double,double,double)` retain the same intermediary method identity (`method_24203`), while exact 26.2 `Entity.recreateFromPacket(packet)` uses `syncPacketPositionCodec(...)` followed by `snapTo(...)`. The fail-closed overlay changes only `entity.moveTo(d,e,f)` to `entity.snapTo(d,e,f)`. Existing packet cancellation, `EntitySpawnReason.LOAD` creation, packet coordinates, codec sync ordering, explicit rotation assignments, id/UUID, `level.addEntity`, teleport wrapper, and real VS2 `SHIP_MOUNTING_ENTITY_TYPE` authority remain unchanged. Exact compile `35512025153` removes `MixinClientPacketListener` entirely from the primary error set.
 
-Freeze all eleven units above at P1 compile/API scope. Runtime semantics remain to be proven later by normal P1/P2 gates.
+Freeze all twelve units above at P1 compile/API scope. Runtime semantics remain to be proven later by normal P1/P2 gates.
 
-### Current primary Java frontier at `d0bf1efc...`
+### Current primary Java frontier at `8653eb7b...`
 
 1. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/immersive_portals/MixinMyBuiltChunkStorage.java` — 25
 2. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/vanilla_renderer/MixinViewAreaVanilla.java` — 14
@@ -63,9 +64,8 @@ Freeze all eleven units above at P1 compile/API scope. Runtime semantics remain 
 6. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/optifine_vanilla/MixinLevelRenderer.java` — 3
 7. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/ftb_chunks/MixinClaimedChunkManagerImpl.java` — 2
 8. `common/src/main/java/org/valkyrienskies/mod/mixin/client/world/MixinClientChunkCache.java` — 1
-9. `common/src/main/java/org/valkyrienskies/mod/mixin/client/multiplayer/MixinClientPacketListener.java` — 1
 
-`MixinServerLevel`, `SodiumCompat`, `MixinEntity`, `MixinLivingEntity`, `MixinLocalPlayer`, `MixinMinecraftServer`, and `MixinClientLevel` are zero-error in the primary javac pass. `MixinClientPacketListener` now has only the separate removed-position-initialization API error. `MixinClientChunkCache` remains intentionally at one unresolved ship-render dirty-invalidation error.
+`MixinServerLevel`, `SodiumCompat`, `MixinEntity`, `MixinLivingEntity`, `MixinLocalPlayer`, `MixinMinecraftServer`, `MixinClientLevel`, and `MixinClientPacketListener` are zero-error in the primary javac pass. `MixinClientChunkCache` remains intentionally at one unresolved ship-render dirty-invalidation error.
 
 Do not bulk-rewrite this list. Continue one bounded, evidence-backed 26.2 API unit at a time.
 
@@ -83,7 +83,7 @@ Do not reopen absent direct contradictory evidence:
 - LevelRenderer / LevelExtractor split — `660d5320902a3ecba4f3219969aa77b0316cfa52`; existing `IVSCamera` is observation only.
 - optional Create deployer helper is P1 compile isolation only, never P3 Create integration.
 - `MixinClientLevel` two-hand barrier read and base-standing-width adaptations are frozen at proof heads `486dbdaec5302f983d76bd871dea4e59eac67479` and `4e880e6271c9fa79001df9d3077086c4dda6530f`; do not broaden to inventory scanning, scale-aware dimensions, or particle/reference-space redesign.
-- `MixinClientPacketListener` mounting-entity creation reason at proof head `d0bf1efc8ae705ba0aa1f88e7c64be79db3e365b`: exact packet-spawn creation uses `EntitySpawnReason.LOAD`; do not substitute a different spawn reason or collapse the separate position-initialization unit into creation.
+- `MixinClientPacketListener` packet-created mounting-entity API is frozen through proof head `8653eb7b9c4d0db62e04614c744aac1810255d75`: `EntitySpawnReason.LOAD` creation and the old `moveTo` -> current `snapTo` vocabulary adaptation only. Do not replay this work, change spawn reason, call full `recreateFromPacket`, substitute `setPos`/`setPosRaw`, or alter packet/teleport ordering without new contradictory evidence.
 
 Forbidden final architecture remains: custom VS2-like reference frames, synthetic carry/inertia, fake gravity or wall/floor clamps, per-tick setPos chase, camera counter-rotation/forcing, duplicate authority, floor-only fake success, or reuse of retired `apm23/VS2-Create_Interactive` implementation code.
 
@@ -101,6 +101,7 @@ Forbidden final architecture remains: custom VS2-like reference frames, syntheti
 - Do not replace remaining `RenderSection.setDirty(true)` mechanically with a vanilla dirty call. It targets a section obtained through `IVSViewAreaMethods.vs$getShipRenderSection(...)`; exact ship-render invalidation ownership/access must be proven before mutation.
 - ClientLevel hand-overlay transport: `587c6b41d2a95815d26440ee753abc0f70faecb6` / `35510733124` invoked the hand helper twice and failed its idempotence guard before javac. `486dbdaec5302f983d76bd871dea4e59eac67479` removed only the duplicate call; never replay it.
 - `player.getDimensions(Pose.STANDING)` is a locked failed/forbidden standing-width hypothesis for this site because it is not the proven base-standing constant boundary and could collapse the intended current-width/base-width ratio. Use the proven `getDefaultDimensions(Pose.STANDING)` mapping only.
+- Do not replace the proven packet-position `snapTo` adaptation with `setPos`, `setPosRaw`, or full `recreateFromPacket`; those would broaden the unit or duplicate ordering already explicitly owned by the pinned VS2 branch.
 - Actions self-push workflow edits without `workflows` permission remain failed transport hypothesis.
 - retired `apm23/VS2-Create_Interactive` implementation is forbidden.
 
@@ -133,12 +134,10 @@ Create/SNR/Copycats are not authority for current standalone P1 source adaptatio
 
 1. This ledger commit is documentation-only. Require exact-head P0 provenance success before the next source mutation.
 2. Preserve all frozen boundaries and negative evidence above.
-3. Treat artifact `10605476571` as the canonical **60-error / 9-source-file** Java frontier until a later exact canonical compile changes it.
-4. Freeze the proven `MixinClientPacketListener` creation adaptation. Do not replay the creation signature or change `EntitySpawnReason.LOAD`.
-5. `MixinClientPacketListener.java` now has exactly one primary error in the real `SHIP_MOUNTING_ENTITY_TYPE` client-spawn branch: removed `entity.moveTo(d,e,f)`. Treat position initialization as an independent API/lifecycle unit.
-6. Prove the exact Minecraft 26.2 position initialization semantics for an entity created from `ClientboundAddEntityPacket`, including what vanilla `Entity.recreateFromPacket(packet)` now does to position/rotation/packet-position codec. Do not mechanically substitute `setPos`, `setPosRaw`, `snapTo`, or call the whole vanilla recreation path unless evidence shows it preserves the pinned VS2 branch's ordering and does not duplicate the already-explicit codec/rotation/id/UUID work.
-7. Preserve packet cancellation, `syncPacketPositionCodec(d,e,f)`, explicit rotations, id/UUID, `level.addEntity`, teleport handling, and VS2 mounting-entity authority until the exact minimal equivalent for old `moveTo(d,e,f)` is proven.
-8. Leave `MixinClientChunkCache`'s one ship-specific dirty-invalidation error untouched unless its custom ship-render ownership path is independently proven.
-9. `MixinLevelChunk.java` remains lifecycle/storage-sensitive and must be split by error class. Optional compat (`Immersive Portals`, FTB Chunks, OptiFine) is not first target merely because it has many errors.
-10. After any bounded source mutation, run exact canonical standalone P1 compile, classify the first primary javac pass from the uploaded artifact, and update this ledger at the next meaningful proven boundary.
-11. Remain P1. No ordinary compile/debug video.
+3. Treat artifact `10605932626` as the canonical **59-error / 8-source-file** Java frontier until a later exact canonical compile changes it. Artifact digest `sha256:259db9962dcb41c9fcc08a3bdadbe177e0cb7a14d777aef61faacf9710ea237c`; extracted log SHA-256 `59f13f2f7ec9c53d2c8a07a73b81333fb800485544b376b10ad47e2ea06eb92f`.
+4. Freeze both proven `MixinClientPacketListener` units. Do not replay creation or packet-position work.
+5. Leave `MixinClientChunkCache`'s one ship-specific dirty-invalidation error untouched unless its custom ship-render ownership path is independently proven.
+6. Next non-optional bounded core target is `MixinLevelChunk.java`, currently **8 primary errors**. First classify those exact eight diagnostics by API/error class against pinned upstream and exact Minecraft 26.2 APIs; split them into separately evidenced units. This file is lifecycle/storage-sensitive: do not bulk-rewrite it and do not alter ship chunk lifecycle/storage authority while fixing vocabulary/API boundaries.
+7. Optional compat (`Immersive Portals`, FTB Chunks, OptiFine) is not first merely because it has many errors. Establish target-runtime optionality/dependency evidence before isolation or port work.
+8. After any bounded source mutation, run exact canonical standalone P1 compile, classify the first primary javac pass from its uploaded artifact, and update this ledger at the next meaningful proven boundary.
+9. Remain P1. No ordinary compile/debug video.
