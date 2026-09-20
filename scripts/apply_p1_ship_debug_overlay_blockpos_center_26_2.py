@@ -82,3 +82,11 @@ if not clientside_helper.is_file():
     raise SystemExit(f"fail-closed: required Level client-side accessor overlay helper missing: {clientside_helper}")
 subprocess.run([sys.executable, str(clientside_helper), str(root)], check=True)
 print("P1_LEVEL_CLIENTSIDE_ACCESSOR_26_2_CHAINED")
+
+# Mechanical Optional-unwrapping adaptation for seven exact CompoundTag primitive reads.
+# Use the legacy numeric fallback value so old VS2 save semantics are preserved.
+nbt_helper = Path(__file__).with_name("apply_p1_compoundtag_optional_primitives_26_2.py")
+if not nbt_helper.is_file():
+    raise SystemExit(f"fail-closed: required CompoundTag Optional primitive overlay helper missing: {nbt_helper}")
+subprocess.run([sys.executable, str(nbt_helper), str(root)], check=True)
+print("P1_COMPOUNDTAG_OPTIONAL_PRIMITIVES_26_2_CHAINED")
