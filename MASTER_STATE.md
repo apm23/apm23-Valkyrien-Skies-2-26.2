@@ -103,7 +103,7 @@ Exact `BASELINE_LOCK.json` remains authoritative. Current locked stack includes:
 - Minecraft `26.2`
 - Java `25`
 - Fabric Loader observed `0.19.3`
-- Fabric API `0.160.0+26.2`, SHA-256 `5f3dff88e1666e222213302b25ace6c36dc3683804cbd4b5acf93138ea05e`
+- Fabric API `0.160.0+26.2`, SHA-256 `5f3dff88e1661166e222213302b25ace6c36dc3683804cbd4b5acf93138ea05e`
 - Create Fly `6.0.9-1`, SHA-256 `d9c6cb6116d5caa1174a289ecd7d3cdd463ccef6e8db1249ab0bcfcd8c935870`
 - SNR embedded `SNR.FLY-STABLE-1.2.2+fabric-mc26.2`, SHA-256 `33c87d5a7da0d468d3b6c0e99f726b835c63b693e7447fdaeca5e1f204caab84`
 - Copycats embedded `3.0.7-createfly+mc.26.2-v1.14`, SHA-256 `1922db10a49dfab42c4c272fbaee41cdc149287cd08ca84148b497e598029858`
