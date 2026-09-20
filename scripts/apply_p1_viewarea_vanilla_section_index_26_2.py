@@ -7,7 +7,7 @@ in this unit. Preserve all custom ship ViewArea storage, dirty scheduling, secti
 unload, and buffer-disposal behavior for later independently evidenced adaptations.
 """
 from pathlib import Path
-import sys
+import subprocess, sys
 
 root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("upstream-vs2")
 path = root / "common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/vanilla_renderer/MixinViewAreaVanilla.java"
@@ -58,3 +58,11 @@ for anchor, expected in anchors.items():
 
 path.write_text(new_text, encoding="utf-8")
 print("P1_VIEWAREA_VANILLA_SECTION_INDEX_26_2_OVERLAY_APPLIED min_section_sites=3")
+
+# Packed chunk keys are a separate already-evidenced MC26.2 vocabulary unit.
+# Chain only after the independently frozen section-index transform.
+pack_helper = Path(__file__).with_name("apply_p1_viewarea_vanilla_chunkpos_pack_26_2.py")
+if not pack_helper.is_file():
+    raise SystemExit(f"fail-closed: required ViewArea packed-key helper missing: {pack_helper}")
+subprocess.run([sys.executable, str(pack_helper), str(root)], check=True)
+print("P1_VIEWAREA_VANILLA_CHUNKPOS_PACK_26_2_CHAINED")
