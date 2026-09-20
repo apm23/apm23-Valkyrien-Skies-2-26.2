@@ -67,3 +67,11 @@ if not section_range_helper.is_file():
     raise SystemExit(f"fail-closed: required ClientChunkCache section-range overlay helper missing: {section_range_helper}")
 subprocess.run([sys.executable, str(section_range_helper), str(root)], check=True)
 print("P1_CLIENTCHUNKCACHE_SECTION_RANGE_26_2_CHAINED")
+
+# Transport-only chaining for the independently evidenced MixinClientLevel hand API split.
+# Preserve creative gating and barrier semantics; do not touch the separate player-scale frontier.
+clientlevel_hand_helper = Path(__file__).with_name("apply_p1_clientlevel_hand_items_26_2.py")
+if not clientlevel_hand_helper.is_file():
+    raise SystemExit(f"fail-closed: required ClientLevel hand-items overlay helper missing: {clientlevel_hand_helper}")
+subprocess.run([sys.executable, str(clientlevel_hand_helper), str(root)], check=True)
+print("P1_CLIENTLEVEL_HAND_ITEMS_26_2_CHAINED")
