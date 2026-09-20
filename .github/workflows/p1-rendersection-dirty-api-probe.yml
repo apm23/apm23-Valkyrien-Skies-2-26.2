@@ -1,0 +1,110 @@
+name: P1 RenderSection dirty API inspection
+
+on:
+  push:
+    paths:
+      - '.github/workflows/p1-rendersection-dirty-api-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-rendersection-dirty-api:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact upstream baseline
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Replay canonical P1 overlays in canonical order
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, shlex, subprocess
+          workflow = Path('.github/workflows/p1-compile.yml').read_text(encoding='utf-8')
+          commands = re.findall(r'^\s*run:\s+(python3 scripts/apply_p1_[^\n]+ upstream-vs2)\s*$', workflow, flags=re.MULTILINE)
+          if len(commands) < 50:
+              raise SystemExit(f'fail-closed: expected canonical overlay chain, found only {len(commands)} commands')
+          for command in commands:
+              print('+', command)
+              subprocess.run(shlex.split(command), check=True)
+          PY
+
+      - name: Resolve exact common compile classpath
+        shell: bash
+        working-directory: upstream-vs2
+        run: |
+          set -euo pipefail
+          cat > ../p1-rendersection-dirty-classpath.init.gradle <<'GRADLE'
+          gradle.projectsEvaluated {
+              def commonProject = gradle.rootProject.findProject(':common')
+              if (commonProject == null) throw new GradleException('fail-closed: :common project not found')
+              commonProject.tasks.register('vsPrintMainCompileClasspath') {
+                  doLast {
+                      def sourceSets = commonProject.extensions.findByName('sourceSets')
+                      if (sourceSets == null) throw new GradleException('fail-closed: sourceSets extension not found')
+                      sourceSets.getByName('main').compileClasspath.files.each { file -> println('VS_CP_FILE=' + file.absolutePath) }
+                  }
+              }
+          }
+          GRADLE
+          ./gradlew -I ../p1-rendersection-dirty-classpath.init.gradle :common:vsPrintMainCompileClasspath --no-daemon | tee ../p1-rendersection-dirty-classpath.log
+          grep -q '^VS_CP_FILE=' ../p1-rendersection-dirty-classpath.log
+
+      - name: Inspect exact Minecraft 26.2 RenderSection dirty API
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' | tee p1-rendersection-dirty-api-probe.log
+          from pathlib import Path
+          import subprocess, zipfile
+          cp = Path('p1-rendersection-dirty-classpath.log').read_text(encoding='utf-8', errors='replace')
+          jars = [Path(line.split('=',1)[1]) for line in cp.splitlines() if line.startswith('VS_CP_FILE=')]
+          entry = 'net/minecraft/client/renderer/chunk/SectionRenderDispatcher$RenderSection.class'
+          hits=[]
+          for jar in jars:
+              if not jar.exists() or jar.suffix != '.jar':
+                  continue
+              try:
+                  with zipfile.ZipFile(jar) as zf:
+                      if entry in zf.namelist():
+                          hits.append(jar)
+              except zipfile.BadZipFile:
+                  pass
+          if not hits:
+              raise SystemExit('fail-closed: exact mapped RenderSection class not found on :common compile classpath')
+          for jar in hits:
+              print('=== JAR', jar, '===')
+              proc=subprocess.run(['javap','-classpath',str(jar),'-p','-s','-c','net.minecraft.client.renderer.chunk.SectionRenderDispatcher$RenderSection'], text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+              print(proc.stdout)
+              if proc.returncode != 0:
+                  raise SystemExit('fail-closed: javap RenderSection failed')
+              text=proc.stdout
+              dirty=[line.strip() for line in text.splitlines() if 'dirty' in line.lower()]
+              print('=== DIRTY MEMBERS ===')
+              for line in dirty: print(line)
+              if not dirty:
+                  raise SystemExit('fail-closed: no dirty-related RenderSection members found')
+          print('RENDERSECTION_DIRTY_API_26_2_PROBE_COMPLETE')
+          PY
+
+      - name: Upload exact RenderSection dirty API inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-rendersection-dirty-api-probe-${{ github.sha }}
+          path: |
+            p1-rendersection-dirty-classpath.log
+            p1-rendersection-dirty-api-probe.log
+          if-no-files-found: warn
