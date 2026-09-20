@@ -16,6 +16,8 @@ if not path.is_file():
 text = path.read_text(encoding="utf-8")
 old = "vs$sectionRenderDispatcher.new RenderSection(0, chunkX << 4, sectionY << 4, chunkZ << 4)"
 new = "vs$sectionRenderDispatcher.new RenderSection(0, SectionPos.asLong(chunkX, sectionY, chunkZ))"
+blockpos_import = "import net.minecraft.core.BlockPos;"
+sectionpos_import = "import net.minecraft.core.SectionPos;"
 
 # Require all independently frozen ViewArea vocabulary units first.
 if text.count("level.getMinSectionY()") != 3 or "level.getMinSection()" in text:
@@ -25,9 +27,11 @@ if text.count("ChunkPos.pack(") != 5 or "ChunkPos.asLong(" in text:
 if text.count("level.getMinY()") != 1 or "level.getMinBuildHeight()" in text:
     raise SystemExit("fail-closed: frozen ViewArea minY unit missing before constructor adaptation")
 
-# SectionPos is part of pinned upstream source and is the exact 26.2 section-node packer.
-if text.count("import net.minecraft.core.SectionPos;") != 1:
-    raise SystemExit("fail-closed: expected pinned SectionPos import missing or duplicated")
+# Pinned upstream imports BlockPos but not SectionPos; add only the exact 26.2 packer import.
+if text.count(blockpos_import) != 1:
+    raise SystemExit("fail-closed: expected exactly one pinned BlockPos import")
+if sectionpos_import in text:
+    raise SystemExit("fail-closed: SectionPos import already present before constructor adaptation")
 
 anchors = {
     "private final Long2ObjectMap<SectionRenderDispatcher.RenderSection[]> vs$shipRenderChunks": 1,
@@ -49,10 +53,13 @@ if text.count(old) != 1:
 if new in text:
     raise SystemExit("fail-closed: ViewArea RenderSection constructor adaptation already partially present")
 
-new_text = text.replace(old, new, 1)
+new_text = text.replace(blockpos_import, blockpos_import + "\n" + sectionpos_import, 1)
+new_text = new_text.replace(old, new, 1)
 
 if old in new_text or new_text.count(new) != 1:
     raise SystemExit("fail-closed: ViewArea RenderSection constructor adaptation did not converge exactly once")
+if new_text.count(sectionpos_import) != 1:
+    raise SystemExit("fail-closed: SectionPos import adaptation did not converge exactly once")
 for anchor, expected in anchors.items():
     count = new_text.count(anchor)
     if count != expected:
@@ -61,4 +68,4 @@ for anchor, expected in anchors.items():
         )
 
 path.write_text(new_text, encoding="utf-8")
-print("P1_VIEWAREA_VANILLA_RENDERSECTION_CTOR_26_2_OVERLAY_APPLIED sites=1")
+print("P1_VIEWAREA_VANILLA_RENDERSECTION_CTOR_26_2_OVERLAY_APPLIED sites=1 import=SectionPos")
