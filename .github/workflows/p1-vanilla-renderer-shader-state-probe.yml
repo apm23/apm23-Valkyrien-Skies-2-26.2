@@ -1,0 +1,135 @@
+name: P1 vanilla renderer terrain transform semantics
+# Inspection-only: prove current 26.2 camera/frustum extraction and terrain shader transform semantics.
+
+on:
+  push:
+    paths:
+      - '.github/workflows/p1-vanilla-renderer-shader-state-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prove-terrain-transform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Replay canonical P1 overlays and verify pinned target
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, shlex, subprocess
+          workflow = Path('.github/workflows/p1-compile.yml').read_text(encoding='utf-8')
+          commands = re.findall(r'^\s*run:\s+(python3 scripts/apply_p1_[^\n]+ upstream-vs2)\s*$', workflow, flags=re.MULTILINE)
+          if len(commands) < 50:
+              raise SystemExit(f'fail-closed: canonical overlay chain incomplete: {len(commands)}')
+          for command in commands:
+              subprocess.run(shlex.split(command), check=True)
+          target='common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/vanilla_renderer/MixinLevelRendererVanilla.java'
+          actual=subprocess.check_output(['git','-C','upstream-vs2','hash-object',target], text=True).strip()
+          if actual != '824e1ac56a99bc6480cc80c32c085d18c2425b09':
+              raise SystemExit(f'fail-closed: upstream target drift: {actual}')
+          print('VANILLA_RENDERER_UPSTREAM_BLOB='+actual)
+          PY
+
+      - name: Resolve exact common compile classpath
+        shell: bash
+        working-directory: upstream-vs2
+        run: |
+          set -euo pipefail
+          cat > ../p1-terrain-transform-classpath.init.gradle <<'GRADLE'
+          gradle.projectsEvaluated {
+              def p = gradle.rootProject.findProject(':common')
+              if (p == null) throw new GradleException('fail-closed: :common missing')
+              p.tasks.register('vsPrintMainCompileClasspath') {
+                  doLast {
+                      p.extensions.getByName('sourceSets').getByName('main').compileClasspath.files.each { f -> println('VS_CP_FILE=' + f.absolutePath) }
+                  }
+              }
+          }
+          GRADLE
+          ./gradlew -I ../p1-terrain-transform-classpath.init.gradle :common:vsPrintMainCompileClasspath --no-daemon | tee ../p1-terrain-transform-classpath.log
+          grep -q '^VS_CP_FILE=' ../p1-terrain-transform-classpath.log
+
+      - name: Prove current extraction and shader transform order
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' | tee p1-vanilla-renderer-shader-state-probe.log
+          from pathlib import Path
+          import subprocess, zipfile
+
+          cp=[]
+          for line in Path('p1-terrain-transform-classpath.log').read_text(errors='replace').splitlines():
+              if line.startswith('VS_CP_FILE='):
+                  p=Path(line.split('=',1)[1])
+                  if p.exists() and p.suffix=='.jar': cp.append(p)
+          owners=[]
+          for jar in cp:
+              try:
+                  with zipfile.ZipFile(jar) as z:
+                      if 'net/minecraft/client/renderer/LevelRenderer.class' in z.namelist(): owners.append(jar)
+              except zipfile.BadZipFile: pass
+          if len(owners)!=1: raise SystemExit(f'fail-closed: mapped MC owner count={len(owners)}')
+          owner=owners[0]
+          print('MC_OWNER', owner)
+
+          classes=['net.minecraft.client.renderer.extract.LevelExtractor','net.minecraft.client.renderer.GameRenderer']
+          outputs={}
+          for cls in classes:
+              p=subprocess.run(['javap','-classpath',str(owner),'-p','-s','-c',cls],text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+              print('\n=== JAVAP',cls,'===\n'+p.stdout)
+              if p.returncode: raise SystemExit(f'fail-closed: javap failed {cls}')
+              outputs[cls]=p.stdout
+
+          extractor=outputs['net.minecraft.client.renderer.extract.LevelExtractor']
+          if 'cullFrustum' not in extractor or 'addSectionsInFrustum' not in extractor:
+              raise SystemExit('fail-closed: exact current frustum extraction path not found')
+
+          hits=[]
+          for jar in cp:
+              try:
+                  with zipfile.ZipFile(jar) as z:
+                      for name in z.namelist():
+                          low=name.lower()
+                          if not (low.endswith('.vsh') or low.endswith('.fsh') or low.endswith('.glsl') or low.endswith('.json')):
+                              continue
+                          try: data=z.read(name)
+                          except Exception: continue
+                          if b'ChunkSection' in data or b'SectionOffset' in data or b'ModelView' in data and b'Position' in data:
+                              try: txt=data.decode('utf-8')
+                              except UnicodeDecodeError: continue
+                              hits.append((str(jar),name,txt))
+              except zipfile.BadZipFile: pass
+          print('\nTERRAIN_SHADER_HITS_BEGIN')
+          for jar,name,txt in hits:
+              print('\n--- RESOURCE',name,'FROM',jar,'---')
+              for line in txt.splitlines():
+                  if any(k in line for k in ('ChunkSection','SectionOffset','ModelView','Position','gl_Position')):
+                      print(line)
+          print('TERRAIN_SHADER_HITS_END')
+          if not hits:
+              raise SystemExit('fail-closed: no terrain shader/uniform resource evidence found')
+          print('VANILLA_RENDERER_26_2_TERRAIN_TRANSFORM_SEMANTICS_PROBED frustum_owner=LevelExtractor shader_resources=true')
+          PY
+
+      - name: Upload exact terrain transform proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-vanilla-renderer-shader-state-probe-${{ github.sha }}
+          path: |
+            p1-terrain-transform-classpath.log
+            p1-vanilla-renderer-shader-state-probe.log
+          if-no-files-found: warn
