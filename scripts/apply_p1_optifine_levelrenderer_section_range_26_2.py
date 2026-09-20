@@ -13,7 +13,7 @@ The separate removed ViewArea#setDirty authority remains intentionally untouched
 it can be adapted/proven as its own root hypothesis after this vocabulary unit.
 """
 from pathlib import Path
-import sys
+import subprocess, sys
 
 root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("upstream-vs2")
 path = root / "common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/optifine_vanilla/MixinLevelRenderer.java"
@@ -63,3 +63,11 @@ for anchor, expected in anchors.items():
 
 path.write_text(new_text, encoding="utf-8")
 print("P1_OPTIFINE_LEVELRENDERER_SECTION_RANGE_26_2_OVERLAY_APPLIED loop=exclusive-to-inclusive min_sites=1 max_sites=1 dirty_authority=untouched")
+
+# Dirty authority is a separate compile unit. Run it only after the section-range transform
+# so each hypothesis remains independently fail-closed and the already-proven range stays frozen.
+dirty_helper = Path(__file__).with_name("apply_p1_optifine_levelrenderer_dirty_authority_26_2.py")
+if not dirty_helper.is_file():
+    raise SystemExit(f"fail-closed: required OptiFine dirty-authority helper missing: {dirty_helper}")
+subprocess.run([sys.executable, str(dirty_helper), str(root)], check=True)
+print("P1_OPTIFINE_LEVELRENDERER_DIRTY_AUTHORITY_26_2_CHAINED")
