@@ -4,11 +4,12 @@ import sys
 
 root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("upstream-vs2")
 
-# Minecraft 26.2 exposes ChunkPos as a record. The exact-head canonical javac
-# frontier at 22fe6fe80f87e22a6aa384072bb56c00081ac51a reports these 40
-# direct x/z field accesses as private. Adapt only the reported pinned VS2
-# active call sites to the record accessors; do not sweep unrelated .x/.z
-# members or the historical commented-out MixinChunkMap block.
+# Minecraft 26.2 exposes ChunkPos as a record. Canonical javac first exposed
+# 40 active direct x/z field accesses at 22fe6fe80f87e22a6aa384072bb56c00081ac51a;
+# after those became clean, a2c59dd670badf96ffbdb176a061e870c2956efb
+# revealed 14 more active accesses behind javac's 100-error frontier. Adapt
+# only these exact pinned VS2 call sites to x()/z(); do not sweep unrelated
+# .x/.z members or the historical commented-out MixinChunkMap block.
 PATCHES = {
     "common/src/main/java/org/valkyrienskies/mod/mixin/client/world/MixinClientChunkCache.java": [
         ("pos.x", "pos.x()", 2, 2),
@@ -52,6 +53,18 @@ PATCHES = {
         ("pos.x", "pos.x()", 1, 1),
         ("pos.z", "pos.z()", 1, 1),
     ],
+    "common/src/main/java/org/valkyrienskies/mod/mixin/server/world/MixinServerLevel.java": [
+        ("worldChunk.getPos().x", "worldChunk.getPos().x()", 2, 2),
+        ("worldChunk.getPos().z", "worldChunk.getPos().z()", 2, 2),
+        ("pos.x", "pos.x()", 2, 2),
+        ("pos.z", "pos.z()", 2, 2),
+        ("cp.x", "cp.x()", 2, 2),
+        ("cp.z", "cp.z()", 2, 2),
+    ],
+    "common/src/main/java/org/valkyrienskies/mod/mixin/server/world/MixinChunkMapShipyard.java": [
+        ("center.x", "center.x()", 1, 1),
+        ("center.z", "center.z()", 1, 1),
+    ],
 }
 
 changed = 0
@@ -70,7 +83,7 @@ for rel, replacements in PATCHES.items():
         changed += adapted_fields
     path.write_text(text, encoding="utf-8")
 
-if changed != 40:
-    raise SystemExit(f"fail-closed: expected exactly 40 active ChunkPos field adaptations, got {changed}")
+if changed != 54:
+    raise SystemExit(f"fail-closed: expected exactly 54 active ChunkPos field adaptations, got {changed}")
 
-print("P1_CHUNKPOS_RECORD_ACCESSORS_26_2_OVERLAY_APPLIED count=40 files=8")
+print("P1_CHUNKPOS_RECORD_ACCESSORS_26_2_OVERLAY_APPLIED count=54 files=10")
