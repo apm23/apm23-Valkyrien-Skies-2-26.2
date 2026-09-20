@@ -87,4 +87,4 @@ chunkpos_helper = Path(__file__).with_name("apply_p1_chunkpos_record_accessors_2
 if not chunkpos_helper.is_file():
     raise SystemExit(f"fail-closed: required ChunkPos accessor overlay helper missing: {chunkpos_helper}")
 subprocess.run([sys.executable, str(chunkpos_helper), str(root)], check=True)
-print("P1_CHUNKPOS_RECORD_ACCESSORS_26_2_CHAINED")
+print("P1_CHUNKPOS_RECORD_ACCESSORS_26_2_CHAINED_V2")
