@@ -61,3 +61,11 @@ bb_helper = Path(__file__).with_name("apply_p1_ship_debug_bb_gizmo_26_2.py")
 if not bb_helper.is_file():
     raise SystemExit(f"fail-closed: required ship debug BB gizmo overlay helper missing: {bb_helper}")
 subprocess.run([sys.executable, str(bb_helper), str(root)], check=True)
+
+# Transport-only chaining for the separately proven Minecraft 26.2 vanilla terrain-renderer bridge.
+# The helper preserves pinned upstream VS2 ship visibility and VSClientGameUtils ship transforms,
+# while delegating chunk draw/GPU authority to 26.2 prepareChunkRenders/DynamicUniforms.
+renderer_helper = Path(__file__).with_name("apply_p1_vanilla_renderer_26_2.py")
+if not renderer_helper.is_file():
+    raise SystemExit(f"fail-closed: required vanilla renderer overlay helper missing: {renderer_helper}")
+subprocess.run([sys.executable, str(renderer_helper), str(root)], check=True)
