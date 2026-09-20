@@ -1,0 +1,126 @@
+name: P1 vanilla renderer adaptation proof
+
+on:
+  push:
+    paths:
+      - '.github/workflows/p1-vanilla-renderer-adaptation-proof.yml'
+      - 'scripts/apply_p1_vanilla_renderer_26_2.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prove-vanilla-renderer-adaptation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact upstream baseline
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Replay canonical P1 overlays in canonical order
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, shlex, subprocess
+          workflow = Path('.github/workflows/p1-compile.yml').read_text(encoding='utf-8')
+          commands = re.findall(
+              r'^\s*run:\s+(python3 scripts/apply_p1_[^\n]+ upstream-vs2)\s*$',
+              workflow,
+              flags=re.MULTILINE,
+          )
+          if len(commands) < 50:
+              raise SystemExit(f'fail-closed: canonical overlay chain incomplete: {len(commands)}')
+          for command in commands:
+              subprocess.run(shlex.split(command), check=True)
+          PY
+
+      - name: Apply candidate vanilla renderer overlay
+        run: python3 scripts/apply_p1_vanilla_renderer_26_2.py upstream-vs2
+
+      - name: Validate candidate semantic boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('upstream-vs2/common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/vanilla_renderer/MixinLevelRendererVanilla.java')
+          text = p.read_text(encoding='utf-8')
+          required = [
+              'method = "prepareChunkRenders"',
+              'DynamicUniforms$ChunkSectionInfo;<init>(Lorg/joml/Matrix4fc;IIIFII)V',
+              'levelRenderState.cameraRenderState.cullFrustum',
+              'VSClientGameUtils.transformRenderWithShip(',
+              'method = "submitBlockEntities"',
+              'VSGameUtilsKt.squaredDistanceBetweenInclShips(',
+              'shipObject.getRenderTransform().getShipToWorld()',
+          ]
+          for anchor in required:
+              if anchor not in text:
+                  raise SystemExit(f'fail-closed: missing candidate semantic anchor {anchor!r}')
+          forbidden = ['ShaderInstance', 'VertexBuffer', 'Uniform', 'renderSectionLayer', 'LightTexture', 'RenderSystem']
+          for anchor in forbidden:
+              if anchor in text:
+                  raise SystemExit(f'fail-closed: obsolete renderer authority present: {anchor}')
+          print('VANILLA_RENDERER_26_2_CANDIDATE_BOUNDARY_VALID')
+          PY
+
+      - name: Compile candidate and classify exact frontier
+        shell: bash
+        working-directory: upstream-vs2
+        run: |
+          set +e
+          set -o pipefail
+          ./gradlew :common:compileJava :common:compileKotlin :fabric:compileJava :fabric:compileKotlin --stacktrace --no-daemon 2>&1 | tee ../p1-vanilla-renderer-adaptation-compile.log
+          status=${PIPESTATUS[0]}
+          set -e
+          echo "GRADLE_STATUS=$status"
+          cd ..
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          log = Path('p1-vanilla-renderer-adaptation-compile.log').read_text(encoding='utf-8', errors='replace')
+          target = 'common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/vanilla_renderer/MixinLevelRendererVanilla.java'
+          allowed = {
+              'common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/sable/MixinSubLevelHoldingChunkMap.java',
+              'common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/sable/MixinActiveSableCompanion.java',
+          }
+          error_lines = [line for line in log.splitlines() if ': error:' in line]
+          if any(target in line for line in error_lines):
+              print('\n'.join(line for line in error_lines if target in line))
+              raise SystemExit('fail-closed: vanilla renderer candidate still has javac errors')
+
+          files = set()
+          for line in error_lines:
+              match = re.search(r'(?:(?:^|\s)|/)(common/src/main/java/[^:]+\.java):\d+: error:', line)
+              if match:
+                  files.add(match.group(1))
+          unexpected = files - allowed
+          if unexpected:
+              raise SystemExit(f'fail-closed: candidate created unexpected compile frontier: {sorted(unexpected)}')
+          if not files:
+              raise SystemExit('fail-closed: expected known Sable-only frontier, but no normalized javac frontier was found')
+          if files != allowed:
+              raise SystemExit(f'fail-closed: expected exactly two known Sable files, got {sorted(files)}')
+
+          print(f'VANILLA_RENDERER_26_2_SCRATCH_COMPILE_CLEAN remaining_only_sable=true error_markers={len(error_lines)} files={len(files)}')
+          PY
+
+      - name: Upload exact scratch compile proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-vanilla-renderer-adaptation-proof-${{ github.sha }}
+          path: p1-vanilla-renderer-adaptation-compile.log
+          if-no-files-found: warn
