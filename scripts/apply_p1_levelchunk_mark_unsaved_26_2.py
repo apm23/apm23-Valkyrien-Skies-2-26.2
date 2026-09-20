@@ -19,13 +19,12 @@ if not path.is_file():
     raise SystemExit(f"fail-closed: expected pinned VS2 MixinLevelChunk source missing: {path}")
 
 text = path.read_text(encoding="utf-8")
-
-old = "registerTickContainerInLevel((ServerLevel) level);\n        this.unsaved = true;"
-new = "registerTickContainerInLevel((ServerLevel) level);\n        this.markUnsaved();"
+old = "this.unsaved = true;"
+new = "this.markUnsaved();"
 
 if text.count(old) != 2:
-    raise SystemExit(f"fail-closed: expected two LevelChunk post-register unsaved marks, found {text.count(old)}")
-if text.count("this.markUnsaved();") != 0:
+    raise SystemExit(f"fail-closed: expected exactly two LevelChunk unsaved assignments, found {text.count(old)}")
+if text.count(new) != 0:
     raise SystemExit("fail-closed: LevelChunk markUnsaved adaptation already present")
 if "setUnsaved(" in text:
     raise SystemExit("fail-closed: forbidden obsolete setUnsaved hypothesis present")
@@ -36,24 +35,36 @@ anchors = {
     "unregisterTickContainerFromLevel((ServerLevel) level);": 2,
     "this.setLightCorrect(false);": 2,
     "registerTickContainerInLevel((ServerLevel) level);": 2,
+    "registerTickContainerInLevel((ServerLevel) level);\n        this.unsaved = true;": 1,
+    "registerTickContainerInLevel((ServerLevel) level);\n\n        this.unsaved = true;": 1,
 }
 for anchor, expected in anchors.items():
     actual = text.count(anchor)
     if actual != expected:
-        raise SystemExit(f"fail-closed: preserved LevelChunk lifecycle anchor {anchor!r} count={actual} expected={expected}")
+        raise SystemExit(f"fail-closed: preserved LevelChunk dirty/lifecycle anchor {anchor!r} count={actual} expected={expected}")
 
 text = text.replace(old, new)
 
-if "this.unsaved = true;" in text:
+if old in text:
     raise SystemExit("fail-closed: direct private ChunkAccess.unsaved assignment remains")
-if text.count("this.markUnsaved();") != 2:
-    raise SystemExit(f"fail-closed: expected two markUnsaved calls after adaptation, found {text.count('this.markUnsaved();')}")
+if text.count(new) != 2:
+    raise SystemExit(f"fail-closed: expected two markUnsaved calls after adaptation, found {text.count(new)}")
 if "setUnsaved(" in text:
     raise SystemExit("fail-closed: forbidden obsolete setUnsaved hypothesis introduced")
-for anchor, expected in anchors.items():
+
+post_anchors = {
+    "public void clearChunk() {": 1,
+    "public void copyChunkFromOtherDimension(@NotNull final VSLevelChunk srcChunkVS) {": 1,
+    "unregisterTickContainerFromLevel((ServerLevel) level);": 2,
+    "this.setLightCorrect(false);": 2,
+    "registerTickContainerInLevel((ServerLevel) level);": 2,
+    "registerTickContainerInLevel((ServerLevel) level);\n        this.markUnsaved();": 1,
+    "registerTickContainerInLevel((ServerLevel) level);\n\n        this.markUnsaved();": 1,
+}
+for anchor, expected in post_anchors.items():
     actual = text.count(anchor)
     if actual != expected:
-        raise SystemExit(f"fail-closed: LevelChunk lifecycle anchor changed after dirty-mark adaptation: {anchor!r} count={actual} expected={expected}")
+        raise SystemExit(f"fail-closed: LevelChunk dirty/lifecycle anchor changed after adaptation: {anchor!r} count={actual} expected={expected}")
 
 path.write_text(text, encoding="utf-8")
 print("P1_LEVELCHUNK_MARK_UNSAVED_26_2_OVERLAY_APPLIED")
