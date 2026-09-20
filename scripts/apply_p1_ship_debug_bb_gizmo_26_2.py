@@ -36,6 +36,7 @@ for anchor in required_upstream_anchors:
 target = '''package org.valkyrienskies.mod.mixin.feature.render_ship_debug_bb;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.debug.DebugScreenEntries;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.debug.DebugRenderer;
@@ -81,10 +82,11 @@ public class MixinDebugRenderer {
     @Inject(method = "emitGizmos", at = @At("TAIL"))
     private void postRender(final Frustum frustum, final double cameraX, final double cameraY,
         final double cameraZ, final float partialTick, final CallbackInfo ci) {
-        final ClientLevel world = Minecraft.getInstance().level;
+        final Minecraft minecraft = Minecraft.getInstance();
+        final ClientLevel world = minecraft.level;
         final VsiClientShipWorld shipObjectClientWorld = VSGameUtilsKt.getShipObjectWorld(world);
 
-        if (Minecraft.getInstance().getEntityRenderDispatcher().shouldRenderHitBoxes()) {
+        if (minecraft.debugEntries.isCurrentlyEnabled(DebugScreenEntries.ENTITY_HITBOXES)) {
             for (final ClientShip shipObjectClient : shipObjectClientWorld.getLoadedShips()) {
                 final ShipTransform shipRenderTransform = shipObjectClient.getRenderTransform();
                 final Vector3dc shipRenderPosition = shipRenderTransform.getShipPositionInWorldCoordinates();
@@ -165,7 +167,7 @@ required_26_2_anchors = [
     'transform.getShipToWorld().transformPosition(point);',
     'Gizmos.cuboid(shipRenderAABB, GizmoStyle.stroke(VS$RENDER_AABB_COLOR));',
     'Gizmos.line(from, to, color, VS$DEBUG_LINE_WIDTH);',
-    'Minecraft.getInstance().getEntityRenderDispatcher().shouldRenderHitBoxes()',
+    'minecraft.debugEntries.isCurrentlyEnabled(DebugScreenEntries.ENTITY_HITBOXES)',
 ]
 for anchor in required_26_2_anchors:
     if rewritten.count(anchor) != 1:
@@ -178,6 +180,7 @@ for forbidden in (
     'VSClientGameUtils.transformRenderWithShip',
     '@Inject(method = "render"',
     'bufferSource.endBatch()',
+    'getEntityRenderDispatcher().shouldRenderHitBoxes()',
 ):
     if forbidden in rewritten:
         raise SystemExit(f"fail-closed: obsolete pre-26.2 render authority survived: {forbidden!r}")
