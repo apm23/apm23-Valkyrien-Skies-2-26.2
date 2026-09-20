@@ -132,3 +132,12 @@ if not chunkmap_containing_helper.is_file():
     raise SystemExit(f"fail-closed: required ChunkMap ChunkPos 26.2 overlay helper missing: {chunkmap_containing_helper}")
 subprocess.run([sys.executable, str(chunkmap_containing_helper), str(root)], check=True)
 print("P1_CHUNKMAP_CHUNKPOS_26_2_CHAINED_V3")
+
+# Mechanical Minecraft 26.2 vocabulary for four exact MixinServerLevel sites.
+# Keep TicketStorage predicates, SHIP_CHUNK lifecycle, load/unload ordering, terrain updates,
+# wing scanning, and shipyard keep-loaded authority unchanged.
+serverlevel_chunkkey_helper = Path(__file__).with_name("apply_p1_serverlevel_chunkpos_height_26_2.py")
+if not serverlevel_chunkkey_helper.is_file():
+    raise SystemExit(f"fail-closed: required MixinServerLevel chunk-key/height overlay helper missing: {serverlevel_chunkkey_helper}")
+subprocess.run([sys.executable, str(serverlevel_chunkkey_helper), str(root)], check=True)
+print("P1_SERVERLEVEL_CHUNKPOS_HEIGHT_26_2_CHAINED")
