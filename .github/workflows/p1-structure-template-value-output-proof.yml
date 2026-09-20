@@ -1,0 +1,189 @@
+name: P1 StructureTemplate ValueOutput proof
+
+on:
+  push:
+    paths:
+      - 'scripts/apply_p1_structure_template_value_output_26_2.py'
+      - '.github/workflows/p1-structure-template-value-output-proof.yml'
+      - '.github/workflows/p1-compile.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  structure-template-value-output-proof:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact upstream baseline
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Verify pinned upstream
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C upstream-vs2 rev-parse HEAD)" = "f39132148e717d325933b4ce6e9e9fb13d929390"
+
+      - name: Replay canonical frozen P1 overlays excluding StructureTemplate ValueOutput unit
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import shlex
+          import subprocess
+
+          workflow = Path('.github/workflows/p1-compile.yml').read_text(encoding='utf-8')
+          commands = re.findall(
+              r'^\s*run:\s+(python3 scripts/apply_p1_[^\n]+ upstream-vs2)\s*$',
+              workflow,
+              flags=re.MULTILINE,
+          )
+          if len(commands) < 80:
+              raise SystemExit(f'fail-closed: expected canonical overlay chain, found only {len(commands)} parseable commands')
+          candidate = [c for c in commands if 'apply_p1_structure_template_value_output_26_2.py' in c]
+          if len(candidate) > 1:
+              raise SystemExit(f'fail-closed: duplicate canonical StructureTemplate ValueOutput overlays: {candidate}')
+          for command in commands:
+              if 'apply_p1_structure_template_value_output_26_2.py' in command:
+                  continue
+              print('+', command)
+              subprocess.run(shlex.split(command), check=True)
+          PY
+
+      - name: Apply isolated StructureTemplate ValueOutput overlay
+        run: python3 scripts/apply_p1_structure_template_value_output_26_2.py upstream-vs2
+
+      - name: Validate isolated StructureTemplate semantic unit
+        shell: bash
+        run: |
+          set -euo pipefail
+          target=upstream-vs2/common/src/main/java/org/valkyrienskies/mod/mixin/feature/structure_template/StructureTemplateMixin.java
+          git -C upstream-vs2 diff --check
+          git -C upstream-vs2 diff -- common/src/main/java/org/valkyrienskies/mod/mixin/feature/structure_template/StructureTemplateMixin.java
+          changed="$(git -C upstream-vs2 diff --name-only)"
+          test "$changed" = "common/src/main/java/org/valkyrienskies/mod/mixin/feature/structure_template/StructureTemplateMixin.java"
+          test "$(grep -Fc 'import net.minecraft.util.ProblemReporter;' "$target")" -eq 1
+          test "$(grep -Fc 'import net.minecraft.world.level.storage.TagValueOutput;' "$target")" -eq 1
+          test "$(grep -Fc 'CompoundTag customTag = null;' "$target")" -eq 1
+          test "$(grep -Fc 'TagValueOutput output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, level.registryAccess());' "$target")" -eq 1
+          test "$(grep -Fc 'blockEntity.saveWithId(output);' "$target")" -eq 1
+          test "$(grep -Fc 'new StructureTemplate.StructureBlockInfo(relativePos, blockState, output.buildResult())' "$target")" -eq 1
+          ! grep -Fq 'blockEntity.saveWithId(level.registryAccess())' "$target"
+          test "$(grep -Fc '((ICopyableBlock) block).onCopy((ServerLevel) level, currentWorldPos, blockState, blockEntity, shipsBeingCopied, centerPositions)' "$target")" -eq 1
+          test "$(grep -Fc 'addToLists(blockInfo, basicBlocks, blocksWithEntities, specialBlocks);' "$target")" -eq 1
+          test "$(grep -Fc 'this.palettes.add(PaletteInvoker.invokeInit(finalBlockList));' "$target")" -eq 1
+          test "$(git -C upstream-vs2 diff --numstat -- common/src/main/java/org/valkyrienskies/mod/mixin/feature/structure_template/StructureTemplateMixin.java | awk '{print $1}')" -eq 5
+          test "$(git -C upstream-vs2 diff --numstat -- common/src/main/java/org/valkyrienskies/mod/mixin/feature/structure_template/StructureTemplateMixin.java | awk '{print $2}')" -eq 1
+
+      - name: Configure exhaustive javac diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > p1-structure-template-value-output-proof.init.gradle <<'GRADLE'
+          allprojects {
+              tasks.withType(org.gradle.api.tasks.compile.JavaCompile).configureEach {
+                  options.compilerArgs += ['-Xmaxerrs', '10000']
+              }
+          }
+          GRADLE
+
+      - name: Compile standalone sources and preserve unrelated failure
+        shell: bash
+        working-directory: upstream-vs2
+        run: |
+          set -uo pipefail
+          set +e
+          ./gradlew -I ../p1-structure-template-value-output-proof.init.gradle \
+            :common:compileJava :common:compileKotlin :fabric:compileJava :fabric:compileKotlin \
+            --stacktrace --no-daemon 2>&1 | tee ../p1-structure-template-value-output-proof.log
+          status=${PIPESTATUS[0]}
+          set -e
+          printf '%s\n' "$status" > ../p1-structure-template-value-output-gradle-status.txt
+          echo "GRADLE_EXIT_STATUS=$status"
+          exit 0
+
+      - name: Prove exact Minecraft 26.2 ValueOutput API
+        shell: bash
+        run: |
+          set -euo pipefail
+          jar="$HOME/.gradle/caches/fabric-loom/26.2/minecraft-client.jar"
+          test -f "$jar"
+          javap -private -classpath "$jar" net.minecraft.world.level.block.entity.BlockEntity | tee p1-structure-template-blockentity-javap.txt
+          javap -private -classpath "$jar" net.minecraft.world.level.storage.TagValueOutput | tee p1-structure-template-tagvalueoutput-javap.txt
+          python3 - <<'PY'
+          from pathlib import Path
+
+          be = Path('p1-structure-template-blockentity-javap.txt').read_text(encoding='utf-8')
+          out = Path('p1-structure-template-tagvalueoutput-javap.txt').read_text(encoding='utf-8')
+          if 'saveWithId(net.minecraft.world.level.storage.ValueOutput)' not in be:
+              raise SystemExit('fail-closed: BlockEntity.saveWithId(ValueOutput) not present in resolved Minecraft 26.2 jar')
+          create_lines = [line.strip() for line in out.splitlines() if ' createWithContext(' in line]
+          if len(create_lines) != 1 or 'net.minecraft.util.ProblemReporter' not in create_lines[0] or 'net.minecraft.core.HolderLookup$Provider' not in create_lines[0]:
+              raise SystemExit(f'fail-closed: unexpected TagValueOutput.createWithContext API: {create_lines}')
+          result_lines = [line.strip() for line in out.splitlines() if ' buildResult();' in line]
+          if len(result_lines) != 1 or 'net.minecraft.nbt.CompoundTag' not in result_lines[0]:
+              raise SystemExit(f'fail-closed: unexpected TagValueOutput.buildResult API: {result_lines}')
+          print('MINECRAFT_26_2_STRUCTURE_TEMPLATE_VALUE_OUTPUT_API_PROVEN')
+          PY
+
+      - name: Prove exact StructureTemplate mixin file is compiler-clean
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          log = Path('p1-structure-template-value-output-proof.log').read_text(encoding='utf-8', errors='replace')
+          status = int(Path('p1-structure-template-value-output-gradle-status.txt').read_text(encoding='utf-8').strip())
+          if ':common:compileJava' not in log:
+              raise SystemExit('fail-closed: common Java compile task was never reached')
+          if status == 0:
+              print('FULL_STANDALONE_COMPILE_GREEN')
+          elif 'error:' not in log or 'Compilation failed' not in log:
+              raise SystemExit('fail-closed: Gradle failed without a normal javac compilation frontier')
+          if re.search(r'only showing the first\s+\d+\s+errors', log, flags=re.IGNORECASE):
+              raise SystemExit('fail-closed: javac diagnostics were still capped')
+
+          target = '/common/src/main/java/org/valkyrienskies/mod/mixin/feature/structure_template/StructureTemplateMixin.java:'
+          lines = log.splitlines()
+          target_errors = []
+          for index, line in enumerate(lines):
+              if 'error:' not in line or target not in line:
+                  continue
+              target_errors.append('\n'.join(lines[max(0, index - 2):index + 5]))
+          if target_errors:
+              raise SystemExit(
+                  'fail-closed: StructureTemplate ValueOutput unit still has compiler diagnostics:\n'
+                  + '\n---\n'.join(target_errors)
+              )
+
+          unrelated = [line for line in lines if 'error:' in line]
+          print(
+              'STRUCTURE_TEMPLATE_VALUE_OUTPUT_CLUSTER_COMPILER_CLEAN '
+              f'unrelated_error_diagnostics={len(unrelated)} gradle_status={status}'
+          )
+          PY
+
+      - name: Upload StructureTemplate ValueOutput proof diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-structure-template-value-output-proof-${{ github.sha }}
+          path: |
+            p1-structure-template-value-output-proof.log
+            p1-structure-template-value-output-gradle-status.txt
+            p1-structure-template-blockentity-javap.txt
+            p1-structure-template-tagvalueoutput-javap.txt
+          if-no-files-found: warn
