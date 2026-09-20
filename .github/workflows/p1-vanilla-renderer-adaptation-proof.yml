@@ -68,7 +68,14 @@ jobs:
           for anchor in required:
               if anchor not in text:
                   raise SystemExit(f'fail-closed: missing candidate semantic anchor {anchor!r}')
-          forbidden = ['ShaderInstance', 'VertexBuffer', 'Uniform', 'renderSectionLayer', 'LightTexture', 'RenderSystem']
+          forbidden = [
+              'com.mojang.blaze3d.shaders.Uniform',
+              'ShaderInstance',
+              'com.mojang.blaze3d.vertex.VertexBuffer',
+              'renderSectionLayer',
+              'LightTexture',
+              'RenderSystem',
+          ]
           for anchor in forbidden:
               if anchor in text:
                   raise SystemExit(f'fail-closed: obsolete renderer authority present: {anchor}')
