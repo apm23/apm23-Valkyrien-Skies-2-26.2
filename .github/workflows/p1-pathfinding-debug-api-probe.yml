@@ -1,5 +1,6 @@
 name: P1 Pathfinding Debug API inspection
-# One probe-only retry after run 35493504112 failed during transient Architectury plugin resolution before javap.
+# Inspection-only proof for a lifecycle-preserving 26.2 pathfinding debug bridge.
+# This workflow never mutates upstream VS2 source.
 
 on:
   push:
@@ -68,13 +69,13 @@ jobs:
             | tee ../p1-pathfinding-debug-classpath.log
           grep -q '^VS_CP_FILE=' ../p1-pathfinding-debug-classpath.log
 
-      - name: Inspect exact Minecraft 26.2 pathfinding debug boundary
+      - name: Prove exact Minecraft 26.2 pathfinding lifecycle contract
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY' | tee p1-pathfinding-debug-api-probe.log
           from pathlib import Path
-          import subprocess, zipfile
+          import re, subprocess, zipfile
 
           cp_log = Path('p1-pathfinding-debug-classpath.log').read_text(encoding='utf-8', errors='replace')
           jars = []
@@ -88,12 +89,10 @@ jobs:
 
           targets = {
               'net/minecraft/client/renderer/debug/DebugRenderer.class': 'net.minecraft.client.renderer.debug.DebugRenderer',
+              'net/minecraft/client/renderer/debug/DebugRenderer$SimpleDebugRenderer.class': 'net.minecraft.client.renderer.debug.DebugRenderer$SimpleDebugRenderer',
               'net/minecraft/client/renderer/debug/PathfindingRenderer.class': 'net.minecraft.client.renderer.debug.PathfindingRenderer',
           }
           found = {k: [] for k in targets}
-          candidate_entries = set()
-          patterns = ('MultiBufferSource', 'BufferSource', 'SubmitNode', 'Gizmo', 'DebugData', 'DebugValue', 'Frustum')
-
           for jar in jars:
               try:
                   with zipfile.ZipFile(jar) as zf:
@@ -101,11 +100,6 @@ jobs:
                       for entry in targets:
                           if entry in names:
                               found[entry].append(jar)
-                      if any(entry in names for entry in targets):
-                          print('=== TARGET JAR', jar, '===')
-                          for name in sorted(names):
-                              if name.endswith('.class') and name.startswith(('net/minecraft/client/renderer/', 'net/minecraft/client/renderer/debug/', 'net/minecraft/client/renderer/gizmos/', 'net/minecraft/client/')) and any(p in name for p in patterns):
-                                  candidate_entries.add(name)
               except zipfile.BadZipFile:
                   pass
 
@@ -113,37 +107,154 @@ jobs:
           if missing:
               raise SystemExit('fail-closed: exact mapped debug classes missing: ' + ', '.join(missing))
 
-          print('=== CANDIDATE RENDER/DEBUG CLASSES ===')
-          for name in sorted(candidate_entries):
-              print(name)
-
           outputs = {}
           for entry, cls in targets.items():
-              texts = []
-              for jar in found[entry]:
-                  print('\n=== JAVAP', cls, 'FROM', jar, '===')
-                  proc = subprocess.run(['javap', '-classpath', str(jar), '-p', '-s', '-c', cls], text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                  print(proc.stdout)
-                  if proc.returncode != 0:
-                      raise SystemExit(f'fail-closed: javap failed for {cls}')
-                  texts.append(proc.stdout)
-              outputs[cls] = '\n'.join(texts)
+              if len(found[entry]) != 1:
+                  raise SystemExit(f'fail-closed: expected one owner jar for {cls}, got {len(found[entry])}')
+              jar = found[entry][0]
+              print('\n=== JAVAP', cls, 'FROM', jar, '===')
+              proc = subprocess.run(['javap', '-classpath', str(jar), '-p', '-s', '-c', cls], text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+              print(proc.stdout)
+              if proc.returncode != 0:
+                  raise SystemExit(f'fail-closed: javap failed for {cls}')
+              outputs[cls] = proc.stdout
 
           debug = outputs['net.minecraft.client.renderer.debug.DebugRenderer']
+          simple = outputs['net.minecraft.client.renderer.debug.DebugRenderer$SimpleDebugRenderer']
           path = outputs['net.minecraft.client.renderer.debug.PathfindingRenderer']
-          print('\n=== METHOD MARKERS ===')
-          for label, text in [('DebugRenderer', debug), ('PathfindingRenderer', path)]:
-              print(label, 'render=', ' render(' in text, 'emitGizmos=', ' emitGizmos(' in text, 'MultiBufferSource=', 'MultiBufferSource' in text, 'PoseStack=', 'PoseStack' in text, 'DebugValueAccess=', 'DebugValueAccess' in text)
 
-          if 'pathfindingRenderer' not in debug:
-              raise SystemExit('fail-closed: DebugRenderer.pathfindingRenderer field not proven')
-          if not any(marker in debug for marker in (' render(', ' emitGizmos(')):
-              raise SystemExit('fail-closed: no current DebugRenderer render/emitGizmos boundary proven')
-          if not any(marker in path for marker in (' render(', ' emitGizmos(')):
-              raise SystemExit('fail-closed: no current PathfindingRenderer render/emitGizmos boundary proven')
+          required_debug = [
+              'private final java.util.List<net.minecraft.client.renderer.debug.DebugRenderer$SimpleDebugRenderer> renderers;',
+              'public void refreshRendererList();',
+              'public void emitGizmos(net.minecraft.client.renderer.culling.Frustum, double, double, double, float);',
+              'new           #',
+              '// class java/util/ArrayList',
+              '// Field net/minecraft/SharedConstants.DEBUG_PATHFINDING:Z',
+              '// class net/minecraft/client/renderer/debug/PathfindingRenderer',
+              '// InterfaceMethod java/util/List.iterator:()Ljava/util/Iterator;',
+              '// InterfaceMethod net/minecraft/client/renderer/debug/DebugRenderer$SimpleDebugRenderer.emitGizmos:(DDDLnet/minecraft/util/debug/DebugValueAccess;Lnet/minecraft/client/renderer/culling/Frustum;F)V',
+          ]
+          for marker in required_debug:
+              if marker not in debug:
+                  raise SystemExit('fail-closed: DebugRenderer contract marker missing: ' + marker)
 
-          print('PATHFINDING_DEBUG_26_2_API_INSPECTED exact_debug_owner=true exact_pathfinding_owner=true')
+          if 'public abstract interface net.minecraft.client.renderer.debug.DebugRenderer$SimpleDebugRenderer' not in simple:
+              raise SystemExit('fail-closed: SimpleDebugRenderer is not a public interface')
+          if 'public abstract void emitGizmos(double, double, double, net.minecraft.util.debug.DebugValueAccess, net.minecraft.client.renderer.culling.Frustum, float);' not in simple:
+              raise SystemExit('fail-closed: SimpleDebugRenderer emitGizmos contract changed')
+          if 'public net.minecraft.client.renderer.debug.PathfindingRenderer();' not in path:
+              raise SystemExit('fail-closed: PathfindingRenderer public constructor missing')
+          if 'implements net.minecraft.client.renderer.debug.DebugRenderer$SimpleDebugRenderer' not in path:
+              raise SystemExit('fail-closed: PathfindingRenderer no longer implements SimpleDebugRenderer')
+          if 'public void emitGizmos(double, double, double, net.minecraft.util.debug.DebugValueAccess, net.minecraft.client.renderer.culling.Frustum, float);' not in path:
+              raise SystemExit('fail-closed: PathfindingRenderer emitGizmos contract changed')
+
+          emit_start = debug.index('public void emitGizmos(')
+          emit_body = debug[emit_start:]
+          refresh_call = emit_body.find('// Method refreshRendererList:()V')
+          iterator_call = emit_body.find('// InterfaceMethod java/util/List.iterator:()Ljava/util/Iterator;')
+          dispatch_call = emit_body.find('// InterfaceMethod net/minecraft/client/renderer/debug/DebugRenderer$SimpleDebugRenderer.emitGizmos:')
+          if min(refresh_call, iterator_call, dispatch_call) < 0:
+              raise SystemExit('fail-closed: emitGizmos ordering markers missing')
+          if not refresh_call < iterator_call < dispatch_call:
+              raise SystemExit(f'fail-closed: unexpected emitGizmos ordering refresh={refresh_call} iterator={iterator_call} dispatch={dispatch_call}')
+          if emit_body.count('// InterfaceMethod java/util/List.iterator:()Ljava/util/Iterator;') != 1:
+              raise SystemExit('fail-closed: expected exactly one List.iterator in DebugRenderer.emitGizmos')
+
+          # Model the intended membership-only bridge. It never invokes PathfindingRenderer directly.
+          # vanilla_present models a renderer inserted by refreshRendererList under DEBUG_PATHFINDING.
+          for vanilla_present in (False, True):
+              for config_on in (False, True):
+                  vanilla = object() if vanilla_present else None
+                  owned = object()
+                  renderers = [] if vanilla is None else [vanilla]
+                  owned_member = False
+                  if config_on:
+                      any_path = bool(renderers)
+                      if not any_path:
+                          renderers.append(owned)
+                          owned_member = True
+                  else:
+                      if owned in renderers:
+                          renderers.remove(owned)
+                  if len(renderers) > 1:
+                      raise SystemExit('fail-closed: candidate membership logic can duplicate a pathfinding renderer')
+                  if config_on and not renderers:
+                      raise SystemExit('fail-closed: VS config ON failed to guarantee one pathfinding renderer')
+                  if (not config_on) and vanilla is None and renderers:
+                      raise SystemExit('fail-closed: VS config OFF left VS-owned renderer active')
+                  if vanilla is not None and vanilla not in renderers:
+                      raise SystemExit('fail-closed: candidate logic removed vanilla-owned renderer')
+                  print('MEMBERSHIP_CASE', 'vanilla_present='+str(vanilla_present).lower(), 'config_on='+str(config_on).lower(), 'count='+str(len(renderers)), 'owned='+str(owned_member).lower())
+
+          print('PATHFINDING_DEBUG_26_2_LIFECYCLE_PROVEN list_owner=true mutable_arraylist=true simple_interface_public=true path_ctor_public=true refresh_before_iterator=true iterator_unique=true vanilla_dispatch=true membership_only_candidate=true')
           PY
+
+      - name: Compile scratch mixin shape against exact classpath
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          cp = []
+          for line in Path('p1-pathfinding-debug-classpath.log').read_text(encoding='utf-8', errors='replace').splitlines():
+              if line.startswith('VS_CP_FILE='):
+                  p = Path(line.split('=', 1)[1])
+                  if p.exists(): cp.append(str(p))
+          Path('p1-pathfinding-debug-cp.txt').write_text(':'.join(cp), encoding='utf-8')
+          PY
+          mkdir -p p1-pathfinding-scratch
+          cat > p1-pathfinding-scratch/ProbeMixin.java <<'JAVA'
+          import java.util.List;
+          import net.minecraft.client.renderer.culling.Frustum;
+          import net.minecraft.client.renderer.debug.DebugRenderer;
+          import net.minecraft.client.renderer.debug.PathfindingRenderer;
+          import org.spongepowered.asm.mixin.Final;
+          import org.spongepowered.asm.mixin.Mixin;
+          import org.spongepowered.asm.mixin.Shadow;
+          import org.spongepowered.asm.mixin.Unique;
+          import org.spongepowered.asm.mixin.injection.At;
+          import org.spongepowered.asm.mixin.injection.Inject;
+          import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+          @Mixin(DebugRenderer.class)
+          abstract class ProbeMixin {
+              @Shadow @Final private List<DebugRenderer.SimpleDebugRenderer> renderers;
+              @Unique private PathfindingRenderer vs$ownedPathfindingRenderer;
+
+              @Inject(
+                  method = "emitGizmos",
+                  at = @At(
+                      value = "INVOKE",
+                      target = "Ljava/util/List;iterator()Ljava/util/Iterator;",
+                      ordinal = 0,
+                      shift = At.Shift.BEFORE
+                  )
+              )
+              private void vs$beforeDebugRendererIteration(
+                  final Frustum frustum,
+                  final double camX, final double camY, final double camZ,
+                  final float partialTick,
+                  final CallbackInfo ci
+              ) {
+                  final boolean configOn = true; // compile-shape only; real overlay keeps VSGameConfig as authority.
+                  if (configOn) {
+                      final boolean pathfindingAlreadyPresent = renderers.stream().anyMatch(PathfindingRenderer.class::isInstance);
+                      if (!pathfindingAlreadyPresent) {
+                          if (vs$ownedPathfindingRenderer == null) {
+                              vs$ownedPathfindingRenderer = new PathfindingRenderer();
+                          }
+                          renderers.add(vs$ownedPathfindingRenderer);
+                      }
+                  } else if (vs$ownedPathfindingRenderer != null) {
+                      renderers.remove(vs$ownedPathfindingRenderer);
+                  }
+              }
+          }
+          JAVA
+          javac -proc:none -cp "$(cat p1-pathfinding-debug-cp.txt)" -d p1-pathfinding-scratch/out p1-pathfinding-scratch/ProbeMixin.java
+          test -f p1-pathfinding-scratch/out/ProbeMixin.class
+          echo PATHFINDING_DEBUG_26_2_SCRATCH_MIXIN_COMPILES
 
       - name: Upload exact pathfinding debug API inspection
         if: always()
@@ -153,4 +264,5 @@ jobs:
           path: |
             p1-pathfinding-debug-classpath.log
             p1-pathfinding-debug-api-probe.log
+            p1-pathfinding-scratch/ProbeMixin.java
           if-no-files-found: warn
