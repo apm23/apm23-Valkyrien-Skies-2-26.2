@@ -81,7 +81,9 @@ jobs:
           for line in cp_log.splitlines():
               if line.startswith('VS_CP_FILE='):
                   p = Path(line.split('=', 1)[1])
-                  if p.exists() and p.suffix == '.jar': jars.append(p)
+                  if p.exists() and p.suffix == '.jar':
+                      jars.append(p)
+
           owners = []
           gizmo_entries = []
           for jar in jars:
@@ -91,7 +93,7 @@ jobs:
                       if 'net/minecraft/client/renderer/debug/DebugRenderer.class' in names:
                           owners.append(jar)
                       for name in names:
-                          if name.startswith('net/minecraft/client/renderer/') and name.endswith('.class') and 'Gizmo' in name:
+                          if name.endswith('.class') and ('gizmo' in name.lower() or 'Gizmo' in name):
                               gizmo_entries.append(name)
               except zipfile.BadZipFile:
                   pass
@@ -103,22 +105,30 @@ jobs:
           for name in sorted(set(gizmo_entries)):
               print(name)
 
-          required_suffixes = ['Gizmos.class', 'GizmoStyle.class']
-          selected = {}
-          for suffix in required_suffixes:
-              matches = [x for x in gizmo_entries if x.endswith('/' + suffix)]
-              if len(matches) != 1:
-                  raise SystemExit(f'fail-closed: expected exactly one {suffix}, got {matches}')
-              selected[suffix] = matches[0][:-6].replace('/', '.')
+          required_entries = [
+              'net/minecraft/gizmos/Gizmos.class',
+              'net/minecraft/gizmos/GizmoStyle.class',
+              'net/minecraft/gizmos/GizmoProperties.class',
+          ]
+          with zipfile.ZipFile(owner) as zf:
+              names = set(zf.namelist())
+          missing = [entry for entry in required_entries if entry not in names]
+          if missing:
+              raise SystemExit('fail-closed: exact gizmo classes missing: ' + repr(missing))
 
           classes = [
               'net.minecraft.client.renderer.debug.DebugRenderer',
-              selected['Gizmos.class'],
-              selected['GizmoStyle.class'],
+              'net.minecraft.client.renderer.debug.PathfindingRenderer',
+              'net.minecraft.gizmos.Gizmos',
+              'net.minecraft.gizmos.GizmoStyle',
+              'net.minecraft.gizmos.GizmoProperties',
           ]
           outputs = {}
           for cls in classes:
-              proc = subprocess.run(['javap', '-classpath', str(owner), '-p', '-s', '-c', cls], text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+              proc = subprocess.run(
+                  ['javap', '-classpath', str(owner), '-p', '-s', '-c', cls],
+                  text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+              )
               print('\n=== JAVAP', cls, '===')
               print(proc.stdout)
               if proc.returncode != 0:
@@ -126,23 +136,40 @@ jobs:
               outputs[cls] = proc.stdout
 
           debug = outputs['net.minecraft.client.renderer.debug.DebugRenderer']
-          gizmos = outputs[selected['Gizmos.class']]
-          style = outputs[selected['GizmoStyle.class']]
+          pathfinding = outputs['net.minecraft.client.renderer.debug.PathfindingRenderer']
+          gizmos = outputs['net.minecraft.gizmos.Gizmos']
+          style = outputs['net.minecraft.gizmos.GizmoStyle']
+          props = outputs['net.minecraft.gizmos.GizmoProperties']
+
           if 'public void emitGizmos(net.minecraft.client.renderer.culling.Frustum, double, double, double, float);' not in debug:
               raise SystemExit('fail-closed: DebugRenderer.emitGizmos boundary changed')
           if 'SimpleDebugRenderer' not in debug:
               raise SystemExit('fail-closed: SimpleDebugRenderer lifecycle missing')
+          if 'net/minecraft/gizmos/Gizmos.cuboid' not in pathfinding:
+              raise SystemExit('fail-closed: vanilla PathfindingRenderer no longer delegates AABB output to Gizmos.cuboid')
+
+          print('GIZMOS_PUBLIC_API_BEGIN')
+          for line in gizmos.splitlines():
+              if line.strip().startswith('public static'):
+                  print(line.strip())
+          print('GIZMOS_PUBLIC_API_END')
+          print('GIZMOSTYLE_PUBLIC_API_BEGIN')
+          for line in style.splitlines():
+              if line.strip().startswith('public '):
+                  print(line.strip())
+          print('GIZMOSTYLE_PUBLIC_API_END')
+          print('GIZMOPROPERTIES_PUBLIC_API_BEGIN')
+          for line in props.splitlines():
+              if line.strip().startswith('public '):
+                  print(line.strip())
+          print('GIZMOPROPERTIES_PUBLIC_API_END')
 
           print('GIZMOS_AABB_REFS', gizmos.count('net.minecraft.world.phys.AABB'))
+          print('GIZMOS_VEC3_REFS', gizmos.count('net.minecraft.world.phys.Vec3'))
           print('GIZMOS_MATRIX_REFS', gizmos.count('org.joml.Matrix4'))
-          print('GIZMOS_LINE_REFS', gizmos.count('line('))
-          print('GIZMOS_CUBOID_REFS', gizmos.count('cuboid('))
-          print('GIZMOSTYLE_CONTENT_BEGIN')
-          for line in style.splitlines():
-              if any(k in line for k in ('public ', 'static ', 'color', 'Color', 'stroke', 'Stroke', 'lineWidth', 'LineWidth')):
-                  print(line.strip())
-          print('GIZMOSTYLE_CONTENT_END')
-          print('SHIP_DEBUG_BB_26_2_GIZMO_API_INSPECTED emit_gizmos=true simple_debug_renderer=true')
+          print('GIZMOS_LINE_REFS', gizmos.count(' line('))
+          print('GIZMOS_CUBOID_REFS', gizmos.count(' cuboid('))
+          print('SHIP_DEBUG_BB_26_2_GIZMO_API_INSPECTED emit_gizmos=true simple_debug_renderer=true pathfinding_uses_cuboid=true')
           PY
 
       - name: Upload exact ship debug BB API inspection
