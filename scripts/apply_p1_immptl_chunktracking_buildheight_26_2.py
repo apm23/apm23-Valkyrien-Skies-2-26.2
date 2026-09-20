@@ -10,6 +10,7 @@ This overlay intentionally does not touch ChunkLoader center/dimension access. T
 `net.minecraft.class_5321` dependency/mapping diagnostic remains a separate root hypothesis.
 """
 from pathlib import Path
+import subprocess
 import sys
 
 root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("upstream-vs2")
@@ -66,3 +67,9 @@ for anchor, expected in anchors.items():
 
 path.write_text(new_text, encoding="utf-8")
 print("P1_IMMPTL_CHUNKTRACKING_BUILDHEIGHT_26_2_OVERLAY_APPLIED min=getMinY maxExclusive=getMinY+getHeight class_5321=untouched")
+
+isolation_helper = Path(__file__).with_name("apply_p1_immptl_optional_isolation_26_2.py")
+if not isolation_helper.is_file():
+    raise SystemExit(f"fail-closed: Immersive Portals optional-isolation helper missing: {isolation_helper}")
+subprocess.run([sys.executable, str(isolation_helper), str(root)], check=True)
+print("P1_IMMPTL_OPTIONAL_ISOLATION_26_2_CHAINED")
