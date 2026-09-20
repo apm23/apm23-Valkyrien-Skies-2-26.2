@@ -22,6 +22,14 @@ text = path.read_text(encoding="utf-8")
 
 old = "SerializableChunkData.parse((ServerLevel) level, level.registryAccess(), compoundTag)"
 new = "SerializableChunkData.parse((ServerLevel) level, level.palettedContainerFactory(), compoundTag)"
+old_chain = (
+    "final ProtoChunk protoChunk = SerializableChunkData.parse((ServerLevel) level, level.registryAccess(), compoundTag)"
+    ".read((ServerLevel) level, ((ServerLevel) level).getPoiManager(), dummyInfo, chunkPos);"
+)
+new_chain = (
+    "final ProtoChunk protoChunk = SerializableChunkData.parse((ServerLevel) level, level.palettedContainerFactory(), compoundTag)"
+    ".read((ServerLevel) level, ((ServerLevel) level).getPoiManager(), dummyInfo, chunkPos);"
+)
 
 if text.count(old) != 1:
     raise SystemExit(
@@ -34,7 +42,7 @@ preserved = {
     "public void copyChunkFromOtherDimension(@NotNull final VSLevelChunk srcChunkVS) {": 1,
     "final CompoundTag compoundTag = SerializableChunkData.copyOf((ServerLevel) srcChunk.getLevel(), srcChunk).write();": 1,
     "final RegionStorageInfo dummyInfo = new RegionStorageInfo(\"dummy\", level.dimension(), \"dummy\");": 1,
-    "final ProtoChunk protoChunk = SerializableChunkData.parse((ServerLevel) level, level.registryAccess(), compoundTag)\n            .read((ServerLevel) level, ((ServerLevel) level).getPoiManager(), dummyInfo, chunkPos);": 1,
+    old_chain: 1,
     "this.blockTicks = protoChunk.unpackBlockTicks();": 1,
     "this.fluidTicks = protoChunk.unpackFluidTicks();": 1,
     "this.blendingData = protoChunk.getBlendingData();": 1,
@@ -61,7 +69,7 @@ post_preserved = {
     "public void copyChunkFromOtherDimension(@NotNull final VSLevelChunk srcChunkVS) {": 1,
     "final CompoundTag compoundTag = SerializableChunkData.copyOf((ServerLevel) srcChunk.getLevel(), srcChunk).write();": 1,
     "final RegionStorageInfo dummyInfo = new RegionStorageInfo(\"dummy\", level.dimension(), \"dummy\");": 1,
-    "final ProtoChunk protoChunk = SerializableChunkData.parse((ServerLevel) level, level.palettedContainerFactory(), compoundTag)\n            .read((ServerLevel) level, ((ServerLevel) level).getPoiManager(), dummyInfo, chunkPos);": 1,
+    new_chain: 1,
     "this.blockTicks = protoChunk.unpackBlockTicks();": 1,
     "this.fluidTicks = protoChunk.unpackFluidTicks();": 1,
     "this.blendingData = protoChunk.getBlendingData();": 1,
