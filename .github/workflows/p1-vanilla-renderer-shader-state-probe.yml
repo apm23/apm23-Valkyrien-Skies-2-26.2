@@ -94,8 +94,14 @@ jobs:
               outputs[cls]=p.stdout
 
           extractor=outputs['net.minecraft.client.renderer.extract.LevelExtractor']
-          if 'cullFrustum' not in extractor or 'addSectionsInFrustum' not in extractor:
-              raise SystemExit('fail-closed: exact current frustum extraction path not found')
+          required_frustum_anchors=(
+              'Camera.getCullFrustum:',
+              'applyFrustum:(Lnet/minecraft/client/renderer/culling/Frustum;)V',
+              'SectionOcclusionGraph.addSectionsInFrustum:',
+          )
+          missing=[anchor for anchor in required_frustum_anchors if anchor not in extractor]
+          if missing:
+              raise SystemExit(f'fail-closed: exact current frustum extraction path changed: missing={missing}')
 
           hits=[]
           for jar in cp:
@@ -107,7 +113,7 @@ jobs:
                               continue
                           try: data=z.read(name)
                           except Exception: continue
-                          if b'ChunkSection' in data or b'SectionOffset' in data or b'ModelView' in data and b'Position' in data:
+                          if b'ChunkSection' in data or b'SectionOffset' in data or (b'ModelView' in data and b'Position' in data):
                               try: txt=data.decode('utf-8')
                               except UnicodeDecodeError: continue
                               hits.append((str(jar),name,txt))
