@@ -68,56 +68,113 @@ jobs:
           set -euo pipefail
           python3 - <<'PY' | tee p1-renderer-dirty-authority-probe.log
           from pathlib import Path
-          import subprocess, zipfile
+          import re, subprocess, zipfile
 
           cp = Path('p1-renderer-dirty-classpath.log').read_text(encoding='utf-8', errors='replace')
           jars = [Path(line.split('=',1)[1]) for line in cp.splitlines() if line.startswith('VS_CP_FILE=')]
-          wanted_simple = {
-              'SectionRenderDispatcher$RenderSection.class',
-              'ViewArea.class',
-              'LevelRenderer.class',
-              'LevelExtractor.class',
-              'SectionUpdateTracker.class',
+          wanted_entries = {
+              'net/minecraft/client/Minecraft.class': 'net.minecraft.client.Minecraft',
+              'net/minecraft/client/renderer/GameRenderer.class': 'net.minecraft.client.renderer.GameRenderer',
+              'net/minecraft/client/renderer/chunk/SectionRenderDispatcher$RenderSection.class': 'net.minecraft.client.renderer.chunk.SectionRenderDispatcher$RenderSection',
+              'net/minecraft/client/renderer/ViewArea.class': 'net.minecraft.client.renderer.ViewArea',
+              'net/minecraft/client/renderer/LevelRenderer.class': 'net.minecraft.client.renderer.LevelRenderer',
+              'net/minecraft/client/renderer/extract/LevelExtractor.class': 'net.minecraft.client.renderer.extract.LevelExtractor',
+              'net/minecraft/client/SectionUpdateTracker.class': 'net.minecraft.client.SectionUpdateTracker',
           }
-          found = {}
+          found = {entry: [] for entry in wanted_entries}
           for jar in jars:
               if not jar.exists() or jar.suffix != '.jar':
                   continue
               try:
                   with zipfile.ZipFile(jar) as zf:
-                      for entry in zf.namelist():
-                          simple = entry.rsplit('/',1)[-1]
-                          if simple in wanted_simple and entry.startswith('net/minecraft/'):
-                              found.setdefault(entry, []).append(jar)
+                      names = set(zf.namelist())
+                      for entry in wanted_entries:
+                          if entry in names:
+                              found[entry].append(jar)
               except zipfile.BadZipFile:
                   pass
 
-          required_simple = {'SectionRenderDispatcher$RenderSection.class','ViewArea.class','LevelRenderer.class'}
-          present_simple = {entry.rsplit('/',1)[-1] for entry in found}
-          missing = required_simple - present_simple
+          missing = [entry for entry, hits in found.items() if not hits]
           if missing:
-              raise SystemExit('fail-closed: required renderer classes missing: ' + ', '.join(sorted(missing)))
+              raise SystemExit('fail-closed: required exact mapped renderer classes missing: ' + ', '.join(missing))
 
-          any_dirty = False
-          for entry, hit_jars in sorted(found.items()):
-              cls = entry[:-6].replace('/','.')
-              for jar in hit_jars:
+          outputs = {}
+          for entry, cls in wanted_entries.items():
+              texts = []
+              for jar in found[entry]:
                   print('\n=== JAVAP', cls, 'FROM', jar, '===')
                   proc = subprocess.run(['javap','-classpath',str(jar),'-p','-s','-c',cls], text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
                   if proc.returncode != 0:
                       raise SystemExit(f'fail-closed: javap failed for {cls}')
-                  text = proc.stdout
-                  print(text)
-                  signals = [line.strip() for line in text.splitlines() if any(k in line.lower() for k in ('dirty','changed','rebuild','sectionupdate'))]
-                  print('=== DIRTY/UPDATE SIGNALS', cls, '===')
-                  for line in signals:
-                      print(line)
-                  if any('dirty' in line.lower() for line in signals):
-                      any_dirty = True
+                  print(proc.stdout)
+                  texts.append(proc.stdout)
+              outputs[cls] = '\n'.join(texts)
 
-          if not any_dirty:
-              raise SystemExit('fail-closed: no dirty-related renderer authority found in exact mapped candidates')
-          print('RENDERER_DIRTY_AUTHORITY_26_2_PROBE_COMPLETE')
+          minecraft = outputs['net.minecraft.client.Minecraft']
+          game_renderer = outputs['net.minecraft.client.renderer.GameRenderer']
+          level_renderer = outputs['net.minecraft.client.renderer.LevelRenderer']
+          view_area = outputs['net.minecraft.client.renderer.ViewArea']
+          extractor = outputs['net.minecraft.client.renderer.extract.LevelExtractor']
+          tracker = outputs['net.minecraft.client.SectionUpdateTracker']
+          render_section = outputs['net.minecraft.client.renderer.chunk.SectionRenderDispatcher$RenderSection']
+
+          owner_hits = []
+          for owner_name, text in (
+              ('Minecraft', minecraft),
+              ('GameRenderer', game_renderer),
+              ('LevelRenderer', level_renderer),
+          ):
+              if 'net.minecraft.client.renderer.extract.LevelExtractor' in text:
+                  owner_hits.append(owner_name)
+          print('\n=== LEVEL EXTRACTOR OWNER SIGNALS ===')
+          print('owners=', owner_hits)
+          if not owner_hits:
+              raise SystemExit('fail-closed: no exact owner/reference to LevelExtractor found in Minecraft/GameRenderer/LevelRenderer')
+
+          required_signals = {
+              'LevelExtractor public setSectionDirty': 'public void setSectionDirty(int, int, int);',
+              'LevelExtractor private boolean setSectionDirty': 'private void setSectionDirty(int, int, int, boolean);',
+              'SectionUpdateTracker setDirty': 'public void setDirty(int, int, int, boolean);',
+              'ViewArea protected getRenderSection(long)': 'protected net.minecraft.client.renderer.chunk.SectionRenderDispatcher$RenderSection getRenderSection(long);',
+              'LevelRenderer visibleSections accessor': 'public it.unimi.dsi.fastutil.objects.ObjectArrayList<net.minecraft.client.renderer.chunk.SectionRenderDispatcher$RenderSection> visibleSections();',
+              'RenderSection section node': 'public long getSectionNode();',
+          }
+          haystacks = {
+              'LevelExtractor public setSectionDirty': extractor,
+              'LevelExtractor private boolean setSectionDirty': extractor,
+              'SectionUpdateTracker setDirty': tracker,
+              'ViewArea protected getRenderSection(long)': view_area,
+              'LevelRenderer visibleSections accessor': level_renderer,
+              'RenderSection section node': render_section,
+          }
+          print('\n=== SHIP DIRTY BRIDGE REQUIRED SIGNALS ===')
+          for label, needle in required_signals.items():
+              ok = needle in haystacks[label]
+              print(label, ok, needle)
+              if not ok:
+                  raise SystemExit(f'fail-closed: missing exact 26.2 signal: {label}')
+
+          # Verify the public no-boolean entrypoint is merely a false-priority wrapper around the
+          # same private boolean authority, rather than a separate rebuild path.
+          public_block = re.search(
+              r'public void setSectionDirty\(int, int, int\);.*?Code:(.*?)(?=\n\s*(?:public|private|protected) |\Z)',
+              extractor,
+              flags=re.S,
+          )
+          if not public_block or 'iconst_0' not in public_block.group(1) or 'setSectionDirty:(IIIZ)V' not in public_block.group(1):
+              raise SystemExit('fail-closed: public LevelExtractor.setSectionDirty is not proven false-priority wrapper')
+
+          # The render compile path must consume tracker state from each visible RenderSection by
+          # its section node. This is the key evidence that VS2 custom sections already inserted
+          # into LevelRenderer.visibleSections remain the section authority after dirty tracking moved.
+          if 'SectionUpdateTracker.getDirtyState:(J)' not in extractor:
+              raise SystemExit('fail-closed: LevelExtractor does not consume tracker dirty state by section node')
+          if 'LevelRenderer.visibleSections:()' not in extractor and 'LevelRenderer.visibleSections()' not in extractor:
+              raise SystemExit('fail-closed: LevelExtractor visibleSections consumption not proven')
+          if 'ViewArea.getRenderSection:(J)' not in extractor:
+              raise SystemExit('fail-closed: LevelExtractor compile-stage ViewArea.getRenderSection(long) lookup not proven')
+
+          print('RENDERER_DIRTY_OWNER_26_2_PROBE_COMPLETE')
           PY
 
       - name: Upload exact renderer dirty authority inspection
