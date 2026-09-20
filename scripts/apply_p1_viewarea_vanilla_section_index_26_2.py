@@ -27,7 +27,7 @@ anchors = {
     "renderChunksArray[yIndex].setDirty(important);": 1,
     "level.getMinBuildHeight()": 1,
     "ChunkPos.asLong(": 5,
-    "vs$getShipRenderSection": 2,
+    "vs$getShipRenderSection": 1,
     "vs$getOrCreateShipRenderSection": 1,
     "vs$sectionRenderDispatcher.new RenderSection(0, chunkX << 4, sectionY << 4, chunkZ << 4)": 1,
     "arr[yIndex].setDirty(true);": 1,
