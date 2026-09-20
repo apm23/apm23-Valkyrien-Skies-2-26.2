@@ -12,8 +12,7 @@ This helper changes only that loop header. Renderer dirty propagation is chained
 this independently frozen section-range unit and is handled by its own fail-closed helper.
 """
 from pathlib import Path
-import subprocess
-import sys
+import subprocess, sys
 
 root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("upstream-vs2")
 path = root / "common/src/main/java/org/valkyrienskies/mod/mixin/client/world/MixinClientChunkCache.java"
@@ -81,3 +80,11 @@ if not renderer_dirty_helper.is_file():
     raise SystemExit(f"fail-closed: required ClientChunkCache renderer-dirty overlay helper missing: {renderer_dirty_helper}")
 subprocess.run([sys.executable, str(renderer_dirty_helper), str(root)], check=True)
 print("P1_CLIENTCHUNKCACHE_RENDERER_DIRTY_26_2_CHAINED")
+
+# The mandatory vanilla renderer uses the same 1.21.1-exclusive -> 26.2-inclusive section bound move.
+# Keep it as a separate fail-closed unit after the now-frozen ClientChunkCache renderer bridge.
+levelrenderer_section_helper = Path(__file__).with_name("apply_p1_levelrenderer_vanilla_section_range_26_2.py")
+if not levelrenderer_section_helper.is_file():
+    raise SystemExit(f"fail-closed: required vanilla renderer section-range helper missing: {levelrenderer_section_helper}")
+subprocess.run([sys.executable, str(levelrenderer_section_helper), str(root)], check=True)
+print("P1_LEVELRENDERER_VANILLA_SECTION_RANGE_26_2_CHAINED")
