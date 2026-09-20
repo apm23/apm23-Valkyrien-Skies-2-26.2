@@ -61,8 +61,6 @@ for rel, replacements in PATCHES.items():
             raise SystemExit(
                 f"fail-closed: expected {expected} occurrences of {old!r} in {rel}, found {actual}"
             )
-        if new in text:
-            raise SystemExit(f"fail-closed: 26.2 accessor already present unexpectedly in {rel}: {new!r}")
         text = text.replace(old, new)
         changed += expected
     path.write_text(text, encoding="utf-8")
