@@ -1,5 +1,5 @@
 name: P1 LevelRenderer API inspection
-# Inspection-only proof for the exact Minecraft 26.2 renderLevel callback surface.
+# Inspection-only proof for the exact Minecraft 26.2 LevelRenderer/GameRenderer split.
 # This workflow never mutates upstream VS2 source.
 
 on:
@@ -69,7 +69,7 @@ jobs:
             | tee ../p1-levelrenderer-classpath.log
           grep -q '^VS_CP_FILE=' ../p1-levelrenderer-classpath.log
 
-      - name: Inspect exact Minecraft 26.2 LevelRenderer callback surface
+      - name: Prove exact Minecraft 26.2 render split and block-breaking path
         shell: bash
         run: |
           set -euo pipefail
@@ -78,47 +78,40 @@ jobs:
           import re, subprocess, zipfile
 
           cp_log = Path('p1-levelrenderer-classpath.log').read_text(encoding='utf-8', errors='replace')
+          cp_files = []
           jars = []
           for line in cp_log.splitlines():
               if line.startswith('VS_CP_FILE='):
                   p = Path(line.split('=', 1)[1])
-                  if p.exists() and p.suffix == '.jar':
-                      jars.append(p)
+                  if p.exists():
+                      cp_files.append(p)
+                      if p.suffix == '.jar': jars.append(p)
           if not jars:
               raise SystemExit('fail-closed: no jars on exact :common compile classpath')
 
           target_entry = 'net/minecraft/client/renderer/LevelRenderer.class'
           owners = []
           old_light_hits = []
-          light_entries = []
           for jar in jars:
               try:
                   with zipfile.ZipFile(jar) as zf:
-                      names = zf.namelist()
-                      name_set = set(names)
-                      if target_entry in name_set:
-                          owners.append(jar)
-                      if 'net/minecraft/client/renderer/LightTexture.class' in name_set:
-                          old_light_hits.append(jar)
-                      for name in names:
-                          if name.startswith('net/minecraft/client/renderer/') and name.endswith('.class') and 'Light' in name:
-                              light_entries.append((jar.name, name))
+                      names = set(zf.namelist())
+                      if target_entry in names: owners.append(jar)
+                      if 'net/minecraft/client/renderer/LightTexture.class' in names: old_light_hits.append(jar)
               except zipfile.BadZipFile:
                   pass
-
           if len(owners) != 1:
               raise SystemExit(f'fail-closed: expected one LevelRenderer owner jar, got {len(owners)}')
           owner = owners[0]
           print('LEVELRENDERER_OWNER', owner)
           print('OLD_LIGHTTEXTURE_PRESENT', bool(old_light_hits))
-          print('CURRENT_RENDERER_LIGHT_CLASSES')
-          for jar_name, entry in sorted(set(light_entries)):
-              print(jar_name, entry)
 
           classes = [
               'net.minecraft.client.renderer.LevelRenderer',
               'net.minecraft.client.renderer.GameRenderer',
               'net.minecraft.client.renderer.SectionOcclusionGraph',
+              'net.minecraft.client.renderer.extract.LevelExtractor',
+              'net.minecraft.client.renderer.state.level.LevelRenderState',
           ]
           outputs = {}
           for cls in classes:
@@ -130,48 +123,103 @@ jobs:
               outputs[cls] = proc.stdout
 
           level = outputs['net.minecraft.client.renderer.LevelRenderer']
-          sigs = [line.strip() for line in level.splitlines() if ' renderLevel(' in line]
-          if not sigs:
-              raise SystemExit('fail-closed: LevelRenderer.renderLevel missing')
-          print('RENDERLEVEL_SIGNATURE_COUNT', len(sigs))
-          for sig in sigs:
-              print('RENDERLEVEL_SIGNATURE', sig)
+          game = outputs['net.minecraft.client.renderer.GameRenderer']
+          graph = outputs['net.minecraft.client.renderer.SectionOcclusionGraph']
+          extractor = outputs['net.minecraft.client.renderer.extract.LevelExtractor']
+          state = outputs['net.minecraft.client.renderer.state.level.LevelRenderState']
 
-          descriptors = []
-          lines = level.splitlines()
-          for i, line in enumerate(lines):
-              if ' renderLevel(' in line:
-                  for j in range(i + 1, min(i + 5, len(lines))):
-                      if 'descriptor:' in lines[j]:
-                          descriptors.append(lines[j].strip())
-                          break
-          for desc in descriptors:
-              print('RENDERLEVEL_DESCRIPTOR', desc)
+          if ' renderLevel(' in level:
+              raise SystemExit('fail-closed: LevelRenderer.renderLevel unexpectedly still exists')
+          if 'public void renderLevel(net.minecraft.client.DeltaTracker);' not in game:
+              raise SystemExit('fail-closed: GameRenderer.renderLevel(DeltaTracker) not found')
+          expected_render = 'public void render(com.mojang.blaze3d.resource.GraphicsResourceAllocator, net.minecraft.client.DeltaTracker, boolean, net.minecraft.client.renderer.state.level.CameraRenderState, org.joml.Matrix4fc, com.mojang.blaze3d.buffers.GpuBufferSlice, org.joml.Vector4f, boolean);'
+          if expected_render not in level:
+              raise SystemExit('fail-closed: exact LevelRenderer.render(...) signature changed')
+          if 'private final net.minecraft.client.renderer.GameRenderer gameRenderer;' not in level:
+              raise SystemExit('fail-closed: LevelRenderer.gameRenderer ownership changed')
+          if 'private final net.minecraft.client.renderer.SectionOcclusionGraph sectionOcclusionGraph;' not in level:
+              raise SystemExit('fail-closed: SectionOcclusionGraph field ownership changed')
+          if 'public net.minecraft.client.Camera mainCamera();' not in game:
+              raise SystemExit('fail-closed: GameRenderer.mainCamera() missing')
+          if 'public void invalidate();' not in graph:
+              raise SystemExit('fail-closed: SectionOcclusionGraph.invalidate() missing')
+          if old_light_hits:
+              raise SystemExit('fail-closed: obsolete LightTexture unexpectedly present')
 
-          old_sig_tokens = [
-              'net.minecraft.client.DeltaTracker',
-              'boolean',
-              'net.minecraft.client.Camera',
-              'net.minecraft.client.renderer.GameRenderer',
-          ]
-          if not all(token in sigs[0] for token in old_sig_tokens):
-              raise SystemExit('fail-closed: leading renderLevel callback semantics changed unexpectedly')
-          if 'net.minecraft.client.renderer.LightTexture' in sigs[0]:
-              raise SystemExit('fail-closed: old LightTexture unexpectedly still present in renderLevel')
-          if 'org.joml.Matrix4f' not in sigs[0]:
-              raise SystemExit('fail-closed: Matrix4f renderLevel boundary not found')
-          if 'private net.minecraft.client.renderer.SectionOcclusionGraph sectionOcclusionGraph;' not in level:
-              raise SystemExit('fail-closed: SectionOcclusionGraph field contract changed')
-          if 'public void invalidate();' not in outputs['net.minecraft.client.renderer.SectionOcclusionGraph']:
-              raise SystemExit('fail-closed: SectionOcclusionGraph.invalidate missing')
+          block_method = re.search(
+              r'private void submitBlockDestroyAnimation\(.*?(?=\n  (?:public|private|protected) |\Z)',
+              level,
+              flags=re.S,
+          )
+          if not block_method:
+              raise SystemExit('fail-closed: submitBlockDestroyAnimation method not found')
+          block_body = block_method.group(0)
+          if 'LevelRenderState.blockBreakingRenderStates' not in block_body:
+              raise SystemExit('fail-closed: LevelRenderer block-breaking state consumption missing')
+          renderer_has_1024 = ('1024.0d' in block_body or '1024.0' in block_body)
+          extractor_has_1024 = ('1024.0d' in extractor or '1024.0' in extractor)
+          print('BLOCK_BREAKING_RENDERER_1024', renderer_has_1024)
+          print('BLOCK_BREAKING_EXTRACTOR_1024', extractor_has_1024)
+          print('LEVEL_EXTRACTOR_BLOCK_BREAKING_REFS', extractor.count('blockBreakingRenderStates'))
+          for line in extractor.splitlines():
+              if any(token in line for token in ('blockBreakingRenderStates', 'BlockBreakingRenderState', '1024.0', 'distSqr', 'distanceToSqr')):
+                  print('LEVEL_EXTRACTOR_EVIDENCE', line.strip())
+          if 'blockBreakingRenderStates' not in state:
+              raise SystemExit('fail-closed: LevelRenderState block-breaking state list missing')
 
-          # Preserve evidence for the block-damage constant hook rather than guessing it still exists.
-          render_idx = level.find(sigs[0])
-          render_body = level[render_idx:] if render_idx >= 0 else level
-          has_1024 = ('double 1024.0d' in render_body or 'double 1024' in render_body)
-          print('RENDERLEVEL_1024_CONSTANT_PRESENT', has_1024)
-          print('LEVELRENDERER_26_2_API_INSPECTED old_lighttexture_absent=' + str(not old_light_hits).lower() + ' section_graph_invalidate=true')
+          print('LEVELRENDERER_26_2_SPLIT_PROVEN old_renderlevel_owner_absent=true current_render_owner=true game_main_camera=true section_graph_invalidate=true old_lighttexture_absent=true')
           PY
+
+      - name: Compile scratch LevelRenderer mixin shape against exact classpath
+        shell: bash
+        run: |
+          set -euo pipefail
+          CP="$(grep '^VS_CP_FILE=' p1-levelrenderer-classpath.log | cut -d= -f2- | paste -sd: -)"
+          mkdir -p p1-levelrenderer-scratch/probe
+          cat > p1-levelrenderer-scratch/probe/LevelRendererMixinScratch.java <<'JAVA'
+          package probe;
+
+          import com.mojang.blaze3d.buffers.GpuBufferSlice;
+          import com.mojang.blaze3d.resource.GraphicsResourceAllocator;
+          import net.minecraft.client.Camera;
+          import net.minecraft.client.DeltaTracker;
+          import net.minecraft.client.renderer.GameRenderer;
+          import net.minecraft.client.renderer.LevelRenderer;
+          import net.minecraft.client.renderer.SectionOcclusionGraph;
+          import net.minecraft.client.renderer.state.level.CameraRenderState;
+          import org.joml.Matrix4fc;
+          import org.joml.Vector4f;
+          import org.spongepowered.asm.mixin.Final;
+          import org.spongepowered.asm.mixin.Mixin;
+          import org.spongepowered.asm.mixin.Shadow;
+          import org.spongepowered.asm.mixin.injection.At;
+          import org.spongepowered.asm.mixin.injection.Inject;
+          import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+          @Mixin(LevelRenderer.class)
+          abstract class LevelRendererMixinScratch {
+              @Shadow @Final private GameRenderer gameRenderer;
+              @Shadow @Final private SectionOcclusionGraph sectionOcclusionGraph;
+
+              @Inject(method = "render", at = @At("HEAD"))
+              private void vs$probeCurrentRenderBoundary(
+                  GraphicsResourceAllocator allocator,
+                  DeltaTracker deltaTracker,
+                  boolean renderBlockOutline,
+                  CameraRenderState cameraRenderState,
+                  Matrix4fc matrix,
+                  GpuBufferSlice bufferSlice,
+                  Vector4f vector,
+                  boolean flag,
+                  CallbackInfo ci
+              ) {
+                  Camera camera = this.gameRenderer.mainCamera();
+                  if (camera != null) this.sectionOcclusionGraph.invalidate();
+              }
+          }
+          JAVA
+          javac -proc:none -cp "$CP" -d p1-levelrenderer-scratch/out p1-levelrenderer-scratch/probe/LevelRendererMixinScratch.java
+          echo 'LEVELRENDERER_26_2_SCRATCH_MIXIN_COMPILES' | tee p1-levelrenderer-scratch-compile.log
 
       - name: Upload exact LevelRenderer API inspection
         if: always()
@@ -181,4 +229,5 @@ jobs:
           path: |
             p1-levelrenderer-classpath.log
             p1-levelrenderer-api-probe.log
+            p1-levelrenderer-scratch-compile.log
           if-no-files-found: warn
