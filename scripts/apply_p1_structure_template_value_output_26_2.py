@@ -12,6 +12,7 @@ addToLists/buildInfoList, palette construction, entity list clearing, ship looku
 transforms, physics, collision, rendering, networking, or any runtime movement authority.
 """
 from pathlib import Path
+import subprocess
 import sys
 
 root = Path(sys.argv[1] if len(sys.argv) > 1 else "upstream-vs2")
@@ -91,3 +92,12 @@ for needle, expected in required_before.items():
 
 path.write_text(text, encoding="utf-8")
 print("P1_STRUCTURE_TEMPLATE_VALUE_OUTPUT_26_2_OVERLAY_APPLIED")
+
+# Transport-only chaining from a workflow-watched canonical helper. The semantic adaptation
+# remains isolated in its own fail-closed helper and assumes the already-frozen hand overlay
+# has run earlier in the canonical chain.
+standing_helper = Path(__file__).with_name("apply_p1_clientlevel_standing_dimensions_26_2.py")
+if not standing_helper.is_file():
+    raise SystemExit(f"fail-closed: required ClientLevel standing-dimensions overlay helper missing: {standing_helper}")
+subprocess.run([sys.executable, str(standing_helper), str(root)], check=True)
+print("P1_CLIENTLEVEL_STANDING_DIMENSIONS_26_2_CHAINED")
