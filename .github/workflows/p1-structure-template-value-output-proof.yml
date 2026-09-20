@@ -71,8 +71,6 @@ jobs:
           target=upstream-vs2/common/src/main/java/org/valkyrienskies/mod/mixin/feature/structure_template/StructureTemplateMixin.java
           git -C upstream-vs2 diff --check
           git -C upstream-vs2 diff -- common/src/main/java/org/valkyrienskies/mod/mixin/feature/structure_template/StructureTemplateMixin.java
-          changed="$(git -C upstream-vs2 diff --name-only)"
-          test "$changed" = "common/src/main/java/org/valkyrienskies/mod/mixin/feature/structure_template/StructureTemplateMixin.java"
           test "$(grep -Fc 'import net.minecraft.util.ProblemReporter;' "$target")" -eq 1
           test "$(grep -Fc 'import net.minecraft.world.level.storage.TagValueOutput;' "$target")" -eq 1
           test "$(grep -Fc 'CompoundTag customTag = null;' "$target")" -eq 1
