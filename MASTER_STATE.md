@@ -22,91 +22,82 @@ GitHub code is the implementation source of truth. This file is the durable cont
 
 Minecraft 26.2 changes are applied by explicit fail-closed overlays. Every core ported subsystem must remain traceable to upstream VS2 or be documented as a minimal 26.2 compatibility bridge.
 
-## Current reconciliation — canonical P1 chain through LevelRenderer / LevelExtractor split bridge
+## Current reconciliation — ship debug bounding-box gizmo bridge
 
 Current proven implementation boundary before this documentation-only reconciliation commit:
 
-- canonical implementation HEAD: `660d5320902a3ecba4f3219969aa77b0316cfa52` — `ci: wire proven LevelRenderer split overlay`.
-- exact-head P0 provenance run `35495275084`: **success**.
-- exact-head standalone P1 compile run `35495275097` (#126): **frontier-only failure**. Every canonical overlay/apply step, port-delta validation, Gradle runtime setup, and diagnostic upload succeeded; only the remaining javac frontier failed.
-- compile artifact: `p1-compile-log-660d5320902a3ecba4f3219969aa77b0316cfa52`, ID `10600448490`, artifact digest `sha256:a10100d02d295cdfc0466c5761ec41f82cedfcf00d1efd857f27ce379b8a4986`.
-- extracted `p1-compile.log`: 186698 bytes, SHA-256 `4b22fee82f3cfe2d87f2c87eb6581d1e7317565d5b22e68a22a5d4bb55504996`.
-- exact compile log contains **45 `: error:` diagnostics across 4 normalized source files**.
-- both `common/src/main/java/org/valkyrienskies/mod/mixin/client/renderer/MixinLevelRenderer.java` and the new `MixinLevelExtractor.java` have **zero mentions** in the exact compile log.
-- frozen `feature/render_pathfinding/MixinDebugRenderer.java` and frozen ship-debug-overlay `MixinDebugScreenOverlay.java` also have **zero mentions**.
-- immediately prior canonical implementation `f56fa6d76d31661e561de85b7223b6de64e39de9` had artifact `10599943032` with **51 diagnostics across 5 files**. Therefore this bounded renderer-split bridge removed exactly the old client `MixinLevelRenderer.java` compile unit without creating a new compile unit.
-- frozen ship-debug-overlay proof reran at this exact implementation HEAD as run `35495275080`: **success**, including isolated semantic validation and exact-file compiler-clean proof. Transport chaining did not reopen that frozen source boundary.
+- canonical implementation HEAD: `a17dd669717354bfdfcb6c05146836aacc62be8f` — `fix: port ship debug bounds to 26.2 gizmos`.
+- exact-head P0 provenance run `35496345836`: **success**.
+- exact-head standalone P1 compile run `35496345873`: **frontier-only failure**. Every canonical overlay/apply step, port-delta validation, Gradle runtime setup, and diagnostic upload succeeded; only the remaining javac frontier failed.
+- compile artifact: `p1-compile-log-a17dd669717354bfdfcb6c05146836aacc62be8f`, ID `10600870487`, artifact digest `sha256:8ec8d8279533684cbbafd82293509f84091759c8e16084373eae9089786fa0d2`.
+- extracted `p1-compile.log`: 183024 bytes, SHA-256 `353a17f6315e4bf1bfa1a31110f943c03ea3dbcfefea48fbda79303b4ee0e919`.
+- using the same durable ledger metric as prior states, the exact compile log contains **36 `: error:` markers across 3 normalized source files**; the primary javac pass itself reports **12 errors**. The factor-of-three marker repetition comes from Gradle exception/report replay and must not be confused with 36 distinct javac errors.
+- `common/src/main/java/org/valkyrienskies/mod/mixin/feature/render_ship_debug_bb/MixinDebugRenderer.java` has **zero `: error:` mentions** in the exact compile log.
+- immediately prior canonical implementation `660d5320902a3ecba4f3219969aa77b0316cfa52` had artifact `10600448490` with **45 `: error:` markers across 4 normalized source files**. Therefore this bounded ship-debug bridge removed exactly the old 9-marker / one-source-file unit without creating a new compile unit.
+- frozen client `MixinLevelRenderer` / `MixinLevelExtractor`, pathfinding debug, and ship-debug-overlay boundaries remain closed; this implementation did not reopen their source authority.
+
+## Ship debug bounding-box 26.2 gizmo bridge — frozen P1 compile/API green
+
+Pinned upstream target:
+`common/src/main/java/org/valkyrienskies/mod/mixin/feature/render_ship_debug_bb/MixinDebugRenderer.java`.
+
+Pinned upstream behavior:
+
+- render only when vanilla entity hitboxes are enabled;
+- draw ship center-of-mass bounds in world space;
+- draw the ship voxel AABB through the ship render transform, preserving ship rotation;
+- draw the ship render AABB in world space;
+- do not own physics, movement, collision, camera, ship lifecycle, or reference-space authority.
+
+Exact 26.2 inspection history:
+
+- `73a8a8d0568042c80c008cc0e0e355e8a9f42a39` — initial ship-debug gizmo API inspection;
+- `5aa12dd065861180e54533e04f4ab47a65caba39` — exact gizmo package follow-up;
+- exact probe run `35495680174`: **success**;
+- probe artifact `p1-ship-debug-bb-api-probe-5aa12dd065861180e54533e04f4ab47a65caba39`, ID `10600194493`, digest `sha256:5f82165eeb7c20c71c8abe27c32ad5a26eca2a66e9c26bad57737f725cfa5757`;
+- exact evidence proved Minecraft 26.2 uses `DebugRenderer.emitGizmos(...)` plus `Gizmos`/`GizmoStyle`; vanilla debug renderers already emit through that lifecycle;
+- current API provides `Gizmos.cuboid(AABB, GizmoStyle)`, `Gizmos.line(Vec3, Vec3, int, float)`, and `GizmoStyle.stroke(int)` while the old direct `MultiBufferSource` / `RenderType.lines()` path is obsolete for this unit.
+
+Minimal bridge installed at `a17dd669717354bfdfcb6c05146836aacc62be8f`:
+
+- fail-closed helper: `scripts/apply_p1_ship_debug_bb_gizmo_26_2.py`;
+- helper is pinned to the exact upstream source blob and rejects missing upstream semantic anchors;
+- callback moves from obsolete `DebugRenderer.render(...)` to exact current `DebugRenderer.emitGizmos(...)` TAIL;
+- center-of-mass and render AABBs delegate to vanilla `Gizmos.cuboid`;
+- ship voxel AABB remains orientation-preserving: its eight ship-space corners are transformed by the original `ShipTransform.getShipToWorld().transformPosition(...)`, then its twelve world-space edges are emitted with vanilla `Gizmos.line`;
+- original loaded-ship iteration and vanilla hitbox gate are preserved;
+- obsolete direct-buffer authority (`MultiBufferSource`, `RenderType`, `LevelRenderer.renderLineBox`, direct batch end) is forbidden by the helper after rewrite;
+- canonical transport only chains this helper after the already-frozen pathfinding and LevelRenderer-split helpers.
+
+P1 proof at `a17dd669...`: P0 `35496345836` success and P1 compile artifact `10600870487` removes the entire ship-debug compile unit. This freezes the bridge at **P1 compile/API level only**; runtime rendering still belongs to later P1/P2 boot/runtime proof and must not be inferred from compile success.
+
+Do not reopen this boundary absent direct contradictory compile/runtime evidence.
 
 ## LevelRenderer / LevelExtractor 26.2 split bridge — frozen green
 
 Pinned upstream semantic unit:
 `common/src/main/java/org/valkyrienskies/mod/mixin/client/renderer/MixinLevelRenderer.java`.
 
-Pinned upstream active behavior had two independent pieces:
+- canonical implementation: `660d5320902a3ecba4f3219969aa77b0316cfa52`;
+- initial exact API inspection `3e824228a912d9af4e8af5e4bdab29cf2ed11944`, P0 `35494738858`, probe `35494738882`; that probe failed only its deliberately obsolete-owner assertion after proving the current split and remains negative probe-parser evidence, not renderer evidence;
+- successful split-lifecycle probe `ea4fe41eea15ff879ddcebe005f401bf01c0ce23`, P0 `35494987862`, probe `35494987861`, artifact `10600567053`, digest `sha256:34174f63d123166c1ec0fef37eae606f3d08dbdf2fa0ad0c369421f087582b1d`;
+- exact relocated block-damage proof `8c19b74c5b69f1ab28a241b55672840af2824bd0`, P0 `35495140714`, probe `35495140731`, artifact `10599724029`, digest `sha256:4a33fb1f6caba9c01460e9eae24758fad4e8c70735758fa5307d6bee9681f2fd`;
+- upstream camera behavior remains observation-only: use the existing `IVSCamera` transform and invalidate vanilla `SectionOcclusionGraph` when required; no replacement camera authority is introduced;
+- old block-damage distance hook is relocated to exact current `LevelExtractor.extractBlockDestroyAnimation(...)` authority with the same upstream `Double.MAX_VALUE` behavior;
+- exact current compile remains free of the frozen client `MixinLevelRenderer` and `MixinLevelExtractor` units.
 
-1. at old `LevelRenderer.renderLevel(...)` HEAD, read the existing VS-mounted transform from the already-existing vanilla `Camera` via `IVSCamera`, compare it with the previous transform, and call vanilla `SectionOcclusionGraph.invalidate()` when the ship-mounted camera rotation changes by more than one degree;
-2. replace the vanilla `1024.0` block-damage render distance constant with `Double.MAX_VALUE`, making block damage visible independent of that vanilla cap.
-
-No new camera transform, carry system, camera forcing, movement, collision, or ship-space authority is part of this unit.
-
-### Exact 26.2 API evidence
-
-Initial inspection-only commit `3e824228a912d9af4e8af5e4bdab29cf2ed11944`:
-
-- P0 run `35494738858`: **success**;
-- API probe run `35494738882`: fail-closed **failure after successful exact classpath/javap inspection** because the probe deliberately expected the obsolete owner shape;
-- artifact `p1-levelrenderer-api-probe-3e824228a912d9af4e8af5e4bdab29cf2ed11944`, ID `10600437709`, digest `sha256:405f650030249271cd8b5c2d3675399e4d814aa7e3f7df982379876237406505`;
-- exact evidence proved `LevelRenderer.renderLevel(...)` is gone, obsolete `LightTexture` is absent, and `renderLevel(DeltaTracker)` now belongs to `GameRenderer`.
-
-Successful split-lifecycle probe commit `ea4fe41eea15ff879ddcebe005f401bf01c0ce23`:
-
-- P0 run `35494987862`: **success**;
-- probe run `35494987861`: **success**;
-- artifact `p1-levelrenderer-api-probe-ea4fe41eea15ff879ddcebe005f401bf01c0ce23`, ID `10600567053`, digest `sha256:34174f63d123166c1ec0fef37eae606f3d08dbdf2fa0ad0c369421f087582b1d`;
-- marker: `LEVELRENDERER_26_2_SPLIT_PROVEN old_renderlevel_owner_absent=true current_render_owner=true game_main_camera=true section_graph_invalidate=true old_lighttexture_absent=true`;
-- marker: `LEVELRENDERER_26_2_SCRATCH_MIXIN_COMPILES`;
-- exact current `LevelRenderer.render(...)` descriptor is `(GraphicsResourceAllocator, DeltaTracker, boolean, CameraRenderState, Matrix4fc, GpuBufferSlice, Vector4f, boolean)`;
-- exact `LevelRenderer` still owns final `GameRenderer gameRenderer` and final `SectionOcclusionGraph sectionOcclusionGraph`;
-- exact `GameRenderer.mainCamera()` exists and returns the same vanilla `Camera` instance; no replacement camera is created;
-- exact `SectionOcclusionGraph.invalidate()` remains public/current.
-
-The same exact inspection proved the block-damage distance behavior moved out of `LevelRenderer`: current `LevelRenderer` consumes `LevelRenderState.blockBreakingRenderStates`, while the distance filter is built earlier in `LevelExtractor`.
-
-Relocated block-damage proof commit `8c19b74c5b69f1ab28a241b55672840af2824bd0`:
-
-- P0 run `35495140714`: **success**;
-- exact LevelExtractor probe run `35495140731`: **success**;
-- artifact `p1-level-extractor-blockdamage-probe-8c19b74c5b69f1ab28a241b55672840af2824bd0`, ID `10599724029`, digest `sha256:4a33fb1f6caba9c01460e9eae24758fad4e8c70735758fa5307d6bee9681f2fd`;
-- exact current owner is private `LevelExtractor.extractBlockDestroyAnimation(Camera, LevelRenderState)`;
-- exact bytecode gets `Camera.position()`, iterates `ClientLevel.destructionProgress()`, computes `BlockPos.distToCenterSqr(...)`, compares against exactly one `double 1024.0d`, and then emits `BlockBreakingRenderState` into `LevelRenderState.blockBreakingRenderStates`;
-- scratch `@Mixin(LevelExtractor.class)` + MixinExtras `@ModifyExpressionValue` on that exact 1024 constant compiled against the resolved 26.2 classpath.
-
-### Minimal bridge installed
-
-- helper creation: `66f09e12fb612cc9cbd680982fd5202a97e58157` — `scripts/apply_p1_levelrenderer_split_26_2.py`;
-- canonical wiring/proof implementation: `660d5320902a3ecba4f3219969aa77b0316cfa52`;
-- old client `MixinLevelRenderer` remains targeted at `LevelRenderer`, but its active callback moves from removed `renderLevel(...)` to exact current `render(...)`;
-- it reads `gameRenderer.mainCamera()` and then uses the existing upstream `((IVSCamera) camera).getShipMountedRenderTransform()` path unchanged; it does not create, reposition, rotate, force, or counter-rotate a camera;
-- upstream transform comparison threshold and vanilla `sectionOcclusionGraph.invalidate()` authority remain unchanged;
-- the stale block-damage constant hook is removed only from its obsolete owner and recreated as `MixinLevelExtractor`, targeting the exact relocated `1024.0d` filter with the same `Double.MAX_VALUE` behavior;
-- `valkyrienskies-common.mixins.json` registers exactly one new `client.renderer.MixinLevelExtractor` entry;
-- no gameplay, ship lifecycle, physics, movement, collision, entity dragging, networking, or reference-space authority is added or replaced.
-
-This is compile/API proof for this semantic unit, not a claim that every other renderer/camera mixin is runtime-valid. In particular, future P1 runtime/mixin application may expose separate drift in other upstream renderer mixins; do not broaden this frozen bridge to hide such failures.
-
-Transport note: canonical P1 invokes this dedicated helper from the already-used ship-debug-overlay transport dispatcher after the frozen pathfinding helper. Repo diff from probe-head `8c19b74...` to implementation `660d532...` contains only the new helper and eight transport lines. Exact ship-debug proof `35495275080` stayed green. Any future transport cleanup must preserve all semantic outputs exactly.
-
-Do not reopen this LevelRenderer/LevelExtractor boundary absent direct contradictory compile/runtime evidence.
+Do not reopen this boundary absent direct contradictory evidence.
 
 ## Pathfinding debug lifecycle bridge — frozen green
 
-Pinned upstream target: `common/src/main/java/org/valkyrienskies/mod/mixin/feature/render_pathfinding/MixinDebugRenderer.java`.
+Pinned upstream target:
+`common/src/main/java/org/valkyrienskies/mod/mixin/feature/render_pathfinding/MixinDebugRenderer.java`.
 
 - canonical implementation: `f56fa6d76d31661e561de85b7223b6de64e39de9`;
-- exact lifecycle/scratch probe commit `63c6c314719d3f75456d50332268f67ca243f9b1`, P0 `35494083783`, probe `35494083822`, artifact `10600376722`, digest `sha256:dc8aada751ed3f75050029951cd0f2bf0f3551ebcbcf4af485219777456032ab`;
-- exact 26.2 migrated from direct `PathfindingRenderer.render(PoseStack, BufferSource, ...)` to vanilla `SimpleDebugRenderer` / `DebugValueAccess` / gizmo dispatch;
-- bridge controls only renderer-list membership, keeps at most one VS-owned pathfinding renderer, never removes vanilla-owned membership, and never directly owns `DebugValueAccess`, Frustum, or gizmo rendering;
-- canonical compile reduced the frontier 57/6 -> 51/5 and exact pathfinding source remains absent at current implementation `660d532...`.
+- exact lifecycle/scratch probe `63c6c314719d3f75456d50332268f67ca243f9b1`, P0 `35494083783`, probe `35494083822`, artifact `10600376722`, digest `sha256:dc8aada751ed3f75050029951cd0f2bf0f3551ebcbcf4af485219777456032ab`;
+- exact 26.2 migrated from direct pathfinding render calls to vanilla `SimpleDebugRenderer` / `DebugValueAccess` / gizmo dispatch;
+- bridge controls only renderer-list membership, keeps at most one VS-owned pathfinding renderer, never removes vanilla-owned membership, and never owns `DebugValueAccess`, Frustum, or gizmo rendering;
+- exact current compile remains free of this unit.
 
 Do not reopen this boundary absent direct contradictory evidence.
 
@@ -122,7 +113,8 @@ Already-landed API/mapping bridges that must not be repeated blindly include:
 - `6faec034d400458d4471e8aa608c77ecb01119e9`: ChunkMap shutdown-work dispatcher bridge.
 - `480ca1e32024db619574b28488ad8a1c88045d52`: alpha-HUD `Gui`/`GuiGraphics` -> `Hud`/`GuiGraphicsExtractor` lifecycle bridge; exact API probe `39d20e58f40fec26bb4face0823255789f560747`, run `35492969240`, artifact `10599492174`.
 - `f56fa6d76d31661e561de85b7223b6de64e39de9`: pathfinding debug membership/gizmo lifecycle bridge.
-- `660d5320902a3ecba4f3219969aa77b0316cfa52`: LevelRenderer / LevelExtractor split bridge described above.
+- `660d5320902a3ecba4f3219969aa77b0316cfa52`: LevelRenderer / LevelExtractor split bridge.
+- `a17dd669717354bfdfcb6c05146836aacc62be8f`: ship-debug bounding-box gizmo bridge.
 
 These are compatibility adaptations only and authorize no replacement VS2 architecture.
 
@@ -136,7 +128,7 @@ All prior frozen-green proof records in Git history remain binding. Key locks in
 - **Entity local authority / interpolation** — implementation `b7e583af13598b6ddcc583380872f578b8a40bb8`; proof HEAD `9f2719be070e79b91b7f47ceddaec61d7f5cff40`; proof `35455551701`. Real dragging information and ship transforms remain intact; no synthetic carry system.
 - **Entity renderer submit lifecycle** — implementation `a87512437f40a3bfa1325d78f8e2588587ec7cc8`; proof HEAD `58d8554ba623896d486b91f18771df9bdcd6f2b3`; proof `35458380245`.
 - **Shipyard teleport API mapping** — P0 `35467615792`; proof `35467615790`. Real VS2 ship-to-world transform remains authority; no manual packet/setPos/teleport chase.
-- NaturalSpawner, particle collision, EntitySectionStorage, WaterFluid, POIManager, AirAndWaterRandomPos, tick-ship-chunks, ship-debug overlay, world-weather, clip-replace, LavaFluid, Explosion, StructureTemplate, LevelChunk, ChunkMapClose, alpha-HUD, pathfinding-debug, and LevelRenderer/LevelExtractor boundaries remain frozen green.
+- NaturalSpawner, particle collision, EntitySectionStorage, WaterFluid, POIManager, AirAndWaterRandomPos, tick-ship-chunks, ship-debug overlay, world-weather, clip-replace, LavaFluid, Explosion, StructureTemplate, LevelChunk, ChunkMapClose, alpha-HUD, pathfinding-debug, client LevelRenderer/LevelExtractor, and ship-debug bounding-box boundaries remain frozen at their proven scope.
 - **Clip-replace Direction vocabulary** — canonical `5d0fd81810a824b2da989b834dd6d2f92475dc33`; P0 `35478903000`; proof `35478902949`.
 - **LavaFluid randomTick ServerLevel** — canonical `19b0e356b34dae20c3aa8d9409d90fc0b96838b2`; P0 `35479600636`; proof `35479600673`.
 - **Explosion Level client accessor** — canonical `322dcf22e2baf25192682d4b9ee942f4a35dc86b`; P0 `35480514635`; proof `35480514714`.
@@ -148,29 +140,27 @@ All prior frozen-green proof records in Git history remain binding. Key locks in
 - `3bcbf90c75dc4d02448cfdb4590cc9c9674e0ed6` / run `35454717409`: wrong Kotlin-source-set exclusion for `DeployerScrollOptionSlot.kt`; do not replay.
 - `a72aaef8eca34a352ef949eeb57e6bbcda81171f`: `setUnsaved(false)` is invalid current API; do not replay absent direct new evidence.
 - VSKeyBindings failed probes `e108526cbd728454c175c76bffc610d4e074da49`, `fcc65187d79c4b546883875da3597345db1e01cd`, `e9a3efd58acb2af9539628eb2875e6cb829c3cec`, `fb3c7e65a4c2089f6fa695114734d14836bde1d3` remain negative evidence.
-- pathfinding lifecycle probe `b3927e625acf40edbf517970ebc952a104a20c97` / run `35493933563` failed only because of a too-strict textual `javap` assertion; this is probe-parser negative evidence, not renderer evidence.
+- pathfinding lifecycle probe `b3927e625acf40edbf517970ebc952a104a20c97` / run `35493933563` failed only because of a too-strict textual `javap` assertion; do not replay that parser assumption.
 - initial LevelRenderer probe `3e824228...` / run `35494738882` failed its obsolete-owner assertion after producing useful exact evidence; do not treat that conclusion as an API failure.
 - Actions self-push of workflow changes without `workflows` permission is a locked failed transport hypothesis.
 - retired `apm23/VS2-Create_Interactive` workarounds remain historical warning evidence only and are forbidden as implementation source.
 
 ## Current remaining Java compile frontier
 
-Exact artifact `10600448490` at implementation HEAD `660d5320902a3ecba4f3219969aa77b0316cfa52` contains **45 `: error:` diagnostics across 4 normalized source files**:
+Exact artifact `10600870487` at implementation HEAD `a17dd669717354bfdfcb6c05146836aacc62be8f` contains **36 `: error:` markers across 3 normalized source files**; the primary javac pass reports **12 actual errors**:
 
-1. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/vanilla_renderer/MixinLevelRendererVanilla.java` — 24 diagnostics.
-2. `common/src/main/java/org/valkyrienskies/mod/mixin/feature/render_ship_debug_bb/MixinDebugRenderer.java` — 9 diagnostics.
-3. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/sable/MixinSubLevelHoldingChunkMap.java` — 6 diagnostics.
-4. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/sable/MixinActiveSableCompanion.java` — 6 diagnostics.
+1. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/vanilla_renderer/MixinLevelRendererVanilla.java` — 24 repeated markers / 8 primary javac errors.
+2. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/sable/MixinSubLevelHoldingChunkMap.java` — 6 repeated markers / 2 primary javac errors.
+3. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/sable/MixinActiveSableCompanion.java` — 6 repeated markers / 2 primary javac errors.
 
 Observed direct missing-symbol surfaces:
 
-- ship-debug bounding-box renderer: `MultiBufferSource`, `RenderType`, and `MultiBufferSource.BufferSource` no longer resolve;
-- vanilla renderer compat: `Uniform`, `VertexBuffer`, `LightTexture`, `RenderType`, `ShaderInstance`, plus related signatures no longer resolve;
-- Sable: absent optional companion classes/packages.
+- vanilla renderer compat: obsolete/unresolved `Uniform`, `VertexBuffer`, `LightTexture`, `RenderType`, `ShaderInstance`, plus related method signatures;
+- Sable: absent optional companion classes/packages (`SubLevelHoldingChunkMap`, `ActiveSableCompanion`).
 
 Classification:
 
-- the two remaining non-Sable units are renderer/debug-sensitive and must not be blind-patched;
+- `MixinLevelRendererVanilla.java` is now the only remaining non-Sable Java compile unit and is renderer-sensitive; it must not be blind-patched by package-name guessing;
 - both Sable units are optional compatibility residue and remain compile-only isolation territory, not standalone-P1 runtime authority;
 - there is no remaining non-render core Java unit in the observed javac frontier.
 
@@ -188,10 +178,10 @@ Classification:
 ## Project state
 
 - project_state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`
-- active_blocker: `MINECRAFT_26_2_RENDERER_API_MIXIN_DRIFT`
-- active_proof_head: `660d5320902a3ecba4f3219969aa77b0316cfa52; canonical P1 chain through frozen LevelRenderer / LevelExtractor split bridge`
-- active_proof_run: `P0 35495275084 success; P1 compile 35495275097 frontier-only failure; artifact 10600448490; 45 diagnostics / 4 normalized source files; client LevelRenderer and LevelExtractor absent; frozen ship-debug proof 35495275080 success`
-- active_hypothesis: `next work must inspect the smallest remaining real renderer/debug unit against exact resolved Minecraft 26.2 rendering APIs before mutation; no package-name guessing and no batching with vanilla renderer compat or Sable`
+- active_blocker: `MINECRAFT_26_2_VANILLA_RENDERER_COMPAT_API_DRIFT`
+- active_proof_head: `a17dd669717354bfdfcb6c05146836aacc62be8f; canonical P1 chain through frozen ship-debug bounding-box gizmo bridge`
+- active_proof_run: `P0 35496345836 success; P1 compile 35496345873 frontier-only failure; artifact 10600870487; 36 repeated error markers / 3 normalized source files / 12 primary javac errors; ship-debug bounding-box source absent from compile frontier`
+- active_hypothesis: `next work must inspect pinned upstream MixinLevelRendererVanilla behavior against exact resolved Minecraft 26.2 renderer/shader/buffer APIs before mutation; no package-name guessing, no renderer architecture replacement, and no batching with Sable or integrations`
 - final_ready: `false`
 - user_runtime_validation: `NOT_APPLICABLE_YET`
 - video_status: `NOT_APPLICABLE_YET`
@@ -210,7 +200,8 @@ Classification:
 - Frozen Create helper exclusion is P1 compile isolation only, not P3.
 - Frozen shipyard teleport mapping may not be replaced by manual packet/setPos/teleport-chase authority.
 - Frozen pathfinding bridge may only control membership in vanilla debug-render list; it must not own `DebugValueAccess` or gizmo dispatch.
-- Frozen LevelRenderer bridge observes the already-existing `IVSCamera` state and invalidates vanilla occlusion graph only; it must not become camera movement/rotation authority.
+- Frozen client LevelRenderer bridge observes the already-existing `IVSCamera` state and invalidates vanilla occlusion graph only; it must not become camera movement/rotation authority.
+- Frozen ship-debug bounding-box bridge may only adapt upstream debug visualization to vanilla 26.2 gizmo output; it must not become transform, camera, or gameplay authority.
 - `FINAL_READY` is forbidden from CI alone.
 - Video is closure-only and must not be used for ordinary compile/debug hypothesis testing.
 
@@ -218,12 +209,12 @@ Classification:
 
 1. This ledger reconciliation commit is documentation-only. Require exact-head P0 provenance success before another source/workflow mutation.
 2. Preserve every frozen boundary and all negative evidence in Git history. Do not repeat landed patches.
-3. Use compile artifact `10600448490` as the canonical **45-diagnostic / 4-source-file** frontier until implementation/compiler state changes.
-4. Do **not** reopen pathfinding debug or the client LevelRenderer/LevelExtractor split absent direct contradictory evidence.
-5. Preferred next inspection unit: pinned upstream `common/src/main/java/org/valkyrienskies/mod/mixin/feature/render_ship_debug_bb/MixinDebugRenderer.java`, the smallest remaining non-Sable renderer unit at 9 diagnostics.
-6. Before any source mutation, inspect its exact pinned upstream behavior and the exact Minecraft 26.2 `DebugRenderer` / current debug-render output APIs replacing `MultiBufferSource`, `RenderType`, and `MultiBufferSource.BufferSource`. Treat this as renderer-sensitive; do not infer replacements from names or from the already-frozen pathfinding bridge.
-7. If exact resolved bytecode/signatures prove one bounded ship-debug bounding-box adaptation that preserves upstream VS2 ship transform/bounds behavior while delegating current output authority to vanilla 26.2, create one fail-closed overlay and exact proof. Otherwise HOLD that unit.
-8. Do not combine this action with `MixinLevelRendererVanilla`, Sable, Create/SNR/Copycats, movement, collision, entity dragging, camera, or physics authority.
+3. Use compile artifact `10600870487` as the canonical **36-marker / 3-source-file / 12-primary-error** frontier until implementation/compiler state changes.
+4. Do **not** reopen ship-debug bounding-box, pathfinding debug, or the client LevelRenderer/LevelExtractor split absent direct contradictory evidence.
+5. Preferred next inspection unit: pinned upstream `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/vanilla_renderer/MixinLevelRendererVanilla.java`, the only remaining non-Sable compile unit (24 repeated markers / 8 primary javac errors).
+6. Before any source mutation, inspect the exact pinned upstream semantics and exact resolved Minecraft 26.2 replacements/owners for `Uniform`, `VertexBuffer`, `LightTexture`, `RenderType`, `ShaderInstance`, and every affected render callback/signature. Treat this as renderer-sensitive; do not infer replacements from names and do not copy the already-frozen client LevelRenderer bridge unless exact current authority proves the same lifecycle.
+7. If exact bytecode/signatures prove one bounded vanilla-renderer compatibility adaptation that preserves original VS2 render transforms/visibility semantics while delegating current rendering authority to vanilla 26.2, create exactly one fail-closed overlay and exact compile/API proof. Otherwise HOLD the unit.
+8. Do not combine this action with Sable, Create/SNR/Copycats, movement, collision, entity dragging, player/camera authority, networking, ship lifecycle, or physics.
 9. Remain standalone P1. No ordinary compile/debug video.
 
 ## Video and milestone gate
