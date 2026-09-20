@@ -411,4 +411,28 @@ replace_count(
     1,
 )
 
+# Exact-head run 35490652399 proved the applyCarvers signature adaptation clean and exposed
+# the removed ChunkSerializer surface in MixinLevelChunk. Minecraft 26.2 uses
+# SerializableChunkData.copyOf(...).write() for serialization and parse(...).read(...) for
+# deserialization. Preserve the existing VS2 copy-between-dimensions flow, POI manager,
+# RegionStorageInfo, target ChunkPos, block/entity transfer, and heightmap recomputation.
+replace_count(
+    "common/src/main/java/org/valkyrienskies/mod/mixin/world/chunk/MixinLevelChunk.java",
+    "import net.minecraft.world.level.chunk.storage.ChunkSerializer;",
+    "import net.minecraft.world.level.chunk.storage.SerializableChunkData;",
+    1,
+)
+replace_count(
+    "common/src/main/java/org/valkyrienskies/mod/mixin/world/chunk/MixinLevelChunk.java",
+    "ChunkSerializer.write((ServerLevel) srcChunk.getLevel(), srcChunk)",
+    "SerializableChunkData.copyOf((ServerLevel) srcChunk.getLevel(), srcChunk).write()",
+    1,
+)
+replace_count(
+    "common/src/main/java/org/valkyrienskies/mod/mixin/world/chunk/MixinLevelChunk.java",
+    "ChunkSerializer.read((ServerLevel) level, ((ServerLevel) level).getPoiManager(), dummyInfo, chunkPos, compoundTag)",
+    "SerializableChunkData.parse((ServerLevel) level, level.registryAccess(), compoundTag).read((ServerLevel) level, ((ServerLevel) level).getPoiManager(), dummyInfo, chunkPos)",
+    1,
+)
+
 print("P1_SOURCE_API_26_2_OVERLAY_APPLIED")
