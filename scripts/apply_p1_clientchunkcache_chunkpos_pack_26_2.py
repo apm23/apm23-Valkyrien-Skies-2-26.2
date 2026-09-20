@@ -6,6 +6,7 @@ Do not change ship-chunk storage authority, packet decode, connectivity, relight
 renderer invalidation, unload ordering, or Sodium/vanilla renderer selection.
 """
 from pathlib import Path
+import subprocess
 import sys
 
 root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("upstream-vs2")
@@ -50,3 +51,11 @@ for anchor, expected in anchors.items():
 
 path.write_text(text, encoding="utf-8")
 print("P1_CLIENTCHUNKCACHE_CHUNKPOS_PACK_26_2_OVERLAY_APPLIED count=6")
+
+# Transport-only chaining for the separately evidenced Minecraft 26.2 packet-heightmap type.
+# This changes only the injector parameter/imports and its two LevelChunk forwarding calls.
+heightmap_helper = Path(__file__).with_name("apply_p1_clientchunkcache_heightmaps_26_2.py")
+if not heightmap_helper.is_file():
+    raise SystemExit(f"fail-closed: required ClientChunkCache heightmap overlay helper missing: {heightmap_helper}")
+subprocess.run([sys.executable, str(heightmap_helper), str(root)], check=True)
+print("P1_CLIENTCHUNKCACHE_HEIGHTMAPS_26_2_CHAINED")
