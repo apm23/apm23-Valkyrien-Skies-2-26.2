@@ -38,53 +38,47 @@ path.write_text(text, encoding="utf-8")
 print("P1_SHIP_DEBUG_OVERLAY_BLOCKPOS_CENTER_26_2_OVERLAY_APPLIED")
 
 # Transport-only chaining for the separately proven pathfinding debug lifecycle adaptation.
-# This does not alter or reopen the frozen ship-debug source patch above. The helper itself
-# is fail-closed against the exact pinned upstream pathfinding mixin and delegates rendering
-# to Minecraft 26.2's vanilla SimpleDebugRenderer/DebugValueAccess/gizmo lifecycle.
 helper = Path(__file__).with_name("apply_p1_pathfinding_debug_lifecycle_26_2.py")
 if not helper.is_file():
     raise SystemExit(f"fail-closed: required pathfinding debug overlay helper missing: {helper}")
 subprocess.run([sys.executable, str(helper), str(root)], check=True)
 
-# Transport-only chaining for the separately proven LevelRenderer/GameRenderer/LevelExtractor
-# 26.2 split. The helper preserves the upstream VS camera-transform observation and block-damage
-# distance behavior at their exact current vanilla owners; it adds no camera or render authority.
+# Transport-only chaining for the LevelRenderer/GameRenderer/LevelExtractor 26.2 split.
 level_helper = Path(__file__).with_name("apply_p1_levelrenderer_split_26_2.py")
 if not level_helper.is_file():
     raise SystemExit(f"fail-closed: required LevelRenderer split overlay helper missing: {level_helper}")
 subprocess.run([sys.executable, str(level_helper), str(root)], check=True)
 
-# Transport-only chaining for the separately proven ship debug bounding-box gizmo adaptation.
-# The helper preserves the original VS2 ship render transform and hitbox gate, while delegating
-# debug primitive emission to Minecraft 26.2's vanilla Gizmos API inside DebugRenderer.emitGizmos.
+# Transport-only chaining for the ship debug bounding-box gizmo adaptation.
 bb_helper = Path(__file__).with_name("apply_p1_ship_debug_bb_gizmo_26_2.py")
 if not bb_helper.is_file():
     raise SystemExit(f"fail-closed: required ship debug BB gizmo overlay helper missing: {bb_helper}")
 subprocess.run([sys.executable, str(bb_helper), str(root)], check=True)
 
-# Transport-only chaining for the separately proven Minecraft 26.2 vanilla terrain-renderer bridge.
-# The helper preserves pinned upstream VS2 ship visibility and VSClientGameUtils ship transforms,
-# while delegating chunk draw/GPU authority to 26.2 prepareChunkRenders/DynamicUniforms.
+# Transport-only chaining for the Minecraft 26.2 vanilla terrain-renderer bridge.
 renderer_helper = Path(__file__).with_name("apply_p1_vanilla_renderer_26_2.py")
 if not renderer_helper.is_file():
     raise SystemExit(f"fail-closed: required vanilla renderer overlay helper missing: {renderer_helper}")
 subprocess.run([sys.executable, str(renderer_helper), str(root)], check=True)
 
-# Transport-only isolation for the two exact legacy Sable compatibility mixins. Upstream 2.4.12
-# declares legacy Sable core compile-only, and the locked standalone 26.2 P1 runtime does not
-# include it. The helper removes only those exact optional sources plus their one common mixin
-# registration; it supplies no stub or replacement runtime behavior.
+# Transport-only isolation for the two exact legacy Sable compatibility mixins.
 sable_helper = Path(__file__).with_name("apply_p1_legacy_sable_compileonly_isolation_26_2.py")
 if not sable_helper.is_file():
     raise SystemExit(f"fail-closed: required legacy Sable isolation helper missing: {sable_helper}")
 subprocess.run([sys.executable, str(sable_helper), str(root)], check=True)
 print("P1_LEGACY_SABLE_COMPILEONLY_ISOLATION_CHAINED_HITBOX_GATE_V2")
 
-# Transport-only mechanical mapping adaptation for the exact 54 active ChunkPos.x/z
-# accesses exposed across two successive canonical javac frontiers. Minecraft 26.2
-# models ChunkPos as a record; preserve the same coordinates through x()/z() accessors.
+# Mechanical record-accessor adaptation for the exact 54 active ChunkPos.x/z call sites.
 chunkpos_helper = Path(__file__).with_name("apply_p1_chunkpos_record_accessors_26_2.py")
 if not chunkpos_helper.is_file():
     raise SystemExit(f"fail-closed: required ChunkPos accessor overlay helper missing: {chunkpos_helper}")
 subprocess.run([sys.executable, str(chunkpos_helper), str(root)], check=True)
 print("P1_CHUNKPOS_RECORD_ACCESSORS_26_2_CHAINED_V3")
+
+# Mechanical accessor adaptation for seven exact Level.isClientSide field uses that
+# Minecraft 26.2 now exposes through the public isClientSide() method.
+clientside_helper = Path(__file__).with_name("apply_p1_level_clientside_accessor_26_2.py")
+if not clientside_helper.is_file():
+    raise SystemExit(f"fail-closed: required Level client-side accessor overlay helper missing: {clientside_helper}")
+subprocess.run([sys.executable, str(clientside_helper), str(root)], check=True)
+print("P1_LEVEL_CLIENTSIDE_ACCESSOR_26_2_CHAINED")
