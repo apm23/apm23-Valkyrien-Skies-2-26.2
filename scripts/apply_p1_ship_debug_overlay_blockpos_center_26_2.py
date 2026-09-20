@@ -53,3 +53,11 @@ level_helper = Path(__file__).with_name("apply_p1_levelrenderer_split_26_2.py")
 if not level_helper.is_file():
     raise SystemExit(f"fail-closed: required LevelRenderer split overlay helper missing: {level_helper}")
 subprocess.run([sys.executable, str(level_helper), str(root)], check=True)
+
+# Transport-only chaining for the separately proven ship debug bounding-box gizmo adaptation.
+# The helper preserves the original VS2 ship render transform and hitbox gate, while delegating
+# debug primitive emission to Minecraft 26.2's vanilla Gizmos API inside DebugRenderer.emitGizmos.
+bb_helper = Path(__file__).with_name("apply_p1_ship_debug_bb_gizmo_26_2.py")
+if not bb_helper.is_file():
+    raise SystemExit(f"fail-closed: required ship debug BB gizmo overlay helper missing: {bb_helper}")
+subprocess.run([sys.executable, str(bb_helper), str(root)], check=True)
