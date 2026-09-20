@@ -88,3 +88,11 @@ if not levelrenderer_section_helper.is_file():
     raise SystemExit(f"fail-closed: required vanilla renderer section-range helper missing: {levelrenderer_section_helper}")
 subprocess.run([sys.executable, str(levelrenderer_section_helper), str(root)], check=True)
 print("P1_LEVELRENDERER_VANILLA_SECTION_RANGE_26_2_CHAINED")
+
+# ViewArea ship-section arrays use the same minimum section coordinate vocabulary, but no max loop.
+# Keep this as a separate index-origin-only unit; all ViewArea lifecycle errors remain untouched.
+viewarea_section_helper = Path(__file__).with_name("apply_p1_viewarea_vanilla_section_index_26_2.py")
+if not viewarea_section_helper.is_file():
+    raise SystemExit(f"fail-closed: required ViewArea section-index helper missing: {viewarea_section_helper}")
+subprocess.run([sys.executable, str(viewarea_section_helper), str(root)], check=True)
+print("P1_VIEWAREA_VANILLA_SECTION_INDEX_26_2_CHAINED")
