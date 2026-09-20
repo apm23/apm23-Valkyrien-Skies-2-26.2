@@ -43,8 +43,8 @@ if text.count("replaceWithPacketData(buf, heightmaps, consumer);") != 2:
 
 anchors = {
     "final IVSViewAreaMethods viewArea = (IVSViewAreaMethods)": 1,
-    "for (int dx = -1; dx <= 1; dx++) {": 1,
-    "for (int dz = -1; dz <= 1; dz++) {": 1,
+    "for (int dx = -1; dx <= 1; dx++) {": 2,
+    "for (int dz = -1; dz <= 1; dz++) {": 2,
     "viewArea.vs$getShipRenderSection(x + dx, sy, z + dz);": 1,
     "renderSection.setDirty(true);": 1,
     "relightChunk(worldChunk);": 1,
