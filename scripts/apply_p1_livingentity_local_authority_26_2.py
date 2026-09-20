@@ -26,31 +26,31 @@ text = path.read_text(encoding="utf-8")
 old = "this.isControlledByLocalInstance()"
 new = "this.isLocalInstanceAuthoritative()"
 
-anchors = (
-    "if (this.level() != null && this.level().isClientSide() && !firstTick)",
-    "(((Entity) this instanceof Player player) && player.isLocalPlayer())",
-    "((IEntityDraggingInformationProvider) this).getDraggingInformation()",
-    "dragInfo.getLastShipStoodOn()",
-    "VSGameUtilsKt.getShipObjectWorld(level()).getAllShips().getById(dragInfo.getLastShipStoodOn())",
-    "EntityLerper.INSTANCE.lerpStep(dragInfo, ship, (LivingEntity) (Object) this);",
-    "EntityLerper.INSTANCE.lerpHeadStep(dragInfo, ship, (LivingEntity) (Object) this);",
+anchor_counts = (
+    ("if (this.level() != null && this.level().isClientSide() && !firstTick)", 1),
+    ("(((Entity) this instanceof Player player) && player.isLocalPlayer())", 1),
+    ("((IEntityDraggingInformationProvider) this).getDraggingInformation()", 1),
+    ("dragInfo.getLastShipStoodOn()", 2),
+    ("VSGameUtilsKt.getShipObjectWorld(level()).getAllShips().getById(dragInfo.getLastShipStoodOn())", 1),
+    ("EntityLerper.INSTANCE.lerpStep(dragInfo, ship, (LivingEntity) (Object) this);", 1),
+    ("EntityLerper.INSTANCE.lerpHeadStep(dragInfo, ship, (LivingEntity) (Object) this);", 1),
 )
 
 if text.count(old) != 1:
     raise SystemExit(f"fail-closed: expected exactly one legacy local-control query, found {text.count(old)}")
 if new in text:
     raise SystemExit("fail-closed: Minecraft 26.2 local-instance authority query already present")
-for anchor in anchors:
-    if text.count(anchor) != 1:
-        raise SystemExit(f"fail-closed: preserved dragged-entity authority anchor changed: {anchor!r} count={text.count(anchor)}")
+for anchor, expected in anchor_counts:
+    if text.count(anchor) != expected:
+        raise SystemExit(f"fail-closed: preserved dragged-entity authority anchor changed: {anchor!r} expected={expected} count={text.count(anchor)}")
 
 text = text.replace(old, new, 1)
 
 if old in text or text.count(new) != 1:
     raise SystemExit("fail-closed: local-authority vocabulary replacement did not converge exactly once")
-for anchor in anchors:
-    if text.count(anchor) != 1:
-        raise SystemExit(f"fail-closed: dragged-entity authority anchor changed after replacement: {anchor!r}")
+for anchor, expected in anchor_counts:
+    if text.count(anchor) != expected:
+        raise SystemExit(f"fail-closed: dragged-entity authority anchor changed after replacement: {anchor!r} expected={expected} count={text.count(anchor)}")
 
 path.write_text(text, encoding="utf-8")
 print("P1_LIVINGENTITY_LOCAL_AUTHORITY_26_2_OVERLAY_APPLIED count=1")
