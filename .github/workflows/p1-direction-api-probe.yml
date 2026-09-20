@@ -1,0 +1,128 @@
+name: P1 Direction API probe
+
+on:
+  push:
+    paths:
+      - '.github/workflows/p1-direction-api-probe.yml'
+      - 'scripts/apply_p1_build_baseline.py'
+      - 'BASELINE_LOCK.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe-direction-api:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact upstream baseline
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Apply traceable P1 build-only overlay
+        run: python3 scripts/apply_p1_build_baseline.py upstream-vs2
+
+      - name: Hydrate exact Minecraft 26.2 mapped classpath
+        shell: bash
+        run: |
+          set -uo pipefail
+          chmod +x upstream-vs2/gradlew
+          cd upstream-vs2
+          set +e
+          ./gradlew :common:compileJava --no-daemon --stacktrace > ../direction-probe-gradle.log 2>&1
+          rc=$?
+          set -e
+          echo "HYDRATE_COMPILE_RC=$rc (compile failure is expected while P1 frontier remains open)"
+          grep -nE 'minecraft|26\.2' gradle.properties settings.gradle* build.gradle* 2>/dev/null | head -n 80 || true
+
+      - name: Probe resolved Direction signatures and bytecode
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import os, subprocess, zipfile
+
+          roots = [Path.home() / '.gradle' / 'caches', Path('upstream-vs2/.gradle')]
+          hits = []
+          for root in roots:
+              if not root.exists():
+                  continue
+              for jar in root.rglob('*.jar'):
+                  s = str(jar)
+                  if 'minecraft' not in s.lower() and '26.2' not in s:
+                      continue
+                  try:
+                      with zipfile.ZipFile(jar) as zf:
+                          if 'net/minecraft/core/Direction.class' not in zf.namelist():
+                              continue
+                  except (zipfile.BadZipFile, OSError):
+                      continue
+                  cp = subprocess.run(
+                      ['javap', '-classpath', s, '-p', 'net.minecraft.core.Direction'],
+                      text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+                  )
+                  if cp.returncode != 0:
+                      continue
+                  out = cp.stdout
+                  triple = 'getApproximateNearest(double, double, double)' in out
+                  old = 'getNearest(double, double, double)' in out
+                  int_fallback = 'getNearest(int, int, int, net.minecraft.core.Direction)' in out
+                  vec_fallback = 'getNearest(net.minecraft.core.Vec3i, net.minecraft.core.Direction)' in out
+                  hits.append((jar, triple, old, int_fallback, vec_fallback, out))
+
+          if not hits:
+              raise SystemExit('NO_RESOLVED_DIRECTION_CLASS_FOUND')
+
+          print('DIRECTION_JAR_HITS')
+          for jar, triple, old, int_fallback, vec_fallback, _ in hits:
+              print(f'{jar}\n  approximate_double={triple} old_double_getNearest={old} int_fallback={int_fallback} vec_fallback={vec_fallback}')
+
+          exact = [h for h in hits if h[1] and not h[2] and h[3] and h[4]]
+          if not exact:
+              raise SystemExit('NO_EXACT_26_2_DIRECTION_SIGNATURE_SET')
+
+          # Prefer the jar whose path explicitly carries the target Minecraft version.
+          exact.sort(key=lambda h: ('26.2' not in str(h[0]), len(str(h[0]))))
+          jar = exact[0][0]
+          print(f'SELECTED_DIRECTION_JAR={jar}')
+
+          api = subprocess.check_output(['javap', '-classpath', str(jar), '-p', 'net.minecraft.core.Direction'], text=True)
+          code = subprocess.check_output(['javap', '-classpath', str(jar), '-c', '-p', 'net.minecraft.core.Direction'], text=True)
+          Path('direction-api.txt').write_text('SELECTED_JAR=' + str(jar) + '\n\n' + api + '\n\n' + code)
+
+          required = [
+              'getApproximateNearest(double, double, double)',
+              'getNearest(int, int, int, net.minecraft.core.Direction)',
+              'getNearest(net.minecraft.core.Vec3i, net.minecraft.core.Direction)',
+          ]
+          for sig in required:
+              if sig not in api:
+                  raise SystemExit('MISSING_SIGNATURE: ' + sig)
+          if 'getNearest(double, double, double)' in api:
+              raise SystemExit('OLD_DOUBLE_NAME_STILL_PRESENT')
+          print('DIRECTION_26_2_API_PROBE_OK')
+          PY
+
+      - name: Show selected Direction evidence
+        if: always()
+        run: |
+          test -f direction-api.txt && grep -nE 'getApproximateNearest|getNearest\(' direction-api.txt | head -n 40 || true
+
+      - name: Upload probe evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-direction-api-probe-${{ github.sha }}
+          path: |
+            direction-api.txt
+            direction-probe-gradle.log
+          if-no-files-found: warn
