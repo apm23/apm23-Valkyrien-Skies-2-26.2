@@ -150,3 +150,12 @@ if not sodium_chunk_tracker_helper.is_file():
     raise SystemExit(f"fail-closed: required Sodium chunk-tracker isolation helper missing: {sodium_chunk_tracker_helper}")
 subprocess.run([sys.executable, str(sodium_chunk_tracker_helper), str(root)], check=True)
 print("P1_SODIUM_CHUNK_TRACKER_ISOLATION_26_2_CHAINED_V2")
+
+# Minecraft 26.2 collects entity-inside effects and applies them after the inside-block scan.
+# Feed the real VS2 ship-space scan into Entity's own vanilla collector; do not suppress effects
+# or create a second authority for block interaction semantics.
+entity_inside_helper = Path(__file__).with_name("apply_p1_entity_inside_effect_collector_26_2.py")
+if not entity_inside_helper.is_file():
+    raise SystemExit(f"fail-closed: required Entity inside-effect collector overlay helper missing: {entity_inside_helper}")
+subprocess.run([sys.executable, str(entity_inside_helper), str(root)], check=True)
+print("P1_ENTITY_INSIDE_EFFECT_COLLECTOR_26_2_CHAINED")
