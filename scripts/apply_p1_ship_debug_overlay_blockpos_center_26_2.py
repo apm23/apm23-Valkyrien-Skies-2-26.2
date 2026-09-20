@@ -167,4 +167,4 @@ livingentity_authority_helper = Path(__file__).with_name("apply_p1_livingentity_
 if not livingentity_authority_helper.is_file():
     raise SystemExit(f"fail-closed: required LivingEntity local-authority overlay helper missing: {livingentity_authority_helper}")
 subprocess.run([sys.executable, str(livingentity_authority_helper), str(root)], check=True)
-print("P1_LIVINGENTITY_LOCAL_AUTHORITY_26_2_CHAINED")
+print("P1_LIVINGENTITY_LOCAL_AUTHORITY_26_2_CHAINED_V2")
