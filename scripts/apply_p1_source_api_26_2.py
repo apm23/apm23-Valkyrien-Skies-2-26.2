@@ -383,4 +383,15 @@ replace_count(
     1,
 )
 
+# Exact-head run 35490199268 proved the BlockUtil relocation clean and reduced javac from
+# 30 to 28 errors. Minecraft 26.2 renamed DimensionDataStorage to SavedDataStorage while
+# keeping ChunkMap's overworld storage as Supplier<SavedDataStorage>. Change only that type
+# name in the pinned VS2 import and shadow field; chunk/player-watch/save behavior is unchanged.
+replace_count(
+    "common/src/main/java/org/valkyrienskies/mod/mixin/server/world/MixinChunkMap.java",
+    "DimensionDataStorage",
+    "SavedDataStorage",
+    2,
+)
+
 print("P1_SOURCE_API_26_2_OVERLAY_APPLIED")
