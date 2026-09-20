@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import subprocess
 import sys
 
 root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("upstream-vs2")
@@ -35,3 +36,12 @@ for anchor in anchors:
 
 path.write_text(text, encoding="utf-8")
 print("P1_SHIP_DEBUG_OVERLAY_BLOCKPOS_CENTER_26_2_OVERLAY_APPLIED")
+
+# Transport-only chaining for the separately proven pathfinding debug lifecycle adaptation.
+# This does not alter or reopen the frozen ship-debug source patch above. The helper itself
+# is fail-closed against the exact pinned upstream pathfinding mixin and delegates rendering
+# to Minecraft 26.2's vanilla SimpleDebugRenderer/DebugValueAccess/gizmo lifecycle.
+helper = Path(__file__).with_name("apply_p1_pathfinding_debug_lifecycle_26_2.py")
+if not helper.is_file():
+    raise SystemExit(f"fail-closed: required pathfinding debug overlay helper missing: {helper}")
+subprocess.run([sys.executable, str(helper), str(root)], check=True)
