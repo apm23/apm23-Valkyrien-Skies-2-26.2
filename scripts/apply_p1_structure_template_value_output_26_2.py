@@ -118,3 +118,9 @@ if not levelchunk_mark_unsaved_helper.is_file():
     raise SystemExit(f"fail-closed: required LevelChunk mark-unsaved overlay helper missing: {levelchunk_mark_unsaved_helper}")
 subprocess.run([sys.executable, str(levelchunk_mark_unsaved_helper), str(root)], check=True)
 print("P1_LEVELCHUNK_MARK_UNSAVED_26_2_CHAINED_V2")
+
+levelchunk_empty_sections_helper = Path(__file__).with_name("apply_p1_levelchunk_empty_sections_26_2.py")
+if not levelchunk_empty_sections_helper.is_file():
+    raise SystemExit(f"fail-closed: required LevelChunk empty-sections overlay helper missing: {levelchunk_empty_sections_helper}")
+subprocess.run([sys.executable, str(levelchunk_empty_sections_helper), str(root)], check=True)
+print("P1_LEVELCHUNK_EMPTY_SECTIONS_26_2_CHAINED")
