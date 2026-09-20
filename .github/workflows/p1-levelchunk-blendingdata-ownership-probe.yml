@@ -1,0 +1,187 @@
+name: P1 LevelChunk blending data ownership inspection
+
+on:
+  push:
+    paths:
+      - '.github/workflows/p1-levelchunk-blendingdata-ownership-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-levelchunk-blendingdata-ownership:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact upstream baseline
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Replay canonical P1 overlays in canonical order
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import shlex
+          import subprocess
+
+          workflow = Path('.github/workflows/p1-compile.yml').read_text(encoding='utf-8')
+          commands = re.findall(
+              r'^\s*run:\s+(python3 scripts/apply_p1_[^\n]+ upstream-vs2)\s*$',
+              workflow,
+              flags=re.MULTILINE,
+          )
+          if len(commands) < 50:
+              raise SystemExit(f'fail-closed: expected canonical overlay chain, found only {len(commands)} commands')
+          print(f'Replaying {len(commands)} canonical overlay commands')
+          for command in commands:
+              print('+', command)
+              subprocess.run(shlex.split(command), check=True)
+          PY
+
+      - name: Resolve exact common compile classpath
+        shell: bash
+        working-directory: upstream-vs2
+        run: |
+          set -euo pipefail
+          cat > ../p1-levelchunk-blendingdata-classpath.init.gradle <<'GRADLE'
+          gradle.projectsEvaluated {
+              def commonProject = gradle.rootProject.findProject(':common')
+              if (commonProject == null) {
+                  throw new GradleException('fail-closed: :common project not found')
+              }
+              commonProject.tasks.register('vsPrintMainCompileClasspath') {
+                  doLast {
+                      def sourceSets = commonProject.extensions.findByName('sourceSets')
+                      if (sourceSets == null) {
+                          throw new GradleException('fail-closed: sourceSets extension not found on :common')
+                      }
+                      sourceSets.getByName('main').compileClasspath.files.each { file ->
+                          println('VS_CP_FILE=' + file.absolutePath)
+                      }
+                  }
+              }
+          }
+          GRADLE
+          ./gradlew -I ../p1-levelchunk-blendingdata-classpath.init.gradle :common:vsPrintMainCompileClasspath --no-daemon \
+            | tee ../p1-levelchunk-blendingdata-classpath.log
+          grep -q '^VS_CP_FILE=' ../p1-levelchunk-blendingdata-classpath.log
+
+      - name: Inspect exact Minecraft 26.2 chunk blending ownership boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' | tee p1-levelchunk-blendingdata-ownership-probe.log
+          from pathlib import Path
+          import re
+          import subprocess
+          import zipfile
+
+          cp_log = Path('p1-levelchunk-blendingdata-classpath.log').read_text(encoding='utf-8', errors='replace')
+          jars = []
+          for line in cp_log.splitlines():
+              if line.startswith('VS_CP_FILE='):
+                  p = Path(line.split('=', 1)[1])
+                  if p.exists() and p.suffix == '.jar':
+                      jars.append(p)
+          if not jars:
+              raise SystemExit('fail-closed: no jar entries found on :common main compile classpath')
+
+          required = {
+              'net/minecraft/world/level/chunk/ChunkAccess.class': 'net.minecraft.world.level.chunk.ChunkAccess',
+              'net/minecraft/world/level/chunk/LevelChunk.class': 'net.minecraft.world.level.chunk.LevelChunk',
+              'net/minecraft/world/level/chunk/ProtoChunk.class': 'net.minecraft.world.level.chunk.ProtoChunk',
+              'net/minecraft/world/level/chunk/ImposterProtoChunk.class': 'net.minecraft.world.level.chunk.ImposterProtoChunk',
+              'net/minecraft/world/level/chunk/storage/SerializableChunkData.class': 'net.minecraft.world.level.chunk.storage.SerializableChunkData',
+          }
+          found = {entry: [] for entry in required}
+          print('=== EXACT COMPILE CLASSPATH TARGET JARS ===')
+          for jar in jars:
+              try:
+                  with zipfile.ZipFile(jar) as zf:
+                      names = set(zf.namelist())
+                      hits = [entry for entry in required if entry in names]
+                      if hits:
+                          print('JAR', jar)
+                          for entry in hits:
+                              found[entry].append(jar)
+                              print('  HAS', entry)
+              except zipfile.BadZipFile:
+                  pass
+
+          missing = [entry for entry, matches in found.items() if not matches]
+          if missing:
+              raise SystemExit('fail-closed: required exact mapped classes missing: ' + ', '.join(missing))
+
+          outputs = {}
+          for entry, cls in required.items():
+              texts = []
+              for jar in found[entry]:
+                  print('\n=== JAVAP', cls, 'FROM', jar, '===')
+                  proc = subprocess.run(
+                      ['javap', '-classpath', str(jar), '-p', '-s', '-c', cls],
+                      text=True,
+                      stdout=subprocess.PIPE,
+                      stderr=subprocess.STDOUT,
+                      check=False,
+                  )
+                  print(proc.stdout)
+                  if proc.returncode != 0:
+                      raise SystemExit(f'fail-closed: javap failed for {cls} from {jar}')
+                  texts.append(proc.stdout)
+              outputs[cls] = '\n'.join(texts)
+
+          chunk = outputs['net.minecraft.world.level.chunk.ChunkAccess']
+          level = outputs['net.minecraft.world.level.chunk.LevelChunk']
+          proto = outputs['net.minecraft.world.level.chunk.ProtoChunk']
+          imposter = outputs['net.minecraft.world.level.chunk.ImposterProtoChunk']
+          serial = outputs['net.minecraft.world.level.chunk.storage.SerializableChunkData']
+
+          if 'blendingData' not in chunk:
+              raise SystemExit('fail-closed: ChunkAccess blendingData field not found')
+          if not re.search(r'final\s+net\.minecraft\.world\.level\.levelgen\.blending\.BlendingData\s+blendingData;', chunk):
+              raise SystemExit('fail-closed: ChunkAccess blendingData is not proven final with mapped type')
+          if 'getBlendingData' not in chunk and 'getBlendingData' not in proto:
+              raise SystemExit('fail-closed: mapped blending-data getter not found')
+
+          print('\n=== OWNERSHIP SIGNALS ===')
+          for label, text in [('ChunkAccess', chunk), ('LevelChunk', level), ('ProtoChunk', proto), ('ImposterProtoChunk', imposter), ('SerializableChunkData', serial)]:
+              print(label,
+                    'mentions_blendingData=', 'blendingData' in text,
+                    'mentions_BlendingData_type=', 'net.minecraft.world.level.levelgen.blending.BlendingData' in text,
+                    'mentions_getBlendingData=', 'getBlendingData' in text)
+
+          # Emit constructor signatures and bytecode neighborhoods carrying BlendingData/final-field ownership.
+          ctor_pattern = re.compile(r'(?ms)^\s*(?:public|protected|private).*?\);\n\s*descriptor:.*?(?=^\s*(?:public|protected|private)|\Z)')
+          for label, text in [('ChunkAccess', chunk), ('LevelChunk', level), ('ProtoChunk', proto), ('ImposterProtoChunk', imposter)]:
+              print(f'\n=== {label} CONSTRUCTOR/BLENDING EXCERPTS ===')
+              lines = text.splitlines()
+              for i, line in enumerate(lines):
+                  if ('BlendingData' in line or 'blendingData' in line or '<init>' in line or label + '(' in line):
+                      lo = max(0, i - 3)
+                      hi = min(len(lines), i + 8)
+                      print('\n'.join(lines[lo:hi]))
+                      print('---')
+
+          print('\nLEVELCHUNK_BLENDINGDATA_26_2_OWNERSHIP_PROBE_COMPLETE final_field=true exact_mapped_classes=true')
+          PY
+
+      - name: Upload exact LevelChunk blending ownership inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-levelchunk-blendingdata-ownership-probe-${{ github.sha }}
+          path: |
+            p1-levelchunk-blendingdata-classpath.log
+            p1-levelchunk-blendingdata-ownership-probe.log
+          if-no-files-found: warn
