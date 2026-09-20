@@ -33,11 +33,11 @@ jobs:
           path_anchor = "      - 'scripts/apply_p1_world_weather_blockpos_center_26_2.py'\n"
           path_insert = path_anchor + "      - 'scripts/apply_p1_clip_replace_direction_26_2.py'\n"
           step_anchor = (
-              "      - name: Apply traceable P1 world-weather BlockPos center overlay\n"
+              "      - name: Apply frozen P1 world weather BlockPos center overlay\n"
               "        run: python3 scripts/apply_p1_world_weather_blockpos_center_26_2.py upstream-vs2\n"
           )
           step_insert = step_anchor + (
-              "\n      - name: Apply traceable P1 clip-replace Direction vocabulary overlay\n"
+              "\n      - name: Apply frozen P1 clip-replace Direction vocabulary overlay\n"
               "        run: python3 scripts/apply_p1_clip_replace_direction_26_2.py upstream-vs2\n"
           )
 
@@ -87,7 +87,7 @@ jobs:
           added = [line[1:].rstrip('\n') for line in diff.splitlines() if line.startswith('+') and not line.startswith('+++')]
           expected = {
               "      - 'scripts/apply_p1_clip_replace_direction_26_2.py'",
-              "      - name: Apply traceable P1 clip-replace Direction vocabulary overlay",
+              "      - name: Apply frozen P1 clip-replace Direction vocabulary overlay",
               "        run: python3 scripts/apply_p1_clip_replace_direction_26_2.py upstream-vs2",
           }
           if set(added) != expected or len(added) != 3:
