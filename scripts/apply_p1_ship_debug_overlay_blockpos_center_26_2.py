@@ -78,3 +78,4 @@ sable_helper = Path(__file__).with_name("apply_p1_legacy_sable_compileonly_isola
 if not sable_helper.is_file():
     raise SystemExit(f"fail-closed: required legacy Sable isolation helper missing: {sable_helper}")
 subprocess.run([sys.executable, str(sable_helper), str(root)], check=True)
+print("P1_LEGACY_SABLE_COMPILEONLY_ISOLATION_CHAINED")
