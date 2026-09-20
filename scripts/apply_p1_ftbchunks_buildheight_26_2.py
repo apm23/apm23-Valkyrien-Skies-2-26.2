@@ -9,7 +9,7 @@ exclusive upper bound to getMinY() + getHeight(). This overlay changes only that
 FTB claim policy, ship lookup, transform authority, and return ordering remain upstream VS2.
 """
 from pathlib import Path
-import sys
+import subprocess, sys
 
 root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("upstream-vs2")
 path = root / "common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/ftb_chunks/MixinClaimedChunkManagerImpl.java"
@@ -56,3 +56,12 @@ if text.count("level.getMinY()") != 2 or text.count("level.getHeight()") != 1:
 
 path.write_text(text, encoding="utf-8")
 print("P1_FTBCHUNKS_BUILDHEIGHT_26_2_OVERLAY_APPLIED min=getMinY maxExclusive=getMinY+getHeight")
+
+# OptiFine renderer section bounds are a separate optional-compat compile unit. Chain only
+# after the now compile-proven FTB accessor transform; the remaining OptiFine dirty-authority
+# call is intentionally left untouched for its own later proof.
+optifine_range_helper = Path(__file__).with_name("apply_p1_optifine_levelrenderer_section_range_26_2.py")
+if not optifine_range_helper.is_file():
+    raise SystemExit(f"fail-closed: required OptiFine section-range helper missing: {optifine_range_helper}")
+subprocess.run([sys.executable, str(optifine_range_helper), str(root)], check=True)
+print("P1_OPTIFINE_LEVELRENDERER_SECTION_RANGE_26_2_CHAINED")
