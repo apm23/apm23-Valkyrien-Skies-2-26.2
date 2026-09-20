@@ -394,4 +394,21 @@ replace_count(
     2,
 )
 
+# Exact-head run 35490412222 proved the SavedDataStorage adaptation clean and reduced javac
+# from 28 to 26 errors. Minecraft 26.2 removed GenerationStep.Carving from applyCarvers;
+# the pinned VS2 injection never reads that parameter. Remove only the obsolete import and
+# handler argument so the existing shipyard-generation cancellation logic remains identical.
+replace_count(
+    "common/src/main/java/org/valkyrienskies/mod/mixin/world/level/levelgen/MixinNoiseBasedChunkGenerator.java",
+    "import net.minecraft.world.level.levelgen.GenerationStep.Carving;\n",
+    "",
+    1,
+)
+replace_count(
+    "common/src/main/java/org/valkyrienskies/mod/mixin/world/level/levelgen/MixinNoiseBasedChunkGenerator.java",
+    ", Carving carving, CallbackInfo ci)",
+    ", CallbackInfo ci)",
+    1,
+)
+
 print("P1_SOURCE_API_26_2_OVERLAY_APPLIED")
