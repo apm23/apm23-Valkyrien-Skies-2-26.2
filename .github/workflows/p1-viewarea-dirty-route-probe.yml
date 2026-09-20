@@ -1,0 +1,150 @@
+name: P1 ViewArea dirty route probe
+
+on:
+  push:
+    paths:
+      - '.github/workflows/p1-viewarea-dirty-route-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-dirty-route:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact upstream baseline
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Replay canonical P1 overlays in canonical order
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, shlex, subprocess
+          workflow = Path('.github/workflows/p1-compile.yml').read_text(encoding='utf-8')
+          commands = re.findall(r'^\s*run:\s+(python3 scripts/apply_p1_[^\n]+ upstream-vs2)\s*$', workflow, flags=re.MULTILINE)
+          if len(commands) < 50:
+              raise SystemExit(f'fail-closed: expected canonical overlay chain, found only {len(commands)} commands')
+          for command in commands:
+              subprocess.run(shlex.split(command), check=True)
+          PY
+
+      - name: Resolve exact common compile classpath
+        shell: bash
+        working-directory: upstream-vs2
+        run: |
+          set -euo pipefail
+          cat > ../p1-viewarea-dirty-route.init.gradle <<'GRADLE'
+          gradle.projectsEvaluated {
+              def commonProject = gradle.rootProject.findProject(':common')
+              if (commonProject == null) throw new GradleException('fail-closed: :common project not found')
+              commonProject.tasks.register('vsPrintMainCompileClasspath') {
+                  doLast {
+                      def sourceSets = commonProject.extensions.findByName('sourceSets')
+                      if (sourceSets == null) throw new GradleException('fail-closed: sourceSets extension not found')
+                      sourceSets.getByName('main').compileClasspath.files.each { file -> println('VS_CP_FILE=' + file.absolutePath) }
+                  }
+              }
+          }
+          GRADLE
+          ./gradlew -I ../p1-viewarea-dirty-route.init.gradle :common:vsPrintMainCompileClasspath --no-daemon | tee ../p1-viewarea-dirty-route-classpath.log
+          grep -q '^VS_CP_FILE=' ../p1-viewarea-dirty-route-classpath.log
+
+      - name: Trace exact dirty-event callers and tracker flow
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' | tee p1-viewarea-dirty-route-probe.log
+          from pathlib import Path
+          import subprocess, zipfile
+
+          cp = Path('p1-viewarea-dirty-route-classpath.log').read_text(encoding='utf-8', errors='replace')
+          jars = [Path(line.split('=',1)[1]) for line in cp.splitlines() if line.startswith('VS_CP_FILE=')]
+          target_entry = 'net/minecraft/client/renderer/extract/LevelExtractor.class'
+          mc_jars = []
+          for jar in jars:
+              if not jar.exists() or jar.suffix != '.jar':
+                  continue
+              try:
+                  with zipfile.ZipFile(jar) as zf:
+                      if target_entry in zf.namelist():
+                          mc_jars.append(jar)
+              except zipfile.BadZipFile:
+                  pass
+          if len(mc_jars) != 1:
+              raise SystemExit(f'fail-closed: expected one exact mapped Minecraft jar, found {mc_jars}')
+          jar = mc_jars[0]
+          print('MAPPED_MC_JAR=', jar)
+
+          owner = b'net/minecraft/client/renderer/extract/LevelExtractor'
+          dirty_names = [b'blockChanged', b'setBlockDirty', b'setBlocksDirty', b'setSectionDirty', b'setSectionRangeDirty']
+          candidates = []
+          with zipfile.ZipFile(jar) as zf:
+              for name in zf.namelist():
+                  if not name.endswith('.class') or name == target_entry:
+                      continue
+                  data = zf.read(name)
+                  if owner in data and any(method in data for method in dirty_names):
+                      candidates.append(name[:-6].replace('/', '.'))
+          print('EXTERNAL_LEVEL_EXTRACTOR_DIRTY_CALLER_CANDIDATES=', candidates)
+          if not candidates:
+              raise SystemExit('fail-closed: no external exact caller referencing LevelExtractor dirty methods')
+          if len(candidates) > 20:
+              raise SystemExit(f'fail-closed: unexpectedly broad dirty caller set: {len(candidates)}')
+
+          def javap(cls):
+              proc = subprocess.run(['javap','-classpath',str(jar),'-p','-s','-c',cls], text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+              if proc.returncode != 0:
+                  raise SystemExit(f'fail-closed: javap failed for {cls}')
+              print('\n=== JAVAP', cls, '===\n', proc.stdout)
+              return proc.stdout
+
+          caller_outputs = {cls: javap(cls) for cls in candidates}
+          extractor = javap('net.minecraft.client.renderer.extract.LevelExtractor')
+          view_area = javap('net.minecraft.client.renderer.ViewArea')
+          level_renderer = javap('net.minecraft.client.renderer.LevelRenderer')
+          tracker = javap('net.minecraft.client.SectionUpdateTracker')
+
+          block_callers = [cls for cls,text in caller_outputs.items() if 'LevelExtractor.blockChanged:' in text]
+          section_callers = [cls for cls,text in caller_outputs.items() if 'LevelExtractor.setSectionDirty:' in text]
+          print('BLOCK_CHANGED_CALLERS=', block_callers)
+          print('SET_SECTION_DIRTY_CALLERS=', section_callers)
+          if not block_callers:
+              raise SystemExit('fail-closed: ordinary block dirty path into LevelExtractor.blockChanged not proven')
+
+          required = {
+              'ViewArea setDirty removed': ' setDirty(' not in view_area,
+              'LevelExtractor blockChanged exists': 'public void blockChanged(net.minecraft.core.BlockPos, int);' in extractor,
+              'blockChanged preserves flag bit 8': 'bipush        8' in extractor and 'setBlockDirty:(Lnet/minecraft/core/BlockPos;Z)V' in extractor,
+              'private boolean section dirty exists': 'private void setSectionDirty(int, int, int, boolean);' in extractor,
+              'tracker receives boolean': 'SectionUpdateTracker.setDirty:(IIIZ)V' in extractor,
+              'LevelRenderer resolves section node': 'ViewArea.getRenderSection:(J)' in level_renderer,
+          }
+          for label, ok in required.items():
+              print(label, ok)
+              if not ok:
+                  raise SystemExit('fail-closed: missing exact dirty-route signal: ' + label)
+
+          print('VIEWAREA_DIRTY_ROUTE_26_2_PROBE_COMPLETE')
+          PY
+
+      - name: Upload exact dirty-route evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-viewarea-dirty-route-probe-${{ github.sha }}
+          path: |
+            p1-viewarea-dirty-route-classpath.log
+            p1-viewarea-dirty-route-probe.log
+          if-no-files-found: warn
