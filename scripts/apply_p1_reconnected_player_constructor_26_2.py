@@ -17,25 +17,26 @@ if new in text:
 # This mixin constructor is deliberately unreachable; preserve the injected VS2 reconnect
 # ship save/restore authority exactly and adapt only the Minecraft 26.2 superclass vocabulary.
 anchors = [
-    "public MixinServerPlayer(final Level level, final BlockPos blockPos, final float f,",
-    "final GameProfile gameProfile) {",
-    'throw new IllegalStateException("Unreachable");',
-    '@Inject(method = "readAdditionalSaveData", at = @At("RETURN"))',
-    '@Inject(method = "addAdditionalSaveData", at = @At("RETURN"))',
-    "VSGameUtilsKt.getShipObjectWorld(serverLevel()).getAllShips().getById(lastShipId)",
-    "ship.getShipToWorld().transformPosition(playerShipPosition)",
-    "ship.getWorldToShip().transformPosition(playerWorldPosition)",
+    ("public MixinServerPlayer(final Level level, final BlockPos blockPos, final float f,", 1),
+    ("final GameProfile gameProfile) {", 1),
+    ('throw new IllegalStateException("Unreachable");', 1),
+    ('@Inject(method = "readAdditionalSaveData", at = @At("RETURN"))', 1),
+    ('@Inject(method = "addAdditionalSaveData", at = @At("RETURN"))', 1),
+    ("VSGameUtilsKt.getShipObjectWorld(serverLevel()).getAllShips().getById(lastShipId)", 2),
+    ("ship.getShipToWorld().transformPosition(playerShipPosition)", 1),
+    ("ship.getWorldToShip().transformPosition(playerWorldPosition)", 1),
 ]
-for anchor in anchors:
-    if text.count(anchor) != 1:
-        raise SystemExit(f"expected exactly one reconnect-player authority anchor {anchor!r} in {path}, found {text.count(anchor)}")
+for anchor, expected in anchors:
+    actual = text.count(anchor)
+    if actual != expected:
+        raise SystemExit(f"expected {expected} reconnect-player authority anchor(s) {anchor!r} in {path}, found {actual}")
 
 text = text.replace(old, new, 1)
 
 if text.count(new) != 1 or old in text:
     raise SystemExit("fail-closed: reconnect-player constructor replacement did not converge exactly once")
-for anchor in anchors:
-    if text.count(anchor) != 1:
+for anchor, expected in anchors:
+    if text.count(anchor) != expected:
         raise SystemExit(f"fail-closed: reconnect-player authority anchor changed unexpectedly: {anchor!r}")
 
 path.write_text(text, encoding="utf-8")
