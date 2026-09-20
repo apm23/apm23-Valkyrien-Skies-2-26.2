@@ -130,3 +130,9 @@ if not levelchunk_parse_factory_helper.is_file():
     raise SystemExit(f"fail-closed: required LevelChunk SerializableChunkData.parse factory helper missing: {levelchunk_parse_factory_helper}")
 subprocess.run([sys.executable, str(levelchunk_parse_factory_helper), str(root)], check=True)
 print("P1_LEVELCHUNK_SERIALIZABLE_PARSE_FACTORY_26_2_CHAINED")
+
+levelchunk_blendingdata_invariant_helper = Path(__file__).with_name("apply_p1_levelchunk_blendingdata_invariant_26_2.py")
+if not levelchunk_blendingdata_invariant_helper.is_file():
+    raise SystemExit(f"fail-closed: required LevelChunk BlendingData invariant helper missing: {levelchunk_blendingdata_invariant_helper}")
+subprocess.run([sys.executable, str(levelchunk_blendingdata_invariant_helper), str(root)], check=True)
+print("P1_LEVELCHUNK_BLENDINGDATA_INVARIANT_26_2_CHAINED")
