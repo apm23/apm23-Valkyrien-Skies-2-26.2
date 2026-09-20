@@ -9,6 +9,7 @@ boot gate. Keep the upstream submodule untouched; remove only the copied-worktre
 compile-only dependency, source package, and matching mixin registrations.
 """
 from pathlib import Path
+import subprocess
 import sys
 
 root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("upstream-vs2")
@@ -76,3 +77,14 @@ print(
     "P1_IMMPTL_OPTIONAL_ISOLATION_26_2_APPLIED "
     "dependency=removed javaMixins=3 mixinRegistrations=3 upstream=untouched"
 )
+
+# Transport-only chaining. The optional Immersive Portals isolation is complete before
+# entering the newly exposed Fabric Kotlin compile frontier; keep the Fabric data-component
+# Identifier migration isolated in its own fail-closed helper.
+vsdatacomponents_identifier_helper = Path(__file__).with_name("apply_p1_vsdatacomponents_identifier_26_2.py")
+if not vsdatacomponents_identifier_helper.is_file():
+    raise SystemExit(
+        f"fail-closed: required Fabric VSDataComponents Identifier helper missing: {vsdatacomponents_identifier_helper}"
+    )
+subprocess.run([sys.executable, str(vsdatacomponents_identifier_helper), str(root)], check=True)
+print("P1_VSDATACOMPONENTS_IDENTIFIER_26_2_CHAINED")
