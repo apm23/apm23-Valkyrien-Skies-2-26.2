@@ -1,0 +1,156 @@
+name: P1 ship debug BB API inspection
+# Inspection-only proof for the exact Minecraft 26.2 debug-gizmo output surface.
+# This workflow never mutates upstream VS2 source.
+
+on:
+  push:
+    paths:
+      - '.github/workflows/p1-ship-debug-bb-api-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-ship-debug-gizmo-api:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact upstream baseline
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Replay canonical P1 overlays in canonical order
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, shlex, subprocess
+          workflow = Path('.github/workflows/p1-compile.yml').read_text(encoding='utf-8')
+          commands = re.findall(
+              r'^\s*run:\s+(python3 scripts/apply_p1_[^\n]+ upstream-vs2)\s*$',
+              workflow,
+              flags=re.MULTILINE,
+          )
+          if len(commands) < 50:
+              raise SystemExit(f'fail-closed: expected canonical overlay chain, found only {len(commands)} commands')
+          for command in commands:
+              subprocess.run(shlex.split(command), check=True)
+          PY
+
+      - name: Resolve exact common compile classpath
+        shell: bash
+        working-directory: upstream-vs2
+        run: |
+          set -euo pipefail
+          cat > ../p1-ship-debug-bb-classpath.init.gradle <<'GRADLE'
+          gradle.projectsEvaluated {
+              def commonProject = gradle.rootProject.findProject(':common')
+              if (commonProject == null) throw new GradleException('fail-closed: :common project not found')
+              commonProject.tasks.register('vsPrintMainCompileClasspath') {
+                  doLast {
+                      def sourceSets = commonProject.extensions.findByName('sourceSets')
+                      if (sourceSets == null) throw new GradleException('fail-closed: sourceSets extension not found on :common')
+                      sourceSets.getByName('main').compileClasspath.files.each { file -> println('VS_CP_FILE=' + file.absolutePath) }
+                  }
+              }
+          }
+          GRADLE
+          ./gradlew -I ../p1-ship-debug-bb-classpath.init.gradle :common:vsPrintMainCompileClasspath --no-daemon \
+            | tee ../p1-ship-debug-bb-classpath.log
+          grep -q '^VS_CP_FILE=' ../p1-ship-debug-bb-classpath.log
+
+      - name: Inspect exact DebugRenderer and gizmo classes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' | tee p1-ship-debug-bb-api-probe.log
+          from pathlib import Path
+          import subprocess, zipfile
+
+          cp_log = Path('p1-ship-debug-bb-classpath.log').read_text(encoding='utf-8', errors='replace')
+          jars = []
+          for line in cp_log.splitlines():
+              if line.startswith('VS_CP_FILE='):
+                  p = Path(line.split('=', 1)[1])
+                  if p.exists() and p.suffix == '.jar': jars.append(p)
+          owners = []
+          gizmo_entries = []
+          for jar in jars:
+              try:
+                  with zipfile.ZipFile(jar) as zf:
+                      names = zf.namelist()
+                      if 'net/minecraft/client/renderer/debug/DebugRenderer.class' in names:
+                          owners.append(jar)
+                      for name in names:
+                          if name.startswith('net/minecraft/client/renderer/') and name.endswith('.class') and 'Gizmo' in name:
+                              gizmo_entries.append(name)
+              except zipfile.BadZipFile:
+                  pass
+          if len(owners) != 1:
+              raise SystemExit(f'fail-closed: expected one mapped MC owner jar, got {len(owners)}')
+          owner = owners[0]
+          print('MC_OWNER', owner)
+          print('GIZMO_CLASS_INVENTORY')
+          for name in sorted(set(gizmo_entries)):
+              print(name)
+
+          required_suffixes = ['Gizmos.class', 'GizmoStyle.class']
+          selected = {}
+          for suffix in required_suffixes:
+              matches = [x for x in gizmo_entries if x.endswith('/' + suffix)]
+              if len(matches) != 1:
+                  raise SystemExit(f'fail-closed: expected exactly one {suffix}, got {matches}')
+              selected[suffix] = matches[0][:-6].replace('/', '.')
+
+          classes = [
+              'net.minecraft.client.renderer.debug.DebugRenderer',
+              selected['Gizmos.class'],
+              selected['GizmoStyle.class'],
+          ]
+          outputs = {}
+          for cls in classes:
+              proc = subprocess.run(['javap', '-classpath', str(owner), '-p', '-s', '-c', cls], text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+              print('\n=== JAVAP', cls, '===')
+              print(proc.stdout)
+              if proc.returncode != 0:
+                  raise SystemExit(f'fail-closed: javap failed for {cls}')
+              outputs[cls] = proc.stdout
+
+          debug = outputs['net.minecraft.client.renderer.debug.DebugRenderer']
+          gizmos = outputs[selected['Gizmos.class']]
+          style = outputs[selected['GizmoStyle.class']]
+          if 'public void emitGizmos(net.minecraft.client.renderer.culling.Frustum, double, double, double, float);' not in debug:
+              raise SystemExit('fail-closed: DebugRenderer.emitGizmos boundary changed')
+          if 'SimpleDebugRenderer' not in debug:
+              raise SystemExit('fail-closed: SimpleDebugRenderer lifecycle missing')
+
+          print('GIZMOS_AABB_REFS', gizmos.count('net.minecraft.world.phys.AABB'))
+          print('GIZMOS_MATRIX_REFS', gizmos.count('org.joml.Matrix4'))
+          print('GIZMOS_LINE_REFS', gizmos.count('line('))
+          print('GIZMOS_CUBOID_REFS', gizmos.count('cuboid('))
+          print('GIZMOSTYLE_CONTENT_BEGIN')
+          for line in style.splitlines():
+              if any(k in line for k in ('public ', 'static ', 'color', 'Color', 'stroke', 'Stroke', 'lineWidth', 'LineWidth')):
+                  print(line.strip())
+          print('GIZMOSTYLE_CONTENT_END')
+          print('SHIP_DEBUG_BB_26_2_GIZMO_API_INSPECTED emit_gizmos=true simple_debug_renderer=true')
+          PY
+
+      - name: Upload exact ship debug BB API inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-ship-debug-bb-api-probe-${{ github.sha }}
+          path: |
+            p1-ship-debug-bb-classpath.log
+            p1-ship-debug-bb-api-probe.log
+          if-no-files-found: warn
