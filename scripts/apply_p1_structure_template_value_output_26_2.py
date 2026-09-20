@@ -112,3 +112,9 @@ if not packet_snap_helper.is_file():
     raise SystemExit(f"fail-closed: required ClientPacketListener entity-snap overlay helper missing: {packet_snap_helper}")
 subprocess.run([sys.executable, str(packet_snap_helper), str(root)], check=True)
 print("P1_CLIENTPACKETLISTENER_ENTITY_SNAP_26_2_CHAINED")
+
+levelchunk_mark_unsaved_helper = Path(__file__).with_name("apply_p1_levelchunk_mark_unsaved_26_2.py")
+if not levelchunk_mark_unsaved_helper.is_file():
+    raise SystemExit(f"fail-closed: required LevelChunk mark-unsaved overlay helper missing: {levelchunk_mark_unsaved_helper}")
+subprocess.run([sys.executable, str(levelchunk_mark_unsaved_helper), str(root)], check=True)
+print("P1_LEVELCHUNK_MARK_UNSAVED_26_2_CHAINED")
