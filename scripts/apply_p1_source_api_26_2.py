@@ -164,7 +164,7 @@ replace_count(
     1,
 )
 
-# Run 35333733932 proved TestFlapBlock.kt is now clean and reports the same single private
+# Run 35333733932 proved TestFlapBlock.kt clean and reports the same single private
 # Direction.normal access in TestWingBlock#getWing. Pinned baseline and current 1.21.1/main
 # are byte-identical at blob 0728a94852bd0adbe5fe9d3bcbd7ee719d54bb6b. Replace only
 # that unit-vector accessor; Wing construction, coefficients, camber bias, and toJOMLD stay unchanged.
@@ -284,6 +284,17 @@ replace_count(
     "common/src/main/kotlin/org/valkyrienskies/mod/common/command/commands/GetAirCommand.kt",
     "literal(\"get-air\").requires { it.hasPermission(VSGameConfig.SERVER.Commands.getAirValuesPerms)}",
     "literal(\"get-air\").requires { it.permissions().hasPermission(Permission.HasCommandLevel(PermissionLevel.byId(VSGameConfig.SERVER.Commands.getAirValuesPerms)))}",
+    1,
+)
+
+# Run 35481799204 reached the pinned upstream Java mixins and proved Minecraft 26.2's
+# BlockEntityRenderer now has a second render-state generic. Keep VS2's existing shouldRender
+# wrapper, ship lookup, ship-to-world transform, and distance test unchanged; only widen the
+# renderer parameter to the compiler-required two-parameter API shape.
+replace_count(
+    "common/src/main/java/org/valkyrienskies/mod/mixin/feature/render_blockentity_distance_check/MixinBlockEntityRenderDispatcher.java",
+    "BlockEntityRenderer<E> instance,",
+    "BlockEntityRenderer<E, ?> instance,",
     1,
 )
 
