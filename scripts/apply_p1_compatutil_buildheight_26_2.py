@@ -32,3 +32,4 @@ print("P1_COMPATUTIL_BUILDHEIGHT_26_2_OVERLAY_APPLIED")
 
 # Transport-only canonical P1 retrigger for the separately chained ClientChunkCache renderer-dirty bridge.
 # Retriggered after correcting only the pinned three-site vanilla-renderer guard count.
+# Transport-only canonical P1 retrigger for the chained vanilla-renderer section-range proof.
