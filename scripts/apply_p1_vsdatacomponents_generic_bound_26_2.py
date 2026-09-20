@@ -7,6 +7,7 @@ current DataComponentType<T : Any> bound. Preserve registration, codec, registry
 builder semantics; add only the non-null Kotlin upper bound required by the mapped API.
 """
 from pathlib import Path
+import subprocess
 import sys
 
 root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("upstream-vs2")
@@ -50,3 +51,11 @@ for anchor, expected in anchors.items():
 
 path.write_text(new_text, encoding="utf-8")
 print("P1_VSDATACOMPONENTS_GENERIC_BOUND_26_2_OVERLAY_APPLIED bound=T:Any sites=1")
+
+# Exact-head proof left VSDataComponents compile-clean and exposed VSFabricNetworking next.
+# Chain only the two packet-ID Identifier migrations; keep PayloadTypeRegistry API untouched.
+network_identifier_helper = Path(__file__).with_name("apply_p1_vsfabricnetworking_identifier_26_2.py")
+if not network_identifier_helper.is_file():
+    raise SystemExit(f"fail-closed: required VSFabricNetworking Identifier helper missing: {network_identifier_helper}")
+subprocess.run([sys.executable, str(network_identifier_helper), str(root)], check=True)
+print("P1_VSFABRICNETWORKING_IDENTIFIER_26_2_CHAINED")
