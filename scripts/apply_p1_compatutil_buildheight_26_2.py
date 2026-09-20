@@ -40,3 +40,4 @@ print("P1_COMPATUTIL_BUILDHEIGHT_26_2_OVERLAY_APPLIED")
 # Transport-only canonical P1 retrigger for the chained ViewArea RenderSection constructor proof.
 # Retriggered after correcting only the missing pinned SectionPos import guard for the ViewArea constructor proof.
 # Transport-only canonical P1 retrigger for the chained ViewArea RenderSection disposal proof.
+# Transport-only canonical P1 retrigger for the chained OptiFine renderer section-range proof.
