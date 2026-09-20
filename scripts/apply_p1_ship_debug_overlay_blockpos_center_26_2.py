@@ -107,3 +107,11 @@ if not camera_position_helper.is_file():
     raise SystemExit(f"fail-closed: required Camera position accessor overlay helper missing: {camera_position_helper}")
 subprocess.run([sys.executable, str(camera_position_helper), str(root)], check=True)
 print("P1_CAMERA_POSITION_ACCESSOR_26_2_CHAINED_V2")
+
+# Exact 26.2 GameRenderer/Camera vocabulary for the upstream render-chunk sorting fix.
+# Keeps VS2 ship-to-world transform and distance calculation unchanged.
+render_chunk_camera_helper = Path(__file__).with_name("apply_p1_render_chunk_sorting_camera_26_2.py")
+if not render_chunk_camera_helper.is_file():
+    raise SystemExit(f"fail-closed: required render-chunk sorting Camera overlay helper missing: {render_chunk_camera_helper}")
+subprocess.run([sys.executable, str(render_chunk_camera_helper), str(root)], check=True)
+print("P1_RENDER_CHUNK_SORTING_CAMERA_26_2_CHAINED")
