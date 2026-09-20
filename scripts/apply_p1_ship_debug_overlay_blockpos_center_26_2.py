@@ -80,11 +80,11 @@ if not sable_helper.is_file():
 subprocess.run([sys.executable, str(sable_helper), str(root)], check=True)
 print("P1_LEGACY_SABLE_COMPILEONLY_ISOLATION_CHAINED_HITBOX_GATE_V2")
 
-# Transport-only mechanical mapping adaptation for the exact 40 direct ChunkPos.x/z
-# accesses reported by the canonical 26.2 javac frontier. Minecraft 26.2 models
-# ChunkPos as a record; preserve the same coordinates through x()/z() accessors.
+# Transport-only mechanical mapping adaptation for the exact 54 active ChunkPos.x/z
+# accesses exposed across two successive canonical javac frontiers. Minecraft 26.2
+# models ChunkPos as a record; preserve the same coordinates through x()/z() accessors.
 chunkpos_helper = Path(__file__).with_name("apply_p1_chunkpos_record_accessors_26_2.py")
 if not chunkpos_helper.is_file():
     raise SystemExit(f"fail-closed: required ChunkPos accessor overlay helper missing: {chunkpos_helper}")
 subprocess.run([sys.executable, str(chunkpos_helper), str(root)], check=True)
-print("P1_CHUNKPOS_RECORD_ACCESSORS_26_2_CHAINED_V2")
+print("P1_CHUNKPOS_RECORD_ACCESSORS_26_2_CHAINED_V3")
