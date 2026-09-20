@@ -435,4 +435,31 @@ replace_count(
     1,
 )
 
+# Exact resolved Minecraft 26.2 API probe run 35491869220 proved ChunkMap's old single
+# ChunkTaskPriorityQueueSorter work condition was split into two ChunkTaskDispatcher fields:
+# worldgenTaskDispatcher and lightTaskDispatcher. Vanilla 26.2 hasWork() checks both before
+# distanceManager.hasTickets(). Preserve the upstream VS2 defense-in-depth shutdown intent:
+# when updatingChunkMap contains only shipyard chunks, keep every non-ticket work predicate,
+# including both current dispatchers, while still intentionally omitting only the lingering
+# distance-manager ticket predicate. The primary SHIP_CHUNK cleanup remains
+# MixinMinecraftServer.preStopServer(); this bridge does not replace ticket/work authority.
+replace_count(
+    "common/src/main/java/org/valkyrienskies/mod/mixin/server/world/MixinChunkMapClose.java",
+    "import net.minecraft.server.level.ChunkTaskPriorityQueueSorter;",
+    "import net.minecraft.server.level.ChunkTaskDispatcher;",
+    1,
+)
+replace_count(
+    "common/src/main/java/org/valkyrienskies/mod/mixin/server/world/MixinChunkMapClose.java",
+    "    @Shadow @Final private ChunkTaskPriorityQueueSorter queueSorter;",
+    "    @Shadow @Final private ChunkTaskDispatcher worldgenTaskDispatcher;\n    @Shadow @Final private ChunkTaskDispatcher lightTaskDispatcher;",
+    1,
+)
+replace_count(
+    "common/src/main/java/org/valkyrienskies/mod/mixin/server/world/MixinChunkMapClose.java",
+    "                || queueSorter.hasWork();",
+    "                || worldgenTaskDispatcher.hasWork()\n                || lightTaskDispatcher.hasWork();",
+    1,
+)
+
 print("P1_SOURCE_API_26_2_OVERLAY_APPLIED")
