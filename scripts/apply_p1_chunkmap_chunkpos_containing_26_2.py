@@ -10,14 +10,20 @@ old_a = "new ChunkPos(BlockPos.containing(VSGameUtilsKt.toWorldCoordinates(level
 new_a = "ChunkPos.containing(BlockPos.containing(VSGameUtilsKt.toWorldCoordinates(level, arg.getMiddleBlockPosition(63))))"
 old_b = "new ChunkPos(BlockPos.containing(VSGameUtilsKt.toWorldCoordinates(level, d0.getMiddleBlockPosition(63))))"
 new_b = "ChunkPos.containing(BlockPos.containing(VSGameUtilsKt.toWorldCoordinates(level, d0.getMiddleBlockPosition(63))))"
+old_pack = "getById(arg.toLong())"
+new_pack = "getById(arg.pack())"
 
-for old, new, label in [(old_a, new_a, "nearby"), (old_b, new_b, "distance")]:
+for old, new, label in [
+    (old_a, new_a, "nearby"),
+    (old_b, new_b, "distance"),
+    (old_pack, new_pack, "ship-lookup packed key"),
+]:
     if text.count(old) != 1:
-        raise SystemExit(f"fail-closed: expected exactly one legacy {label} ChunkPos(BlockPos) conversion in {path}, found {text.count(old)}")
+        raise SystemExit(f"fail-closed: expected exactly one legacy {label} expression in {path}, found {text.count(old)}")
     if new in text:
-        raise SystemExit(f"fail-closed: {label} ChunkPos conversion already adapted before this helper")
+        raise SystemExit(f"fail-closed: {label} expression already adapted before this helper")
 
-# Preserve the upstream VS2 world-space conversion and wrapped vanilla call semantics exactly.
+# Preserve the upstream VS2 world-space conversion, ship lookup, and wrapped vanilla call semantics exactly.
 anchors = [
     ('@WrapOperation(method = "anyPlayerCloseEnoughForSpawning"', 1),
     ('@WrapOperation(method = "playerIsCloseEnoughForSpawning"', 1),
@@ -26,23 +32,25 @@ anchors = [
     ("return original.call(instance,", 1),
     ("return original.call(", 2),
     ("VSGameUtilsKt.getShipObjectWorld(level)", 1),
+    (".getAllShips()", 1),
+    (".map(SavedShipObject::getWorldAABB).orElse(null)", 1),
 ]
 for token, expected in anchors:
     actual = text.count(token)
     if actual != expected:
         raise SystemExit(f"fail-closed: expected {expected} authority anchor(s) {token!r} in {path}, found {actual}")
 
-text = text.replace(old_a, new_a, 1).replace(old_b, new_b, 1)
+text = text.replace(old_a, new_a, 1).replace(old_b, new_b, 1).replace(old_pack, new_pack, 1)
 
-for old in (old_a, old_b):
+for old in (old_a, old_b, old_pack):
     if old in text:
-        raise SystemExit("fail-closed: legacy ChunkPos(BlockPos) conversion remains")
-for new in (new_a, new_b):
+        raise SystemExit("fail-closed: legacy ChunkPos vocabulary remains")
+for new in (new_a, new_b, new_pack):
     if text.count(new) != 1:
-        raise SystemExit("fail-closed: ChunkPos.containing(BlockPos) conversion did not converge exactly once")
+        raise SystemExit("fail-closed: ChunkPos 26.2 vocabulary adaptation did not converge exactly once")
 for token, expected in anchors:
     if text.count(token) != expected:
         raise SystemExit(f"fail-closed: authority anchor changed unexpectedly: {token!r}")
 
 path.write_text(text, encoding="utf-8")
-print("P1_CHUNKMAP_CHUNKPOS_CONTAINING_26_2_OVERLAY_APPLIED count=2")
+print("P1_CHUNKMAP_CHUNKPOS_26_2_OVERLAY_APPLIED containing=2 pack=1")
