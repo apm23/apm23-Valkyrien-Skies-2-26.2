@@ -26,37 +26,36 @@ Minecraft 26.2 changes are applied by explicit fail-closed overlays. Every core 
 
 ### Canonical implementation proof
 
-- canonical implementation/proof HEAD: `cc747f3b550054bab8b638a8772d001fe8e546d8` — `ci: prove ViewArea packed-key frontier`.
-- exact-head P0 provenance run `35524734167`: **success**.
-- exact-head canonical P1 compile run `35524734103`: reached primary javac; compile-frontier failure only. All canonical overlays and delta validation completed successfully before javac.
-- compile artifact `p1-compile-log-cc747f3b550054bab8b638a8772d001fe8e546d8`, ID `10609600687`, digest `sha256:a437630cdd6229ebe0be17c06adfdb180674e9a8bfa017e1f1a5679fcf1b77ef`.
-- extracted `p1-compile.log`: **219051 bytes**, SHA-256 `db51629bbc882c97ea4379cde566e3dafe1c596c4f9f23f216459c5af2caefb1`.
-- authoritative first primary `:common:compileJava` pass: **39 errors across 5 Java source files**.
+- canonical implementation/proof HEAD: `810dc19a7a80d7cfcdbcc9ed141292ee976240e7` — `ci: prove ViewArea minY frontier`.
+- exact-head P0 provenance run `35525024857`: **success**.
+- exact-head canonical P1 compile run `35525024849`: reached primary javac; compile-frontier failure only. All canonical overlays and delta validation completed successfully before javac.
+- compile artifact `p1-compile-log-810dc19a7a80d7cfcdbcc9ed141292ee976240e7`, ID `10609334285`, digest `sha256:1747ccffae5c693400149b53f69720ffea513cd3612facdde667abfae2d7fd01`.
+- extracted `p1-compile.log`: **217699 bytes**, SHA-256 `438211ef67b943a7366966bf9365e8c4896f5e298feba4fbbb927bc70443ab20`.
+- authoritative first primary `:common:compileJava` pass: **38 errors across 5 Java source files**.
 - `MixinClientChunkCache.java`, `MixinLevelRendererVanilla.java`, `MixinLevelChunk.java`, and `LevelExtractorInvoker` remain absent from the first primary error pass.
 - project state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`.
 - active blocker classification: `MINECRAFT_26_2_VIEWAREA_SHIP_RENDER_SECTION_LIFECYCLE`.
 - This is not P1 boot proof, not P2/M1 ship proof, and not runtime rendering proof.
 
-### Current primary Java frontier at `cc747f3b...`
+### Current primary Java frontier at `810dc19a...`
 
 1. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/immersive_portals/MixinMyBuiltChunkStorage.java` — 25
-2. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/vanilla_renderer/MixinViewAreaVanilla.java` — 6
+2. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/vanilla_renderer/MixinViewAreaVanilla.java` — 5
 3. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/immersive_portals/MixinImmPtlChunkTracking.java` — 3
 4. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/optifine_vanilla/MixinLevelRenderer.java` — 3
 5. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/ftb_chunks/MixinClaimedChunkManagerImpl.java` — 2
 
-Optional compat is not the next target merely because it appears first in javac ordering. Standalone P1 vanilla ship rendering remains mandatory; resolve `MixinViewAreaVanilla` in bounded units first.
+Optional compat is not the next target merely because it appears first in javac ordering. Standalone P1 vanilla ship rendering remains mandatory; resolve `MixinViewAreaVanilla` in bounded lifecycle units first.
 
 ### Exact `MixinViewAreaVanilla` remaining-error decomposition
 
-The 6 current diagnostics are four distinct API/lifecycle classes and must not be flattened into one speculative patch:
+The 5 current diagnostics are three lifecycle/authority classes and must not be flattened into one speculative patch:
 
-- 1 × `Level.getMinBuildHeight()` missing — minimum build-height vocabulary.
-- 2 × `RenderSection.setDirty(boolean)` missing — dirty scheduling authority moved out of `RenderSection`.
-- 1 × `RenderSection(int,int,int,int)` constructor missing — 26.2 constructor is `(int,long)` and packed section-node semantics must be preserved.
-- 2 × `RenderSection.releaseBuffers()` missing — disposal/resource ownership changed and requires exact lifecycle evidence before replacement.
+- 2 × `RenderSection.setDirty(boolean)` missing — dirty scheduling authority moved out of `RenderSection`; the old `ViewArea.setDirty(...)` target itself no longer exists in exact 26.2.
+- 1 × `RenderSection(int,int,int,int)` constructor missing — exact 26.2 constructor is `(int,long)` with packed section-node semantics.
+- 2 × `RenderSection.releaseBuffers()` missing — exact 26.2 vanilla ViewArea disposal now uses `RenderSection.reset()`.
 
-The prior three `getMinSection()` and five `ChunkPos.asLong(...)` diagnostics are compile-proven resolved as vocabulary-only adaptations. Do not combine constructor, dirty scheduling, or disposal into a guessed renderer rewrite.
+The prior three `getMinSection()`, five `ChunkPos.asLong(...)`, and one `getMinBuildHeight()` diagnostics are compile-proven resolved as bounded vocabulary-only adaptations. Do not combine constructor, dirty scheduling, or disposal in one source patch.
 
 ## Proven frontier progression — frozen at P1 compile/API scope
 
@@ -80,14 +79,18 @@ The prior three `getMinSection()` and five `ChunkPos.asLong(...)` diagnostics ar
 18. `MixinLevelRendererVanilla` ship-visible section bounds: **50 -> 47**, **6 -> 5 files**. Pinned `getMinSection()` / exclusive `getMaxSection()` loop becomes `getMinSectionY()` / inclusive `getMaxSectionY()` with `<=`, preserving identical section coverage and relative array index. Semantic helper `8546527f1da53344c630245084e5d18aca0cebd8`; chain `f482f643b96ddbbfed611312b35cf3d5cef2211f`; proof HEAD `dcf4a14e09c9c67ca7bf51ba3552027b2a7e80cf`; P0 `35523910648`; P1 `35523910705`; artifact `10609192424`.
 19. `MixinViewAreaVanilla` ship-section array index origin: **47 -> 44**, file **14 -> 11**. Exactly three removed `Level.getMinSection()` calls become `Level.getMinSectionY()` with no lifecycle change. Semantic helper `e84c9ecd588d1c42b14cab03730fcb82ea17223d`; chain `304fb05763f2ab28e5bff4effd585d7c3efe7b82`; guard-only correction `0f5c5eb78207199faf32c10b0148d952df69668c`; proof HEAD `9405f49a9bd5c348a12098fb9e983b62712f16fe`; P0 `35524343843`; P1 `35524343861`; artifact `10609430640`.
 20. `MixinViewAreaVanilla` packed ship-chunk keys: **44 -> 39**, file **11 -> 6**, total files unchanged at 5. Exactly five `ChunkPos.asLong(x,z)` calls become MC26.2 `ChunkPos.pack(x,z)`; arguments, Long2Object map ownership, custom section arrays, dirty sites, constructor, unload and disposal remain untouched. Semantic helper `251b9648fd48c3fd94df02033454510edb62f4f2`; canonical chain `e05ac4f85d78ced05a59957fd0832029cc5092b7`; exact proof HEAD `cc747f3b550054bab8b638a8772d001fe8e546d8`; P0 `35524734167`; P1 `35524734103`; artifact `10609600687`.
+21. `MixinViewAreaVanilla` minimum block-height vocabulary: **39 -> 38**, file **6 -> 5**, total files unchanged at 5. Exactly one `level.getMinBuildHeight()` becomes exact MC26.2 `level.getMinY()`; custom section indexing/keys and all lifecycle-sensitive dirty/constructor/disposal sites remain untouched. Semantic helper `29ea2b45956fbf1ac94967622cf8687db058077f`; canonical chain `39bbfc6b866c9374378fec2edeb59c224a625bdd`; exact proof HEAD `810dc19a7a80d7cfcdbcc9ed141292ee976240e7`; P0 `35525024857`; P1 `35525024849`; artifact `10609334285`, digest `sha256:1747ccffae5c693400149b53f69720ffea513cd3612facdde667abfae2d7fd01`.
 
-Freeze all twenty units above. Runtime semantics remain to be proven later by normal P1/P2 gates.
+Freeze all twenty-one units above. Runtime semantics remain to be proven later by normal P1/P2 gates.
 
 ## Renderer authority evidence and locked boundaries
 
 - Initial dirty probe HEAD `8db9a7cbf8c909609b3078010d6866d6ef70ecd1`, run `35520170375`, artifact `10608013620`: exact 26.2 `RenderSection` has no dirty-related field/method. Therefore `setDirty(true) -> setDirty()` is a locked failed hypothesis.
 - Exact authority probe `35520379454` established dirty/update ownership moved into `LevelExtractor` / `SectionUpdateTracker`.
 - Corrected owner/signature probe HEAD `f35ef5b437f3f5accb31226390eb9518339b805c`, run `35522306388`, artifact `10609236384`, digest `sha256:0a1fe77a594684feccb041f19ae9dc26c1bb0899cff17af42b37c91850b4d0cb`: `Minecraft.levelExtractor` is the owner; private 4-arg dirty entrypoint preserves upstream boolean; extraction consumes dirty state through `visibleSections`; `LevelRenderer` performs the 26.2 `ViewArea.getRenderSection(long)` lookup.
+- Reinspection of the same exact mapped artifact establishes the 26.2 `SectionRenderDispatcher.RenderSection` constructor is `(int,long)`. It stores a packed section node and `setSectionNode(long)` derives block render origin with `SectionPos.x/y/z` + `sectionToBlockCoord`. Exact vanilla `ViewArea` constructs sections with `SectionPos.asLong(sectionX,sectionY,sectionZ)` before calling the `(int,long)` constructor. Therefore the bounded upstream constructor adaptation is `new RenderSection(0, SectionPos.asLong(chunkX, sectionY, chunkZ))`, not packed block coordinates.
+- Exact 26.2 vanilla `ViewArea.releaseAllBuffers()` calls `RenderSection.reset()`. `reset()` cancels compile work, releases/ closes the compiled section mesh and its uber-buffer allocations, clears global block entities/upload/resort state and previous-empty state. This is the evidenced disposal successor for the two pinned custom-section `releaseBuffers()` sites, but it must be adapted and compile-proven separately after the constructor unit.
+- Exact 26.2 `ViewArea` has no `setDirty(...)` method. Dirty state is keyed by packed section node in `SectionUpdateTracker`; `LevelExtractor.extractUsedSectionRenderStates(...)` consumes that state for `LevelRenderer.visibleSections` and compiles the corresponding `RenderSection`. Do not invent per-section dirty state. The old upstream ViewArea dirty injection and lazy-create dirty call must be migrated only through the already-proven `LevelExtractor` authority after constructor/disposal units are independently frozen.
 - First renderer-dirty helper run failed only because its fail-closed guard expected two `!= VSRenderer.SODIUM` sites while pinned source legitimately has three; corrected count is frozen.
 - Vanilla renderer bridge remains original VS2 authority: loaded ships, transformed ship AABB, `VSClientGameUtils.transformRenderWithShip`, custom ship `ViewArea` sections, and vanilla `visibleSections`. No custom renderer authority is permitted.
 
@@ -163,11 +166,11 @@ Create/SNR/Copycats are not authority for current standalone P1 work and must no
 ## next_safe_action
 
 1. Reconcile actual GitHub HEAD and read this file completely before acting.
-2. Preserve all twenty frozen P1 units and all locked negative evidence.
-3. Treat `cc747f3b550054bab8b638a8772d001fe8e546d8` / P0 `35524734167` / canonical compile `35524734103` / artifact `10609600687` as the authoritative **39-error / 5-source-file** implementation proof until a later exact canonical compile changes it.
+2. Preserve all twenty-one frozen P1 units and all locked negative evidence.
+3. Treat `810dc19a7a80d7cfcdbcc9ed141292ee976240e7` / P0 `35525024857` / canonical compile `35525024849` / artifact `10609334285` as the authoritative **38-error / 5-source-file** implementation proof until a later exact canonical compile changes it.
 4. Continue mandatory standalone vanilla renderer before optional FTB/OptiFine/Immersive-Portals work.
-5. In pinned `MixinViewAreaVanilla`, address only the single removed minimum-height call `level.getMinBuildHeight()` -> exact MC26.2 `level.getMinY()`. This vocabulary is already compile-proven in frozen build-height units. Preserve all three `getMinSectionY()` sites, five `ChunkPos.pack(...)` sites, both dirty sites, constructor, map/array ownership and both disposal sites.
-6. Do not touch either `setDirty` site, the `RenderSection` constructor, or either `releaseBuffers` site in the same patch.
-7. Chain the one minimum-height helper canonically, run exact-head P0 + canonical P1 compile, and classify the uploaded first-primary artifact. Expected clean outcome is **39 -> 38** with `MixinViewAreaVanilla` **6 -> 5**; do not assume that result before artifact proof.
-8. After that proof, stop mechanical ViewArea edits. The remaining constructor/disposal require exact 26.2 lifecycle/ownership evidence; the dirty sites must map only to the already-proven `LevelExtractor` authority with exact coordinate/boolean semantics.
-9. Remain P1. No Create/SNR/Copycats integration and no ordinary compile/debug video.
+5. Address only the one `RenderSection` constructor site in pinned `MixinViewAreaVanilla`. Exact 26.2 evidence requires `vs$sectionRenderDispatcher.new RenderSection(0, SectionPos.asLong(chunkX, sectionY, chunkZ))`; `SectionPos` coordinates are section coordinates, not shifted block coordinates. Preserve both dirty sites and both disposal sites unchanged.
+6. Chain a fail-closed constructor helper canonically after the frozen ViewArea minY helper. Run exact-head P0 + canonical P1 compile and classify the uploaded first-primary artifact. Expected clean outcome is **38 -> 37** with `MixinViewAreaVanilla` **5 -> 4**; do not assume that result before artifact proof.
+7. If constructor proof is clean, adapt the two pinned custom-section disposal calls from removed `releaseBuffers()` to exact vanilla 26.2 `reset()` as a separate lifecycle unit and separately prove the expected two-error reduction.
+8. Dirty migration comes last. Do not recreate `RenderSection` dirty state. Reconcile the removed `ViewArea.setDirty` injection and lazy-created section scheduling only through proven `Minecraft.levelExtractor -> LevelExtractor.setSectionDirty(..., boolean) -> SectionUpdateTracker`, preserving exact shipyard coordinates and upstream boolean semantics.
+9. Remain P1. No optional compat first, no Create/SNR/Copycats integration, and no ordinary compile/debug video.
