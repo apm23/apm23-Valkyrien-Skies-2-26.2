@@ -8,10 +8,11 @@ coverage by adapting:
 to:
     sy = getMinSectionY(); sy <= getMaxSectionY()
 
-This helper changes only that loop header. It deliberately leaves RenderSection.setDirty(boolean)
-untouched because renderer-dirty propagation needs separate architecture-sensitive evidence.
+This helper changes only that loop header. Renderer dirty propagation is chained only after
+this independently frozen section-range unit and is handled by its own fail-closed helper.
 """
 from pathlib import Path
+import subprocess
 import sys
 
 root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("upstream-vs2")
@@ -72,3 +73,11 @@ for anchor, expected in anchors.items():
 
 path.write_text(text, encoding="utf-8")
 print("P1_CLIENTCHUNKCACHE_SECTION_RANGE_26_2_OVERLAY_APPLIED loop=exclusive-to-inclusive")
+
+# Transport-only chaining for the independently evidenced Minecraft 26.2 renderer-dirty authority move.
+# The child helper preserves this unit's exact loop coverage and the pinned VS2 custom-section guard/order.
+renderer_dirty_helper = Path(__file__).with_name("apply_p1_clientchunkcache_renderer_dirty_26_2.py")
+if not renderer_dirty_helper.is_file():
+    raise SystemExit(f"fail-closed: required ClientChunkCache renderer-dirty overlay helper missing: {renderer_dirty_helper}")
+subprocess.run([sys.executable, str(renderer_dirty_helper), str(root)], check=True)
+print("P1_CLIENTCHUNKCACHE_RENDERER_DIRTY_26_2_CHAINED")
