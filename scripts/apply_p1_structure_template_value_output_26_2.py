@@ -50,7 +50,6 @@ if count != 1:
         f"expected exactly one pinned upstream StructureTemplate block-entity save branch in {path}, found {count}"
     )
 
-# Freeze the surrounding real VS2 StructureTemplate semantics before changing the API vocabulary.
 required_before = {
     "CompoundTag customTag = null;": 1,
     "((ICopyableBlock) block).onCopy((ServerLevel) level, currentWorldPos, blockState, blockEntity, shipsBeingCopied, centerPositions)": 1,
@@ -93,11 +92,17 @@ for needle, expected in required_before.items():
 path.write_text(text, encoding="utf-8")
 print("P1_STRUCTURE_TEMPLATE_VALUE_OUTPUT_26_2_OVERLAY_APPLIED")
 
-# Transport-only chaining from a workflow-watched canonical helper. The semantic adaptation
-# remains isolated in its own fail-closed helper and assumes the already-frozen hand overlay
-# has run earlier in the canonical chain.
+# Transport-only chaining from a workflow-watched canonical helper. Each semantic unit
+# remains isolated in its own fail-closed helper. The canonical chain has already applied
+# the frozen ClientLevel hand adaptation before these calls.
 standing_helper = Path(__file__).with_name("apply_p1_clientlevel_standing_dimensions_26_2.py")
 if not standing_helper.is_file():
     raise SystemExit(f"fail-closed: required ClientLevel standing-dimensions overlay helper missing: {standing_helper}")
 subprocess.run([sys.executable, str(standing_helper), str(root)], check=True)
 print("P1_CLIENTLEVEL_STANDING_DIMENSIONS_26_2_CHAINED")
+
+packet_create_helper = Path(__file__).with_name("apply_p1_clientpacketlistener_entity_create_26_2.py")
+if not packet_create_helper.is_file():
+    raise SystemExit(f"fail-closed: required ClientPacketListener entity-create overlay helper missing: {packet_create_helper}")
+subprocess.run([sys.executable, str(packet_create_helper), str(root)], check=True)
+print("P1_CLIENTPACKETLISTENER_ENTITY_CREATE_26_2_CHAINED")
