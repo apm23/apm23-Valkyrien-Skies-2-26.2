@@ -35,14 +35,14 @@ replacements = (
     ),
 )
 
-anchors = (
-    "final boolean isOnGround = movePacket.isOnGround() || getDraggingInformation().isEntityBeingDraggedByAShip();",
-    "PacketPlayerShipMotion packet = new PacketPlayerShipMotion(",
-    "ship.getWorldToShip().transformPosition(",
-    "ValkyrienSkiesMod.getVsCore().getSimplePacketNetworking().sendToServer(packet);",
-    "original.call(instance, realArg);",
-    "PacketEntityShipMotion packet = new PacketEntityShipMotion(",
-    "original.call(instance, arg);",
+anchor_counts = (
+    ("final boolean isOnGround = movePacket.isOnGround() || getDraggingInformation().isEntityBeingDraggedByAShip();", 1),
+    ("PacketPlayerShipMotion packet = new PacketPlayerShipMotion(", 1),
+    ("ship.getWorldToShip().transformPosition(", 2),
+    ("ValkyrienSkiesMod.getVsCore().getSimplePacketNetworking().sendToServer(packet);", 2),
+    ("original.call(instance, realArg);", 1),
+    ("PacketEntityShipMotion packet = new PacketEntityShipMotion(", 1),
+    ("original.call(instance, arg);", 1),
 )
 
 for old, new in replacements:
@@ -50,9 +50,9 @@ for old, new in replacements:
         raise SystemExit(f"fail-closed: expected exactly one legacy move-player constructor site, found {text.count(old)}: {old}")
     if new in text:
         raise SystemExit(f"fail-closed: 26.2 move-player constructor already adapted: {new}")
-for anchor in anchors:
-    if text.count(anchor) != 1:
-        raise SystemExit(f"fail-closed: preserved VS2 movement authority anchor changed: {anchor!r} count={text.count(anchor)}")
+for anchor, expected in anchor_counts:
+    if text.count(anchor) != expected:
+        raise SystemExit(f"fail-closed: preserved VS2 movement authority anchor changed: {anchor!r} expected={expected} count={text.count(anchor)}")
 
 for old, new in replacements:
     text = text.replace(old, new, 1)
@@ -62,9 +62,9 @@ for old, new in replacements:
         raise SystemExit(f"fail-closed: move-player constructor replacement did not converge exactly once: {new}")
 if text.count("movePacket.horizontalCollision()") != 4:
     raise SystemExit(f"fail-closed: expected four forwarded horizontalCollision flags, found {text.count('movePacket.horizontalCollision()')}")
-for anchor in anchors:
-    if text.count(anchor) != 1:
-        raise SystemExit(f"fail-closed: VS2 movement authority anchor changed after adaptation: {anchor!r}")
+for anchor, expected in anchor_counts:
+    if text.count(anchor) != expected:
+        raise SystemExit(f"fail-closed: VS2 movement authority anchor changed after adaptation: {anchor!r} expected={expected} count={text.count(anchor)}")
 
 path.write_text(text, encoding="utf-8")
 print("P1_MOVEPLAYER_HORIZONTAL_COLLISION_26_2_OVERLAY_APPLIED count=4")
