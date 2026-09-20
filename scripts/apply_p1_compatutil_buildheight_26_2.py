@@ -34,3 +34,4 @@ print("P1_COMPATUTIL_BUILDHEIGHT_26_2_OVERLAY_APPLIED")
 # Retriggered after correcting only the pinned three-site vanilla-renderer guard count.
 # Transport-only canonical P1 retrigger for the chained vanilla-renderer section-range proof.
 # Transport-only canonical P1 retrigger for the chained ViewArea ship-section index proof.
+# Retriggered after correcting only the pinned one-site ViewArea ship-section method guard.
