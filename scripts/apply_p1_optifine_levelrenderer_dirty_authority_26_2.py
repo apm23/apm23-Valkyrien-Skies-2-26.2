@@ -12,7 +12,7 @@ ship-chunk iteration, section coverage, and allChanged injection. No renderer st
 is duplicated by this overlay.
 """
 from pathlib import Path
-import sys
+import subprocess, sys
 
 root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("upstream-vs2")
 source = root / "common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/optifine_vanilla/MixinLevelRenderer.java"
@@ -100,3 +100,12 @@ for anchor, expected in anchors.items():
 
 source.write_text(new_text, encoding="utf-8")
 print("P1_OPTIFINE_LEVELRENDERER_DIRTY_AUTHORITY_26_2_OVERLAY_APPLIED authority=LevelExtractor boolean=false sites=1")
+
+# Immersive Portals chunk-tracking build-height vocabulary is a separate compile unit. Chain it
+# only after the now compile-proven OptiFine dirty bridge; its remaining class_5321 dependency
+# diagnostic is intentionally left untouched for a later mapping/dependency investigation.
+immptl_height_helper = Path(__file__).with_name("apply_p1_immptl_chunktracking_buildheight_26_2.py")
+if not immptl_height_helper.is_file():
+    raise SystemExit(f"fail-closed: required Immersive Portals chunk-tracking build-height helper missing: {immptl_height_helper}")
+subprocess.run([sys.executable, str(immptl_height_helper), str(root)], check=True)
+print("P1_IMMPTL_CHUNKTRACKING_BUILDHEIGHT_26_2_CHAINED")
