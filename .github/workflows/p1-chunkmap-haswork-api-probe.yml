@@ -1,0 +1,181 @@
+name: P1 ChunkMap hasWork API inspection
+
+on:
+  push:
+    paths:
+      - '.github/workflows/p1-chunkmap-haswork-api-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-chunkmap-haswork-api:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact upstream baseline
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Replay canonical P1 overlays in canonical order
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import shlex
+          import subprocess
+
+          workflow = Path('.github/workflows/p1-compile.yml').read_text(encoding='utf-8')
+          commands = re.findall(
+              r'^\s*run:\s+(python3 scripts/apply_p1_[^\n]+ upstream-vs2)\s*$',
+              workflow,
+              flags=re.MULTILINE,
+          )
+          if len(commands) < 50:
+              raise SystemExit(f'fail-closed: expected canonical overlay chain, found only {len(commands)} commands')
+          print(f'Replaying {len(commands)} canonical overlay commands')
+          for command in commands:
+              print('+', command)
+              subprocess.run(shlex.split(command), check=True)
+          PY
+
+      - name: Resolve exact common compile classpath
+        shell: bash
+        working-directory: upstream-vs2
+        run: |
+          set -euo pipefail
+          cat > ../p1-chunkmap-classpath.init.gradle <<'GRADLE'
+          gradle.projectsEvaluated {
+              def commonProject = gradle.rootProject.findProject(':common')
+              if (commonProject == null) {
+                  throw new GradleException('fail-closed: :common project not found')
+              }
+              commonProject.tasks.register('vsPrintMainCompileClasspath') {
+                  doLast {
+                      def sourceSets = commonProject.extensions.findByName('sourceSets')
+                      if (sourceSets == null) {
+                          throw new GradleException('fail-closed: sourceSets extension not found on :common')
+                      }
+                      sourceSets.getByName('main').compileClasspath.files.each { file ->
+                          println('VS_CP_FILE=' + file.absolutePath)
+                      }
+                  }
+              }
+          }
+          GRADLE
+          ./gradlew -I ../p1-chunkmap-classpath.init.gradle :common:vsPrintMainCompileClasspath --no-daemon \
+            | tee ../p1-chunkmap-classpath.log
+          grep -q '^VS_CP_FILE=' ../p1-chunkmap-classpath.log
+
+      - name: Inspect exact Minecraft 26.2 ChunkMap shutdown-work boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' | tee p1-chunkmap-haswork-api-probe.log
+          from pathlib import Path
+          import re
+          import subprocess
+          import zipfile
+
+          cp_log = Path('p1-chunkmap-classpath.log').read_text(encoding='utf-8', errors='replace')
+          jars = []
+          for line in cp_log.splitlines():
+              if line.startswith('VS_CP_FILE='):
+                  p = Path(line.split('=', 1)[1])
+                  if p.exists() and p.suffix == '.jar':
+                      jars.append(p)
+          if not jars:
+              raise SystemExit('fail-closed: no jar entries found on :common main compile classpath')
+
+          required = {
+              'net/minecraft/server/level/ChunkMap.class': 'net.minecraft.server.level.ChunkMap',
+              'net/minecraft/server/level/ChunkTaskDispatcher.class': 'net.minecraft.server.level.ChunkTaskDispatcher',
+              'net/minecraft/server/level/ThreadedLevelLightEngine.class': 'net.minecraft.server.level.ThreadedLevelLightEngine',
+              'net/minecraft/world/entity/ai/village/poi/PoiManager.class': 'net.minecraft.world.entity.ai.village.poi.PoiManager',
+          }
+          old_entry = 'net/minecraft/server/level/ChunkTaskPriorityQueueSorter.class'
+          found = {entry: [] for entry in required}
+          old_hits = []
+
+          print('=== EXACT COMPILE CLASSPATH TARGET JARS ===')
+          for jar in jars:
+              try:
+                  with zipfile.ZipFile(jar) as zf:
+                      names = set(zf.namelist())
+                      hits = [entry for entry in required if entry in names]
+                      if old_entry in names:
+                          old_hits.append(jar)
+                      if hits or old_entry in names:
+                          print('JAR', jar)
+                          for entry in hits:
+                              found[entry].append(jar)
+                              print('  HAS', entry)
+                          if old_entry in names:
+                              print('  HAS_OLD', old_entry)
+              except zipfile.BadZipFile:
+                  pass
+
+          missing = [entry for entry, matches in found.items() if not matches]
+          if missing:
+              raise SystemExit('fail-closed: required exact mapped classes missing: ' + ', '.join(missing))
+          print('OLD_SORTER_PRESENT=', bool(old_hits))
+
+          outputs = {}
+          for entry, cls in required.items():
+              class_texts = []
+              for jar in found[entry]:
+                  print('\n=== JAVAP', cls, 'FROM', jar, '===')
+                  proc = subprocess.run(
+                      ['javap', '-classpath', str(jar), '-p', '-s', '-c', cls],
+                      text=True,
+                      stdout=subprocess.PIPE,
+                      stderr=subprocess.STDOUT,
+                      check=False,
+                  )
+                  print(proc.stdout)
+                  if proc.returncode != 0:
+                      raise SystemExit(f'fail-closed: javap failed for {cls} from {jar}')
+                  class_texts.append(proc.stdout)
+              outputs[cls] = '\n'.join(class_texts)
+
+          chunkmap = outputs['net.minecraft.server.level.ChunkMap']
+          dispatcher = outputs['net.minecraft.server.level.ChunkTaskDispatcher']
+
+          required_fields = [
+              'updatingChunkMap', 'pendingUnloads', 'pendingGenerationTasks', 'lightEngine',
+              'poiManager', 'toDrop', 'worldgenTaskDispatcher', 'lightTaskDispatcher',
+              'distanceManager', 'unloadQueue'
+          ]
+          absent = [name for name in required_fields if name not in chunkmap]
+          if absent:
+              raise SystemExit('fail-closed: expected current ChunkMap fields not proven: ' + ', '.join(absent))
+          if 'queueSorter' in chunkmap:
+              raise SystemExit('fail-closed: old queueSorter field still present unexpectedly')
+          if not re.search(r'public boolean hasWork\(\);', chunkmap):
+              raise SystemExit('fail-closed: ChunkMap.hasWork() signature not proven')
+          if not re.search(r'public boolean hasWork\(\);', dispatcher):
+              raise SystemExit('fail-closed: ChunkTaskDispatcher.hasWork() signature not proven')
+
+          print('CHUNKMAP_26_2_API_PROVEN old_sorter_absent=' + str(not old_hits).lower()
+                + ' current_dispatchers=true hasWork_signatures=true')
+          PY
+
+      - name: Upload exact ChunkMap hasWork API inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-chunkmap-haswork-api-probe-${{ github.sha }}
+          path: |
+            p1-chunkmap-classpath.log
+            p1-chunkmap-haswork-api-probe.log
+          if-no-files-found: warn
