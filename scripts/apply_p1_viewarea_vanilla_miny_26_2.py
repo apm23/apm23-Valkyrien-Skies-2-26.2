@@ -65,3 +65,12 @@ if not ctor_helper.is_file():
     raise SystemExit(f"fail-closed: required ViewArea RenderSection constructor helper missing: {ctor_helper}")
 subprocess.run([sys.executable, str(ctor_helper), str(root)], check=True)
 print("P1_VIEWAREA_VANILLA_RENDERSECTION_CTOR_26_2_CHAINED")
+
+# Dirty ownership is a separate 26.2 authority unit. Chain it only after the independently
+# frozen constructor/disposal lifecycle helpers have completed, so those transformations stay
+# byte-for-byte semantically isolated while the obsolete ViewArea#setDirty boundary is retired.
+dirty_helper = Path(__file__).with_name("apply_p1_viewarea_vanilla_dirty_authority_26_2.py")
+if not dirty_helper.is_file():
+    raise SystemExit(f"fail-closed: required ViewArea dirty-authority helper missing: {dirty_helper}")
+subprocess.run([sys.executable, str(dirty_helper), str(root)], check=True)
+print("P1_VIEWAREA_VANILLA_DIRTY_AUTHORITY_26_2_CHAINED")
