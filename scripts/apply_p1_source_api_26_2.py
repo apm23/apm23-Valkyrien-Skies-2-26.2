@@ -372,4 +372,15 @@ replace_count(
     2,
 )
 
+# Exact-head run 35489919714 proved the sound Identifier adaptation clean and exposed a
+# direct Minecraft 26.2 package relocation for BlockUtil in MixinMinecraftServer. NeoForge's
+# 26.2 API documents the class and FoundRectangle under net.minecraft.util.BlockUtil. Change
+# only the import; the upstream helper body still delegates unchanged to PortalShape.
+replace_count(
+    "common/src/main/java/org/valkyrienskies/mod/mixin/server/MixinMinecraftServer.java",
+    "import net.minecraft.BlockUtil;",
+    "import net.minecraft.util.BlockUtil;",
+    1,
+)
+
 print("P1_SOURCE_API_26_2_OVERLAY_APPLIED")
