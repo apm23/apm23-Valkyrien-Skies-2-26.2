@@ -1,0 +1,126 @@
+name: P1 LevelChunk vanilla promotion callsite inspection
+
+on:
+  push:
+    paths:
+      - '.github/workflows/p1-levelchunk-promotion-callsite-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-levelchunk-promotion-callsite:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact upstream baseline
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Replay canonical P1 overlays in canonical order
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, shlex, subprocess
+          workflow = Path('.github/workflows/p1-compile.yml').read_text(encoding='utf-8')
+          commands = re.findall(r'^\s*run:\s+(python3 scripts/apply_p1_[^\n]+ upstream-vs2)\s*$', workflow, flags=re.MULTILINE)
+          if len(commands) < 50:
+              raise SystemExit(f'fail-closed: expected canonical overlay chain, found only {len(commands)} commands')
+          for command in commands:
+              subprocess.run(shlex.split(command), check=True)
+          PY
+
+      - name: Resolve exact common compile classpath
+        shell: bash
+        working-directory: upstream-vs2
+        run: |
+          set -euo pipefail
+          cat > ../p1-levelchunk-promotion-callsite-classpath.init.gradle <<'GRADLE'
+          gradle.projectsEvaluated {
+              def p = gradle.rootProject.findProject(':common')
+              if (p == null) throw new GradleException('fail-closed: :common project not found')
+              p.tasks.register('vsPrintMainCompileClasspath') {
+                  doLast {
+                      def ss = p.extensions.findByName('sourceSets')
+                      if (ss == null) throw new GradleException('fail-closed: sourceSets missing')
+                      ss.getByName('main').compileClasspath.files.each { f -> println('VS_CP_FILE=' + f.absolutePath) }
+                  }
+              }
+          }
+          GRADLE
+          ./gradlew -I ../p1-levelchunk-promotion-callsite-classpath.init.gradle :common:vsPrintMainCompileClasspath --no-daemon \
+            | tee ../p1-levelchunk-promotion-callsite-classpath.log
+          grep -q '^VS_CP_FILE=' ../p1-levelchunk-promotion-callsite-classpath.log
+
+      - name: Trace replaceProtoChunk callers and promotion construction
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' | tee p1-levelchunk-promotion-callsite-probe.log
+          from pathlib import Path
+          import subprocess, zipfile
+
+          cp = Path('p1-levelchunk-promotion-callsite-classpath.log').read_text(errors='replace')
+          jars = [Path(x.split('=',1)[1]) for x in cp.splitlines() if x.startswith('VS_CP_FILE=')]
+          target_entry = 'net/minecraft/server/level/GenerationChunkHolder.class'
+          owner_jars = []
+          for jar in jars:
+              if not jar.exists() or jar.suffix != '.jar':
+                  continue
+              try:
+                  with zipfile.ZipFile(jar) as zf:
+                      if target_entry in zf.namelist():
+                          owner_jars.append(jar)
+              except zipfile.BadZipFile:
+                  pass
+          if len(owner_jars) != 1:
+              raise SystemExit(f'fail-closed: expected one exact mapped Minecraft owner jar, found {owner_jars}')
+          jar = owner_jars[0]
+          print('MAPPED_MC_JAR=', jar)
+
+          needles = [b'replaceProtoChunk', b'ImposterProtoChunk']
+          candidates = []
+          with zipfile.ZipFile(jar) as zf:
+              for name in zf.namelist():
+                  if not name.endswith('.class') or '$' in name:
+                      continue
+                  data = zf.read(name)
+                  if any(n in data for n in needles):
+                      candidates.append(name)
+          print('CANDIDATE_COUNT=', len(candidates))
+          for name in candidates:
+              print('CANDIDATE=', name)
+          if not candidates:
+              raise SystemExit('fail-closed: no class references promotion symbols')
+
+          for name in candidates:
+              cls = name[:-6].replace('/', '.')
+              print('\n=== JAVAP', cls, '===')
+              p = subprocess.run(['javap','-classpath',str(jar),'-p','-s','-c',cls], text=True,
+                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+              print(p.stdout)
+              if p.returncode != 0:
+                  raise SystemExit(f'fail-closed: javap failed for {cls}')
+
+          print('\nLEVELCHUNK_PROMOTION_CALLSITE_26_2_PROBE_COMPLETE exact_mapped_jar=true')
+          PY
+
+      - name: Upload exact promotion callsite inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-levelchunk-promotion-callsite-probe-${{ github.sha }}
+          path: |
+            p1-levelchunk-promotion-callsite-classpath.log
+            p1-levelchunk-promotion-callsite-probe.log
+          if-no-files-found: warn
