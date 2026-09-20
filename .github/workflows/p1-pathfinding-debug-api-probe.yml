@@ -1,4 +1,5 @@
 name: P1 Pathfinding Debug API inspection
+# One probe-only retry after run 35493504112 failed during transient Architectury plugin resolution before javap.
 
 on:
   push:
@@ -73,7 +74,7 @@ jobs:
           set -euo pipefail
           python3 - <<'PY' | tee p1-pathfinding-debug-api-probe.log
           from pathlib import Path
-          import subprocess, zipfile, re
+          import subprocess, zipfile
 
           cp_log = Path('p1-pathfinding-debug-classpath.log').read_text(encoding='utf-8', errors='replace')
           jars = []
