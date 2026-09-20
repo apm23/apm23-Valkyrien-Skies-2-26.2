@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
-"""Adapt the pinned VS2 ClientChunkCache section-range accessors to Minecraft 26.2.
+"""Adapt the pinned VS2 ClientChunkCache section-range loop to Minecraft 26.2.
 
-Minecraft 26.2 exposes LevelHeightAccessor section bounds as getMinSectionY()/getMaxSectionY().
-This helper changes only the two accessor calls in the existing ship render-section invalidation loop.
-It deliberately leaves RenderSection.setDirty(boolean) untouched because that renderer-dirty API needs
-separate architecture-sensitive evidence.
+Minecraft 1.21.1 getMaxSection() is an exclusive upper bound, while Minecraft 26.2
+getMaxSectionY() is the inclusive maximum section Y. Preserve the exact upstream loop
+coverage by adapting:
+    sy = getMinSection(); sy < getMaxSection()
+to:
+    sy = getMinSectionY(); sy <= getMaxSectionY()
+
+This helper changes only that loop header. It deliberately leaves RenderSection.setDirty(boolean)
+untouched because renderer-dirty propagation needs separate architecture-sensitive evidence.
 """
 from pathlib import Path
 import sys
@@ -16,17 +21,17 @@ if not path.is_file():
 
 text = path.read_text(encoding="utf-8")
 
-old_min = "level.getMinSection()"
-old_max = "level.getMaxSection()"
-new_min = "level.getMinSectionY()"
-new_max = "level.getMaxSectionY()"
+old_loop = "for (int sy = level.getMinSection(); sy < level.getMaxSection(); sy++) {"
+new_loop = "for (int sy = level.getMinSectionY(); sy <= level.getMaxSectionY(); sy++) {"
 
-if text.count(old_min) != 1:
-    raise SystemExit(f"fail-closed: expected one legacy getMinSection call, found {text.count(old_min)}")
-if text.count(old_max) != 1:
-    raise SystemExit(f"fail-closed: expected one legacy getMaxSection call, found {text.count(old_max)}")
-if new_min in text or new_max in text:
-    raise SystemExit("fail-closed: ClientChunkCache section-range adaptation already partially present")
+if text.count(old_loop) != 1:
+    raise SystemExit(f"fail-closed: expected one pinned legacy section-range loop, found {text.count(old_loop)}")
+if new_loop in text:
+    raise SystemExit("fail-closed: ClientChunkCache section-range loop already adapted")
+if text.count("level.getMinSection()") != 1 or text.count("level.getMaxSection()") != 1:
+    raise SystemExit("fail-closed: legacy section-range accessors changed outside the pinned loop")
+if "level.getMinSectionY()" in text or "level.getMaxSectionY()" in text:
+    raise SystemExit("fail-closed: section-range adaptation already partially present")
 
 # Require the two previously proven ClientChunkCache units before this one.
 if text.count("ChunkPos.pack(") != 6 or "ChunkPos.asLong(" in text:
@@ -37,7 +42,6 @@ if text.count("replaceWithPacketData(buf, heightmaps, consumer);") != 2:
     raise SystemExit("fail-closed: expected two frozen packet-heightmap forwarding calls before section-range unit")
 
 anchors = {
-    "if (ValkyrienCommonMixinConfigPlugin.getVSRenderer() != VSRenderer.SODIUM) {": 1,
     "final IVSViewAreaMethods viewArea = (IVSViewAreaMethods)": 1,
     "for (int dx = -1; dx <= 1; dx++) {": 1,
     "for (int dz = -1; dz <= 1; dz++) {": 1,
@@ -51,13 +55,14 @@ for anchor, expected in anchors.items():
     if count != expected:
         raise SystemExit(f"fail-closed: preserved ClientChunkCache renderer/lifecycle anchor changed: {anchor!r} count={count} expected={expected}")
 
-text = text.replace(old_min, new_min, 1)
-text = text.replace(old_max, new_max, 1)
+text = text.replace(old_loop, new_loop, 1)
 
-if old_min in text or text.count(new_min) != 1:
-    raise SystemExit("fail-closed: getMinSectionY adaptation did not converge exactly once")
-if old_max in text or text.count(new_max) != 1:
-    raise SystemExit("fail-closed: getMaxSectionY adaptation did not converge exactly once")
+if old_loop in text or text.count(new_loop) != 1:
+    raise SystemExit("fail-closed: section-range loop adaptation did not converge exactly once")
+if "level.getMinSection()" in text or "level.getMaxSection()" in text:
+    raise SystemExit("fail-closed: legacy section-range accessor remains after adaptation")
+if text.count("level.getMinSectionY()") != 1 or text.count("level.getMaxSectionY()") != 1:
+    raise SystemExit("fail-closed: 26.2 section-range accessors did not converge exactly once")
 if text.count("renderSection.setDirty(true);") != 1:
     raise SystemExit("fail-closed: renderer-dirty call changed unexpectedly")
 for anchor, expected in anchors.items():
@@ -66,4 +71,4 @@ for anchor, expected in anchors.items():
         raise SystemExit(f"fail-closed: ClientChunkCache renderer/lifecycle anchor changed after adaptation: {anchor!r} count={count} expected={expected}")
 
 path.write_text(text, encoding="utf-8")
-print("P1_CLIENTCHUNKCACHE_SECTION_RANGE_26_2_OVERLAY_APPLIED calls=2")
+print("P1_CLIENTCHUNKCACHE_SECTION_RANGE_26_2_OVERLAY_APPLIED loop=exclusive-to-inclusive")
