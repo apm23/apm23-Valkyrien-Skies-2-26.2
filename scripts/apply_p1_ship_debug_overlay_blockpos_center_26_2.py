@@ -45,3 +45,11 @@ helper = Path(__file__).with_name("apply_p1_pathfinding_debug_lifecycle_26_2.py"
 if not helper.is_file():
     raise SystemExit(f"fail-closed: required pathfinding debug overlay helper missing: {helper}")
 subprocess.run([sys.executable, str(helper), str(root)], check=True)
+
+# Transport-only chaining for the separately proven LevelRenderer/GameRenderer/LevelExtractor
+# 26.2 split. The helper preserves the upstream VS camera-transform observation and block-damage
+# distance behavior at their exact current vanilla owners; it adds no camera or render authority.
+level_helper = Path(__file__).with_name("apply_p1_levelrenderer_split_26_2.py")
+if not level_helper.is_file():
+    raise SystemExit(f"fail-closed: required LevelRenderer split overlay helper missing: {level_helper}")
+subprocess.run([sys.executable, str(level_helper), str(root)], check=True)
