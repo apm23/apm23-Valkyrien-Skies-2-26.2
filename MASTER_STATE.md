@@ -1,6 +1,6 @@
 # MASTER_STATE — REAL VS2 26.2 PORT
 
-GitHub code is the implementation source of truth. This file is the durable continuity ledger; chat memory is not authoritative. Git history remains binding for every frozen-green and negative-evidence record even when this ledger is compacted.
+GitHub code is the implementation source of truth. This file is the durable continuity ledger; chat memory is not authoritative. Git history remains binding for frozen-green and negative-evidence records even when this ledger is compacted.
 
 ## Project identity
 
@@ -20,18 +20,19 @@ GitHub code is the implementation source of truth. This file is the durable cont
 - upstream mod version: `2.4.12`
 - imported as gitlink/submodule `upstream-vs2/`
 
-Minecraft 26.2 changes are applied by explicit fail-closed overlays. Every core subsystem must remain traceable to upstream VS2 or to a documented minimal 26.2 adaptation feeding the existing VS2 architecture.
+Minecraft 26.2 changes are applied by explicit fail-closed overlays. Every core subsystem remains traceable to upstream VS2 or to a documented minimal 26.2 adaptation feeding existing VS2 architecture.
 
 ## Current reconciliation — 2026-09-20 P1 Java API frontier
 
 Current proven implementation boundary before this documentation-only reconciliation commit:
 
-- canonical implementation/proof HEAD: `486dbdaec5302f983d76bd871dea4e59eac67479` — `ci: remove duplicate ClientLevel hand overlay call`.
-- exact-head P0 provenance run `35510781681`: **success**.
-- exact-head standalone P1 compile run `35510781654`: **compile-frontier failure only** after all 87 canonical overlay steps reached javac.
-- canonical compile artifact: `p1-compile-log-486dbdaec5302f983d76bd871dea4e59eac67479`, ID `10605136919`, artifact digest `sha256:9db3ed04345617d270d774f0fc6fdd3c7f1980c05636beb38f707ddb9dcb41d0`.
-- extracted `p1-compile.log`: **252231 bytes**, SHA-256 `f1c633ab98e4a78c99492dba010e3f88a500785c95b504cd4c41657075b52eb7`.
-- authoritative primary javac pass: **62 errors across 10 Java source files**. Gradle repeats diagnostics later; use the first `62 errors` summary as frontier authority.
+- canonical implementation/proof HEAD: `4e880e6271c9fa79001df9d3077086c4dda6530f` — `ci: chain ClientLevel standing-width overlay`.
+- exact-head P0 provenance run `35511223215`: **success**.
+- exact-head standalone P1 compile run `35511223209`: **compile-frontier failure only** after all canonical overlay steps reached javac.
+- exact-head StructureTemplate isolated proof run `35511223217`: **success**; the transport chain did not regress that frozen proof.
+- canonical compile artifact: `p1-compile-log-4e880e6271c9fa79001df9d3077086c4dda6530f`, ID `10605346436`, artifact digest `sha256:e6959690528824949bd097d79d3eb2d467438d7869724730939d6a0a84a48909`.
+- extracted `p1-compile.log`: **254509 bytes**, SHA-256 `85e4d9d2604eed908158673f48fef121b9eacae2d29fc90c02df79b22bbaf05e`.
+- authoritative primary javac pass: **61 errors across 9 Java source files**. Gradle repeats diagnostics later; use the first `61 errors` summary as frontier authority.
 - project state: `P1_SOURCE_API_ADAPTATION_IN_PROGRESS`.
 - active blocker classification: `MINECRAFT_26_2_JAVA_API_FRONTIER`.
 - This is not P1 boot proof, not P2/M1 ship proof, and not runtime rendering proof.
@@ -39,18 +40,19 @@ Current proven implementation boundary before this documentation-only reconcilia
 ### Proven frontier progression since the old 86-error ledger
 
 1. `MixinServerLevel` chunk-key/build-height vocabulary: **86 -> 82**. Exact four-site adaptation only; TicketStorage predicates, SHIP_CHUNK lifecycle, load/unload ordering, terrain updates, wing scan, and shipyard keep-loaded authority preserved.
-2. optional legacy Sodium chunk-tracker bridge isolation: **82 -> 80**. P1 standalone does not include Sodium; only the two obsolete optional callbacks/imports were isolated. Vanilla VS2 rendering remains authority.
-3. `MixinEntity.entityInside` 26.2 effect collector adaptation: **80 -> 79**. Real upstream VS2 ship-space scan feeds Entity's vanilla `InsideBlockEffectApplier.StepBasedCollector`; no NOOP suppression or duplicate block-effect authority.
+2. optional legacy Sodium chunk-tracker bridge isolation: **82 -> 80**. P1 standalone does not include Sodium; only obsolete optional callbacks/imports were isolated. Vanilla VS2 rendering remains authority.
+3. `MixinEntity.entityInside` 26.2 effect collector adaptation: **80 -> 79**. Real upstream VS2 ship-space scan feeds Entity's vanilla `InsideBlockEffectApplier.StepBasedCollector`; no duplicate block-effect authority.
 4. `MixinLivingEntity` local-instance authority vocabulary: **79 -> 78**. Old local-instance semantics were matched to the 26.2 authority split; dragged-entity ship lookup/interpolation authority unchanged.
-5. `MixinLocalPlayer` movement-packet constructors: **78 -> 74**. All four current packet variants forward vanilla `horizontalCollision()` unchanged while retaining VS2's existing ground-state adaptation and real ship-motion packet/transform paths.
-6. `MixinClientChunkCache` packed chunk keys plus packet-heightmap API: **74 -> 66**. Six packed-key vocabulary sites and two packet heightmap forwarding sites only; chunk storage, packet decode, relight, connectivity, ship lifecycle, renderer selection, and `onChunkLoaded` ordering unchanged.
-7. `MixinClientChunkCache` section-height range: **66 -> 64**. Preserved the pinned upstream exclusive section range as current inclusive min/max-Y vocabulary. Earlier one-loop guard failure was harness-only and corrected at `8dea5dfb0e2df52fbf7440abfa6e69b88c94846b`.
-8. `MixinMinecraftServer` shutdown SHIP_CHUNK ticket removal: **64 -> 63**. Commit `fc887ec127899ba1437433ebf77ee6fc968c82ab` extends the already-proven radius-ticket mapping to the missed Java shutdown callsite only. Radius 0, SHIP_CHUNK type, iteration, shutdown ordering, and FORCED cleanup unchanged; compile proof `35510099480`.
-9. `MixinClientLevel` creative barrier two-hand API: **63 -> 62**. Pinned upstream's `LocalPlayer.getHandSlots()` loop means “barrier in either hand”. Minecraft 26.2 exposes public `getMainHandItem()` / `getOffhandItem()` instead. The fail-closed overlay `apply_p1_clientlevel_hand_items_26_2.py` changes only that read to an explicit main-hand OR offhand barrier check and removes the obsolete `ItemStack` import. Creative-mode gating, barrier marker behavior, player-scale calculation, real VS2 ship intersection/world-to-ship transforms, particle probability/scaling, and renderer/physics authority are unchanged. Exact compile `35510781654` removes only the `getHandSlots()` diagnostic; `MixinClientLevel` retains exactly one independent `STANDING_DIMENSIONS` error.
+5. `MixinLocalPlayer` movement-packet constructors: **78 -> 74**. Current packet variants forward vanilla `horizontalCollision()` unchanged while retaining VS2 ground-state adaptation and real ship-motion packet/transform paths.
+6. `MixinClientChunkCache` packed keys plus packet-heightmap API: **74 -> 66**. Vocabulary/parameter adaptation only; chunk storage, packet decode, relight, connectivity, ship lifecycle, renderer selection, and `onChunkLoaded` ordering unchanged.
+7. `MixinClientChunkCache` section-height range: **66 -> 64**. Preserved pinned upstream exclusive range as current inclusive min/max-Y vocabulary. Earlier loop-count failure was harness-only; corrected at `8dea5dfb0e2df52fbf7440abfa6e69b88c94846b`.
+8. `MixinMinecraftServer` shutdown SHIP_CHUNK ticket removal: **64 -> 63**. `fc887ec127899ba1437433ebf77ee6fc968c82ab` extends the already-proven radius-ticket mapping to the missed shutdown callsite only; radius/type/order/FORCED cleanup unchanged. Proof `35510099480`.
+9. `MixinClientLevel` creative barrier two-hand API: **63 -> 62**. `getHandSlots()` became explicit public `getMainHandItem()` OR `getOffhandItem()` reads. Creative gate, barrier marker behavior, player-scale math, real VS2 ship intersection/world-to-ship transforms, probabilities, and renderer/physics authority unchanged. Proof `35510781654` at `486dbdaec5302f983d76bd871dea4e59eac67479`.
+10. `MixinClientLevel` canonical standing-width API: **62 -> 61**. Pinned VS2 divides current `getBbWidth()` by the unscaled standing constant `STANDING_DIMENSIONS.width()`. Exact Minecraft 26.2 `Avatar` source proves public `getDefaultDimensions(Pose.STANDING)` returns `POSES.getOrDefault(Pose.STANDING, STANDING_DIMENSIONS)`, and `POSES` maps `Pose.STANDING` directly to that same base `STANDING_DIMENSIONS`. The fail-closed overlay therefore changes only the protected-field access to `player.getDefaultDimensions(Pose.STANDING).width()` and explicitly forbids the scale-aware `player.getDimensions(Pose.STANDING)` substitution. Numerator, ship intersection, world-to-ship transforms, particle probabilities/ranges, barrier behavior, and VS2 renderer/physics authority are unchanged. Exact compile `35511223209` removes `MixinClientLevel` entirely from the primary error set.
 
-Freeze all nine units above at P1 compile/API scope. Runtime semantics remain to be proven later by the normal P1/P2 gates.
+Freeze all ten units above at P1 compile/API scope. Runtime semantics remain to be proven later by normal P1/P2 gates.
 
-### Current primary Java frontier at `486dbdae...`
+### Current primary Java frontier at `4e880e62...`
 
 1. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/immersive_portals/MixinMyBuiltChunkStorage.java` — 25
 2. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/vanilla_renderer/MixinViewAreaVanilla.java` — 14
@@ -61,9 +63,8 @@ Freeze all nine units above at P1 compile/API scope. Runtime semantics remain to
 7. `common/src/main/java/org/valkyrienskies/mod/mixin/client/multiplayer/MixinClientPacketListener.java` — 2
 8. `common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/ftb_chunks/MixinClaimedChunkManagerImpl.java` — 2
 9. `common/src/main/java/org/valkyrienskies/mod/mixin/client/world/MixinClientChunkCache.java` — 1
-10. `common/src/main/java/org/valkyrienskies/mod/mixin/client/world/MixinClientLevel.java` — 1
 
-`MixinServerLevel`, `SodiumCompat`, `MixinEntity`, `MixinLivingEntity`, `MixinLocalPlayer`, and `MixinMinecraftServer` remain zero-error in the primary javac pass. `MixinClientLevel` now has only the separate standing-width/player-scale API error. `MixinClientChunkCache` remains intentionally at one unresolved ship-render dirty-invalidation error.
+`MixinServerLevel`, `SodiumCompat`, `MixinEntity`, `MixinLivingEntity`, `MixinLocalPlayer`, `MixinMinecraftServer`, and `MixinClientLevel` are zero-error in the primary javac pass. `MixinClientChunkCache` remains intentionally at one unresolved ship-render dirty-invalidation error.
 
 Do not bulk-rewrite this list. Continue one bounded, evidence-backed 26.2 API unit at a time.
 
@@ -80,7 +81,7 @@ Do not reopen absent direct contradictory evidence:
 - vanilla renderer bridge — canonical `290e2bb6c1f6248437e4d189dfb4a01e82a31e33`; real VS2 ship-aware distance, loaded-ship iteration, transformed ship AABB, and `VSClientGameUtils.transformRenderWithShip` remain authority.
 - LevelRenderer / LevelExtractor split — `660d5320902a3ecba4f3219969aa77b0316cfa52`; existing `IVSCamera` is observation only.
 - optional Create deployer helper is P1 compile isolation only, never P3 Create integration.
-- `MixinClientLevel` creative barrier hand detection at proof head `486dbdaec5302f983d76bd871dea4e59eac67479`: two-hand read only; do not broaden to inventory scanning or conflate it with player scale.
+- `MixinClientLevel` two-hand barrier read and base-standing-width adaptations are frozen at proof heads `486dbdaec5302f983d76bd871dea4e59eac67479` and `4e880e6271c9fa79001df9d3077086c4dda6530f`; do not broaden to inventory scanning, scale-aware dimensions, or particle/reference-space redesign.
 
 Forbidden final architecture remains: custom VS2-like reference frames, synthetic carry/inertia, fake gravity or wall/floor clamps, per-tick setPos chase, camera counter-rotation/forcing, duplicate authority, floor-only fake success, or reuse of retired `apm23/VS2-Create_Interactive` implementation code.
 
@@ -96,7 +97,8 @@ Forbidden final architecture remains: custom VS2-like reference frames, syntheti
 - move-player first helper guard expected one transform/networking anchor but source legitimately had player + vehicle paths; harness-only failure, later compile-green.
 - ClientChunkCache section-range guard at `4f7a8461508a55d1c204eaf08343f6af01e32d14` expected one `dx/dz` loop but source has two; corrected at `8dea5dfb0e2df52fbf7440abfa6e69b88c94846b` and later compile-green.
 - Do not replace remaining `RenderSection.setDirty(true)` mechanically with a vanilla dirty call. It targets a section obtained through `IVSViewAreaMethods.vs$getShipRenderSection(...)`; exact ship-render invalidation ownership/access must be proven before mutation.
-- ClientLevel hand-overlay transport: commit/run `587c6b41d2a95815d26440ee753abc0f70faecb6` / `35510733124` invoked the already-successful hand helper a second time from StructureTemplate and failed its fail-closed idempotence guard before javac. This was transport-only. `486dbdaec5302f983d76bd871dea4e59eac67479` removed only that duplicate call; never replay the duplicate StructureTemplate chain.
+- ClientLevel hand-overlay transport: `587c6b41d2a95815d26440ee753abc0f70faecb6` / `35510733124` invoked the hand helper twice and failed its idempotence guard before javac. `486dbdaec5302f983d76bd871dea4e59eac67479` removed only the duplicate call; never replay it.
+- `player.getDimensions(Pose.STANDING)` is a locked failed/forbidden standing-width hypothesis for this site because it is not the proven base-standing constant boundary and could collapse the intended current-width/base-width ratio. Use the proven `getDefaultDimensions(Pose.STANDING)` mapping only.
 - Actions self-push workflow edits without `workflows` permission remain failed transport hypothesis.
 - retired `apm23/VS2-Create_Interactive` implementation is forbidden.
 
@@ -129,11 +131,12 @@ Create/SNR/Copycats are not authority for current standalone P1 source adaptatio
 
 1. This ledger commit is documentation-only. Require exact-head P0 provenance success before the next source mutation.
 2. Preserve all frozen boundaries and negative evidence above.
-3. Treat artifact `10605136919` as the canonical **62-error / 10-source-file** Java frontier until a later exact canonical compile changes it.
-4. Freeze the proven `MixinClientLevel` creative barrier two-hand adaptation. Do not replay `getHandSlots()` work or broaden its semantics.
-5. `MixinClientLevel.java` now has exactly one primary error: `Player.STANDING_DIMENSIONS` is protected in 26.2 at the existing scale formula `player.getBbWidth() / Player.STANDING_DIMENSIONS.width()`. Treat this as a new, independent API unit. Prove the exact current public way to obtain the canonical **unscaled standing player width** before mutation. Do not simply substitute `player.getDimensions(Pose.STANDING)` unless it is proven to preserve the denominator's upstream meaning; a scale-aware getter could collapse the intended ratio.
-6. Preserve the surrounding particle algorithm exactly while researching/adapting that unit: current `getBbWidth()` numerator, ship intersection query, world-to-ship transforms, bigger/smaller AABB probabilities, barrier visibility behavior, particle coordinates, and all VS2 renderer/physics authority.
-7. Leave `MixinClientChunkCache`'s one ship-specific dirty-invalidation error untouched unless its custom ship-render ownership path is independently proven.
-8. `MixinClientPacketListener.java` has two lifecycle-sensitive errors around the real `SHIP_MOUNTING_ENTITY_TYPE`; do not guess spawn reason/placement APIs. `MixinLevelChunk.java` remains lifecycle/storage sensitive and must be split by error class. Optional compat (`Immersive Portals`, FTB Chunks, OptiFine) is not first target merely because it has many errors.
-9. After any bounded source mutation, run the exact canonical standalone P1 compile, classify the first primary javac pass from its uploaded artifact, and update this ledger at the next meaningful proven boundary.
-10. Remain P1. No ordinary compile/debug video.
+3. Treat artifact `10605346436` as the canonical **61-error / 9-source-file** Java frontier until a later exact canonical compile changes it.
+4. Freeze both proven `MixinClientLevel` units. Do not replay hand-slot or standing-width work.
+5. Leave `MixinClientChunkCache`'s one ship-specific dirty-invalidation error untouched unless its custom ship-render ownership path is independently proven.
+6. Next non-optional bounded core target is `MixinClientPacketListener.java`, currently exactly two primary errors in the real `SHIP_MOUNTING_ENTITY_TYPE` client-spawn branch: legacy `EntityType.create(level)` no longer matches 26.2, and `Entity.moveTo(d,e,f)` no longer exists. Treat these as separate API units unless exact vanilla 26.2 spawn code proves they are one atomic lifecycle migration.
+7. First investigate only the entity-creation unit. Prove the exact Minecraft 26.2 `ClientPacketListener.handleAddEntity` creation path and the correct `EntitySpawnReason`/`EntitySpawnRequest` semantics for a client entity created from `ClientboundAddEntityPacket`. Do not guess a spawn reason, do not alter packet cancellation, packet position codec sync, rotation, id/UUID, `level.addEntity`, or VS2 mounting-entity authority.
+8. Only after creation is evidenced and compile-proven may the removed `moveTo(d,e,f)` site be handled as its own unit; prove the current vanilla position initialization equivalent before mutation.
+9. `MixinLevelChunk.java` remains lifecycle/storage-sensitive and must be split by error class. Optional compat (`Immersive Portals`, FTB Chunks, OptiFine) is not first target merely because it has many errors.
+10. After any bounded source mutation, run exact canonical standalone P1 compile, classify the first primary javac pass from the uploaded artifact, and update this ledger at the next meaningful proven boundary.
+11. Remain P1. No ordinary compile/debug video.
