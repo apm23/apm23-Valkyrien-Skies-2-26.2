@@ -1,0 +1,165 @@
+name: P1 LevelChunk unload reload boundary inspection
+
+on:
+  push:
+    paths:
+      - '.github/workflows/p1-levelchunk-unload-reload-boundary-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-levelchunk-unload-reload-boundary:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact upstream baseline
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Replay canonical P1 overlays in canonical order
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, shlex, subprocess
+          workflow = Path('.github/workflows/p1-compile.yml').read_text(encoding='utf-8')
+          commands = re.findall(r'^\s*run:\s+(python3 scripts/apply_p1_[^\n]+ upstream-vs2)\s*$', workflow, flags=re.MULTILINE)
+          if len(commands) < 50:
+              raise SystemExit(f'fail-closed: expected canonical overlay chain, found only {len(commands)} commands')
+          for command in commands:
+              subprocess.run(shlex.split(command), check=True)
+          PY
+
+      - name: Resolve exact common compile classpath
+        shell: bash
+        working-directory: upstream-vs2
+        run: |
+          set -euo pipefail
+          cat > ../p1-levelchunk-unload-reload-classpath.init.gradle <<'GRADLE'
+          gradle.projectsEvaluated {
+              def p = gradle.rootProject.findProject(':common')
+              if (p == null) throw new GradleException('fail-closed: :common project not found')
+              p.tasks.register('vsPrintMainCompileClasspath') {
+                  doLast {
+                      def ss = p.extensions.findByName('sourceSets')
+                      if (ss == null) throw new GradleException('fail-closed: sourceSets missing')
+                      ss.getByName('main').compileClasspath.files.each { f -> println('VS_CP_FILE=' + f.absolutePath) }
+                  }
+              }
+          }
+          GRADLE
+          ./gradlew -I ../p1-levelchunk-unload-reload-classpath.init.gradle :common:vsPrintMainCompileClasspath --no-daemon \
+            | tee ../p1-levelchunk-unload-reload-classpath.log
+          grep -q '^VS_CP_FILE=' ../p1-levelchunk-unload-reload-classpath.log
+
+      - name: Inspect exact Minecraft 26.2 unload reload lifecycle
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' | tee p1-levelchunk-unload-reload-boundary-probe.log
+          from pathlib import Path
+          import subprocess, zipfile
+
+          cp = Path('p1-levelchunk-unload-reload-classpath.log').read_text(errors='replace')
+          jars = [Path(x.split('=',1)[1]) for x in cp.splitlines() if x.startswith('VS_CP_FILE=')]
+          required = {
+              'net/minecraft/server/level/ServerChunkCache.class': 'net.minecraft.server.level.ServerChunkCache',
+              'net/minecraft/server/level/ChunkMap.class': 'net.minecraft.server.level.ChunkMap',
+              'net/minecraft/server/level/ChunkHolder.class': 'net.minecraft.server.level.ChunkHolder',
+              'net/minecraft/server/level/DistanceManager.class': 'net.minecraft.server.level.DistanceManager',
+              'net/minecraft/server/level/Ticket.class': 'net.minecraft.server.level.Ticket',
+          }
+          optional = {
+              'net/minecraft/server/level/TicketStorage.class': 'net.minecraft.server.level.TicketStorage',
+              'net/minecraft/server/level/ServerLevel.class': 'net.minecraft.server.level.ServerLevel',
+              'net/minecraft/world/level/chunk/storage/ChunkStorage.class': 'net.minecraft.world.level.chunk.storage.ChunkStorage',
+          }
+          targets = {**required, **optional}
+          found = {k: [] for k in targets}
+          for jar in jars:
+              if not jar.exists() or jar.suffix != '.jar':
+                  continue
+              try:
+                  with zipfile.ZipFile(jar) as zf:
+                      names = set(zf.namelist())
+                      for entry in targets:
+                          if entry in names:
+                              found[entry].append(jar)
+              except zipfile.BadZipFile:
+                  pass
+          missing = [entry for entry in required if not found[entry]]
+          if missing:
+              raise SystemExit('fail-closed: required mapped lifecycle classes missing: ' + ', '.join(missing))
+
+          outputs = {}
+          for entry, cls in targets.items():
+              if not found[entry]:
+                  print('OPTIONAL_CLASS_ABSENT', cls)
+                  continue
+              if len(found[entry]) != 1:
+                  raise SystemExit(f'fail-closed: expected exactly one owner jar for {cls}, got {found[entry]}')
+              jar = found[entry][0]
+              print('\n=== JAVAP', cls, 'FROM', jar, '===')
+              p = subprocess.run(['javap','-classpath',str(jar),'-p','-s','-c',cls], text=True,
+                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+              print(p.stdout)
+              if p.returncode != 0:
+                  raise SystemExit(f'fail-closed: javap failed for {cls}')
+              outputs[cls] = p.stdout
+
+          needles = (
+              'scheduleUnload', 'processUnloads', 'pendingUnloads', 'toDrop', 'unload', 'save',
+              'addTicket', 'removeTicket', 'updateChunkScheduling', 'updateFutures', 'visibleChunk',
+              'updatingChunk', 'getChunk', 'getChunkNow', 'ChunkHolder', 'CompletableFuture',
+              'scheduleChunkGeneration', 'scheduleGenerationTask', 'promote', 'demote', 'FULL',
+              'replaceProtoChunk', 'setLoaded', 'registerTickContainerInLevel', 'unregisterTickContainerFromLevel'
+          )
+          print('\n=== UNLOAD / RELOAD OWNERSHIP EXCERPTS ===')
+          for cls, text in outputs.items():
+              print('\n###', cls)
+              lines = text.splitlines()
+              emitted = set()
+              for i, line in enumerate(lines):
+                  if any(n.lower() in line.lower() for n in needles):
+                      lo, hi = max(0,i-3), min(len(lines),i+8)
+                      # merge nearby duplicate windows approximately
+                      key = (lo//4, hi//4)
+                      if key in emitted:
+                          continue
+                      emitted.add(key)
+                      print('\n'.join(lines[lo:hi]))
+                      print('---')
+
+          # Fail-closed signals: the lifecycle must expose evidence of asynchronous holder/future ownership.
+          chunkmap = outputs['net.minecraft.server.level.ChunkMap']
+          holder = outputs['net.minecraft.server.level.ChunkHolder']
+          cache = outputs['net.minecraft.server.level.ServerChunkCache']
+          if 'scheduleUnload' not in chunkmap or 'processUnloads' not in chunkmap:
+              raise SystemExit('fail-closed: ChunkMap unload lifecycle anchors not found')
+          if 'CompletableFuture' not in holder:
+              raise SystemExit('fail-closed: ChunkHolder future ownership not found')
+          if 'addTicket' not in cache or 'removeTicket' not in cache:
+              raise SystemExit('fail-closed: ServerChunkCache ticket anchors not found')
+
+          print('\nLEVELCHUNK_UNLOAD_RELOAD_26_2_BOUNDARY_PROBE_COMPLETE exact_mapped_lifecycle=true')
+          PY
+
+      - name: Upload exact unload reload boundary inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-levelchunk-unload-reload-boundary-probe-${{ github.sha }}
+          path: |
+            p1-levelchunk-unload-reload-classpath.log
+            p1-levelchunk-unload-reload-boundary-probe.log
+          if-no-files-found: warn
