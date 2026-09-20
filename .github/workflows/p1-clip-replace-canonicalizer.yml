@@ -84,7 +84,11 @@ jobs:
           new = Path('.ci-transport/p1-compile.yml').read_text(encoding='utf-8').splitlines(keepends=True)
           diff = ''.join(difflib.unified_diff(old, new, fromfile='p1-compile.yml', tofile='canonical-p1-compile.yml'))
           print(diff)
-          added = [line[1:].rstrip('\n') for line in diff.splitlines() if line.startswith('+') and not line.startswith('+++')]
+          added = [
+              line[1:].rstrip('\n')
+              for line in diff.splitlines()
+              if line.startswith('+') and not line.startswith('+++') and line[1:].strip()
+          ]
           expected = {
               "      - 'scripts/apply_p1_clip_replace_direction_26_2.py'",
               "      - name: Apply frozen P1 clip-replace Direction vocabulary overlay",
