@@ -59,3 +59,11 @@ if not heightmap_helper.is_file():
     raise SystemExit(f"fail-closed: required ClientChunkCache heightmap overlay helper missing: {heightmap_helper}")
 subprocess.run([sys.executable, str(heightmap_helper), str(root)], check=True)
 print("P1_CLIENTCHUNKCACHE_HEIGHTMAPS_26_2_CHAINED")
+
+# Transport-only chaining for the separately evidenced Minecraft 26.2 LevelHeightAccessor vocabulary.
+# Change only the two section-bound calls; renderer-dirty semantics remain untouched.
+section_range_helper = Path(__file__).with_name("apply_p1_clientchunkcache_section_range_26_2.py")
+if not section_range_helper.is_file():
+    raise SystemExit(f"fail-closed: required ClientChunkCache section-range overlay helper missing: {section_range_helper}")
+subprocess.run([sys.executable, str(section_range_helper), str(root)], check=True)
+print("P1_CLIENTCHUNKCACHE_SECTION_RANGE_26_2_CHAINED")
