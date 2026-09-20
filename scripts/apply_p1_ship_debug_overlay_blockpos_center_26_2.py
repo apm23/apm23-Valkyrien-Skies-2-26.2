@@ -149,4 +149,4 @@ sodium_chunk_tracker_helper = Path(__file__).with_name("apply_p1_sodium_chunk_tr
 if not sodium_chunk_tracker_helper.is_file():
     raise SystemExit(f"fail-closed: required Sodium chunk-tracker isolation helper missing: {sodium_chunk_tracker_helper}")
 subprocess.run([sys.executable, str(sodium_chunk_tracker_helper), str(root)], check=True)
-print("P1_SODIUM_CHUNK_TRACKER_ISOLATION_26_2_CHAINED")
+print("P1_SODIUM_CHUNK_TRACKER_ISOLATION_26_2_CHAINED_V2")
