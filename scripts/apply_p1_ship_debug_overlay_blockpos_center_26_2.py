@@ -90,3 +90,11 @@ if not nbt_helper.is_file():
     raise SystemExit(f"fail-closed: required CompoundTag Optional primitive overlay helper missing: {nbt_helper}")
 subprocess.run([sys.executable, str(nbt_helper), str(root)], check=True)
 print("P1_COMPOUNDTAG_OPTIONAL_PRIMITIVES_26_2_CHAINED")
+
+# Mechanical ServerLevel weather vocabulary adaptation: getMinY() and Vec3.atCenterOf.
+# Preserve the upstream VS2 occlusion/biome/precipitation transform authority unchanged.
+weather_server_helper = Path(__file__).with_name("apply_p1_world_weather_serverlevel_26_2.py")
+if not weather_server_helper.is_file():
+    raise SystemExit(f"fail-closed: required world-weather ServerLevel overlay helper missing: {weather_server_helper}")
+subprocess.run([sys.executable, str(weather_server_helper), str(root)], check=True)
+print("P1_WORLD_WEATHER_SERVERLEVEL_26_2_CHAINED")
