@@ -106,3 +106,9 @@ if not packet_create_helper.is_file():
     raise SystemExit(f"fail-closed: required ClientPacketListener entity-create overlay helper missing: {packet_create_helper}")
 subprocess.run([sys.executable, str(packet_create_helper), str(root)], check=True)
 print("P1_CLIENTPACKETLISTENER_ENTITY_CREATE_26_2_CHAINED")
+
+packet_snap_helper = Path(__file__).with_name("apply_p1_clientpacketlistener_entity_snap_26_2.py")
+if not packet_snap_helper.is_file():
+    raise SystemExit(f"fail-closed: required ClientPacketListener entity-snap overlay helper missing: {packet_snap_helper}")
+subprocess.run([sys.executable, str(packet_snap_helper), str(root)], check=True)
+print("P1_CLIENTPACKETLISTENER_ENTITY_SNAP_26_2_CHAINED")
