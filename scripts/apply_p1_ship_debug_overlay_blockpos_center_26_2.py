@@ -124,11 +124,11 @@ if not noise_height_helper.is_file():
 subprocess.run([sys.executable, str(noise_height_helper), str(root)], check=True)
 print("P1_NOISEBASED_HEIGHT_ACCESSOR_26_2_CHAINED_RECONNECT_CTOR_GUARD_V2")
 
-# Mechanical BlockPos -> ChunkPos conversion for two exact ChunkMap spawning-distance wrappers.
-# ChunkPos.containing(BlockPos) is already proven by the canonical ShipAssembler 26.2 overlay;
-# preserve VS2 world-coordinate transforms and wrapped vanilla calls unchanged.
+# Mechanical BlockPos -> ChunkPos conversion and packed-key vocabulary for exact ChunkMap wrappers/lookup.
+# ChunkPos.containing(BlockPos) and ChunkPos.pack() are already proven by canonical 26.2 overlays;
+# preserve VS2 world-coordinate transforms, ship lookup, and wrapped vanilla calls unchanged.
 chunkmap_containing_helper = Path(__file__).with_name("apply_p1_chunkmap_chunkpos_containing_26_2.py")
 if not chunkmap_containing_helper.is_file():
-    raise SystemExit(f"fail-closed: required ChunkMap ChunkPos.containing overlay helper missing: {chunkmap_containing_helper}")
+    raise SystemExit(f"fail-closed: required ChunkMap ChunkPos 26.2 overlay helper missing: {chunkmap_containing_helper}")
 subprocess.run([sys.executable, str(chunkmap_containing_helper), str(root)], check=True)
-print("P1_CHUNKMAP_CHUNKPOS_CONTAINING_26_2_CHAINED")
+print("P1_CHUNKMAP_CHUNKPOS_26_2_CHAINED_V2")
