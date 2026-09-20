@@ -13,7 +13,7 @@ the pinned forced-dirty call for custom ship sections is forwarded to that same 
 authority. No local dirty set, duplicate renderer authority, or gameplay behavior is added.
 """
 from pathlib import Path
-import sys
+import subprocess, sys
 
 root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("upstream-vs2")
 path = root / "common/src/main/java/org/valkyrienskies/mod/mixin/mod_compat/vanilla_renderer/MixinViewAreaVanilla.java"
@@ -114,3 +114,12 @@ if "level.getMinSection()" in text or "ChunkPos.asLong(" in text or ".releaseBuf
 
 path.write_text(text, encoding="utf-8")
 print("P1_VIEWAREA_VANILLA_DIRTY_AUTHORITY_26_2_OVERLAY_APPLIED obsolete_setdirty=removed forced_dirty=LevelExtractor:true")
+
+# FTB Chunks build-height vocabulary is a separate optional-compat compile unit. Chain it only
+# after the now compile-proven ViewArea dirty transform so the frozen renderer body above stays
+# semantically isolated while the next two-error frontier is adapted independently.
+ftb_helper = Path(__file__).with_name("apply_p1_ftbchunks_buildheight_26_2.py")
+if not ftb_helper.is_file():
+    raise SystemExit(f"fail-closed: required FTB Chunks build-height helper missing: {ftb_helper}")
+subprocess.run([sys.executable, str(ftb_helper), str(root)], check=True)
+print("P1_FTBCHUNKS_BUILDHEIGHT_26_2_CHAINED")
