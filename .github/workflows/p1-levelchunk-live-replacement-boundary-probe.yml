@@ -1,0 +1,186 @@
+name: P1 LevelChunk live replacement boundary inspection
+
+on:
+  push:
+    paths:
+      - '.github/workflows/p1-levelchunk-live-replacement-boundary-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-live-levelchunk-replacement-boundary:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact upstream baseline
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Replay canonical P1 overlays in canonical order
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import shlex
+          import subprocess
+
+          workflow = Path('.github/workflows/p1-compile.yml').read_text(encoding='utf-8')
+          commands = re.findall(
+              r'^\s*run:\s+(python3 scripts/apply_p1_[^\n]+ upstream-vs2)\s*$',
+              workflow,
+              flags=re.MULTILINE,
+          )
+          if len(commands) < 50:
+              raise SystemExit(f'fail-closed: expected canonical overlay chain, found only {len(commands)} commands')
+          print(f'Replaying {len(commands)} canonical overlay commands')
+          for command in commands:
+              print('+', command)
+              subprocess.run(shlex.split(command), check=True)
+          PY
+
+      - name: Resolve exact common compile classpath
+        shell: bash
+        working-directory: upstream-vs2
+        run: |
+          set -euo pipefail
+          cat > ../p1-levelchunk-live-replacement-classpath.init.gradle <<'GRADLE'
+          gradle.projectsEvaluated {
+              def commonProject = gradle.rootProject.findProject(':common')
+              if (commonProject == null) {
+                  throw new GradleException('fail-closed: :common project not found')
+              }
+              commonProject.tasks.register('vsPrintMainCompileClasspath') {
+                  doLast {
+                      def sourceSets = commonProject.extensions.findByName('sourceSets')
+                      if (sourceSets == null) {
+                          throw new GradleException('fail-closed: sourceSets extension not found on :common')
+                      }
+                      sourceSets.getByName('main').compileClasspath.files.each { file ->
+                          println('VS_CP_FILE=' + file.absolutePath)
+                      }
+                  }
+              }
+          }
+          GRADLE
+          ./gradlew -I ../p1-levelchunk-live-replacement-classpath.init.gradle :common:vsPrintMainCompileClasspath --no-daemon \
+            | tee ../p1-levelchunk-live-replacement-classpath.log
+          grep -q '^VS_CP_FILE=' ../p1-levelchunk-live-replacement-classpath.log
+
+      - name: Inspect exact Minecraft 26.2 live chunk ownership and replacement boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' | tee p1-levelchunk-live-replacement-boundary-probe.log
+          from pathlib import Path
+          import subprocess
+          import zipfile
+
+          cp_log = Path('p1-levelchunk-live-replacement-classpath.log').read_text(encoding='utf-8', errors='replace')
+          jars = []
+          for line in cp_log.splitlines():
+              if line.startswith('VS_CP_FILE='):
+                  p = Path(line.split('=', 1)[1])
+                  if p.exists() and p.suffix == '.jar':
+                      jars.append(p)
+          if not jars:
+              raise SystemExit('fail-closed: no jar entries found on :common main compile classpath')
+
+          core = {
+              'net/minecraft/server/level/ServerChunkCache.class': 'net.minecraft.server.level.ServerChunkCache',
+              'net/minecraft/server/level/ChunkHolder.class': 'net.minecraft.server.level.ChunkHolder',
+              'net/minecraft/server/level/ChunkMap.class': 'net.minecraft.server.level.ChunkMap',
+          }
+          optional = {
+              'net/minecraft/server/level/GenerationChunkHolder.class': 'net.minecraft.server.level.GenerationChunkHolder',
+              'net/minecraft/server/level/ServerLevel.class': 'net.minecraft.server.level.ServerLevel',
+              'net/minecraft/world/level/chunk/LevelChunk.class': 'net.minecraft.world.level.chunk.LevelChunk',
+              'net/minecraft/world/level/chunk/ProtoChunk.class': 'net.minecraft.world.level.chunk.ProtoChunk',
+          }
+          targets = {**core, **optional}
+          found = {entry: [] for entry in targets}
+
+          print('=== EXACT COMPILE CLASSPATH TARGET JARS ===')
+          for jar in jars:
+              try:
+                  with zipfile.ZipFile(jar) as zf:
+                      names = set(zf.namelist())
+                      hits = [entry for entry in targets if entry in names]
+                      if hits:
+                          print('JAR', jar)
+                          for entry in hits:
+                              found[entry].append(jar)
+                              print('  HAS', entry)
+              except zipfile.BadZipFile:
+                  pass
+
+          missing_core = [entry for entry in core if not found[entry]]
+          if missing_core:
+              raise SystemExit('fail-closed: required exact mapped lifecycle classes missing: ' + ', '.join(missing_core))
+
+          outputs = {}
+          for entry, cls in targets.items():
+              if not found[entry]:
+                  print('\nOPTIONAL_CLASS_ABSENT', cls)
+                  continue
+              texts = []
+              for jar in found[entry]:
+                  print('\n=== JAVAP', cls, 'FROM', jar, '===')
+                  proc = subprocess.run(
+                      ['javap', '-classpath', str(jar), '-p', '-s', '-c', cls],
+                      text=True,
+                      stdout=subprocess.PIPE,
+                      stderr=subprocess.STDOUT,
+                      check=False,
+                  )
+                  print(proc.stdout)
+                  if proc.returncode != 0:
+                      raise SystemExit(f'fail-closed: javap failed for {cls} from {jar}')
+                  texts.append(proc.stdout)
+              outputs[cls] = '\n'.join(texts)
+
+          needles = (
+              'LevelChunk', 'ProtoChunk', 'ChunkAccess', 'ChunkHolder', 'ChunkResult',
+              'CompletableFuture', 'visibleChunk', 'updatingChunk', 'pendingUnload',
+              'replace', 'promote', 'demote', 'unload', 'schedule', 'prepare', 'fullChunk',
+              'getChunkNow', 'getChunk(', 'getFullChunk', 'setChunk', 'updateChunk',
+              'onFullChunk', 'chunkToSave', 'currentlyLoading'
+          )
+          print('\n=== OWNERSHIP / REPLACEMENT CANDIDATE LINES ===')
+          for cls, text in outputs.items():
+              print('\n###', cls)
+              lines = text.splitlines()
+              emitted = set()
+              for i, line in enumerate(lines):
+                  if any(n.lower() in line.lower() for n in needles):
+                      lo = max(0, i - 2)
+                      hi = min(len(lines), i + 5)
+                      key = (lo, hi)
+                      if key in emitted:
+                          continue
+                      emitted.add(key)
+                      print('\n'.join(lines[lo:hi]))
+                      print('---')
+
+          print('\nLEVELCHUNK_LIVE_REPLACEMENT_26_2_BOUNDARY_PROBE_COMPLETE exact_mapped_core=true')
+          PY
+
+      - name: Upload exact live LevelChunk replacement boundary inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-levelchunk-live-replacement-boundary-probe-${{ github.sha }}
+          path: |
+            p1-levelchunk-live-replacement-classpath.log
+            p1-levelchunk-live-replacement-boundary-probe.log
+          if-no-files-found: warn
